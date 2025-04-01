@@ -1,7 +1,11 @@
 package com.openim.tophone;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -38,5 +42,19 @@ public class MainActivity extends AppCompatActivity {
     public static void run(Context context) {
         // 1.获取设备 ID
         accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
+    }
+
+
+    // 实现 openLink 方法
+    public void openLink(View view) {
+        // 这里假设要打开的链接是 www.tophone.cc
+        String url = "https://www.tophone.cc";
+        // 创建一个 Intent，用于打开链接
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        // 检查是否有应用程序可以处理该 Intent
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            // 启动该 Intent
+            startActivity(intent);
+        }
     }
 }
