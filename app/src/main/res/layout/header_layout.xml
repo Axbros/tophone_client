@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/logo_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="Logo"
+        android:src="@drawable/logo"
+        android:alpha="0.2"
+        android:scaleType="centerCrop"
+        android:layout_marginStart="-128dp"
+        android:layout_marginBottom="-192dp" />
+
+    <!-- 这里用 ImageView 简单模拟 HermesBadge 组件，你可以根据实际情况替换 -->
+
+    <TextView
+        android:id="@+id/header_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/HeaderText"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:textColor="#000000"
+        android:layout_centerInParent="true" />
+
+    <!-- 添加的右下角文字 -->
+    <TextView
+        android:id="@+id/footer_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="14dp"
+        android:text="@string/official_website"
+        android:textStyle="bold"
+        android:textSize="18sp" />
+
+</RelativeLayout>

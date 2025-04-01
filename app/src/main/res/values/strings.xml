@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Tophone</string>
+    <string name="server">Server</string>
+    <string name="sms">SMS</string>
+    <string name="phone">Phone</string>
+    <string name="HeaderText">Welcome to\nToPhone Client</string>
+    <string name="official_website">www.tophone.cc</string>
+    <string name="footer_text">ToPhone Inc.</string>
+    <string name="account_id">Account ID</string>
+    <string name="account_status">Account Status</string>
+    <string name="permissions">Permissions</string>
+    <string name="learn_more">Learn More</string>
+</resources>
