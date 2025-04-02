@@ -3,8 +3,6 @@ package com.openim.tophone.openim.entity;
 import android.content.Context;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.bage.GsonHel;
 import com.openim.tophone.utils.L;

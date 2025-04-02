@@ -20,6 +20,7 @@ import androidx.databinding.ViewDataBinding;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.openim.tophone.base.vm.injection.Easy;
+import com.openim.tophone.net.RxRetrofit.N;
 import com.openim.tophone.utils.ActivityManager;
 
 
@@ -33,7 +34,6 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
 
     protected T vm;
     protected A view;
-    private String vmCanonicalName;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -63,7 +63,7 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
 
 
     protected void requestedOrientation() {
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
     protected void bindViewDataBinding(A viewDataBinding) {
@@ -81,7 +81,7 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
     @Deprecated
     protected void bindVM(Class<T> vm) {
         this.vm = new ViewModelProvider(this).get(vm);
-        vmCanonicalName = this.vm.getClass().getCanonicalName();
+        String vmCanonicalName = this.vm.getClass().getCanonicalName();
         bind();
     }
 
@@ -106,9 +106,7 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
         //Then call setStatusBarColor.
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
     }
 
 
@@ -153,15 +151,12 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
     protected void onPause() {
         exeFaster();
         if (null != vm) {
-            vm.viewPause();
             releaseRes();
         }
         super.onPause();
     }
 
-    protected void fasterDestroy() {
 
-    }
 
     private void releaseRes() {
         if (vm == null) return;
@@ -175,7 +170,7 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
     protected void onDestroy() {
         ActivityManager.remove(this);
         exeFaster();
-//TODO  N.clearDispose(this);
+        N.clearDispose(this);
         releaseRes();
         super.onDestroy();
     }
@@ -183,7 +178,6 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
     private void exeFaster() {
         if (isFinishing() && !isFaster) {
             isFaster = true;
-            fasterDestroy();
         }
     }
 
@@ -231,10 +225,4 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
         finish();
     }
 
-
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-    }
 }

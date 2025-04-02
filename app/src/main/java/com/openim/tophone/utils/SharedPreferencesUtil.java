@@ -135,6 +135,7 @@ public class SharedPreferencesUtil {
                 Class clz = SharedPreferences.Editor.class;
                 return clz.getMethod("apply");
             } catch (NoSuchMethodException e) {
+                L.d(e.toString());
             }
 
             return null;

@@ -1,5 +1,6 @@
 [versions]
 agp = "8.9.1"
+coreSdk = "3.8.3"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
@@ -7,16 +8,15 @@ appcompat = "1.6.1"
 material = "1.10.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
-androidSdk = "latest"
 library = "3.2.0-alpha11"
 fastjson2 = "2.0.57.android8"
 buildinfrastructure = "1.0.0-rc.1"
 rxjava = "2.2.21"
 loggingInterceptor = "5.0.0-alpha.14"
-adapterRxjava2 = "2.11.0"
 converterGson = "2.11.0"
 
 [libraries]
+core-sdk = { module = "io.openim:core-sdk", version.ref = "coreSdk" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

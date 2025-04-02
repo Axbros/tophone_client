@@ -1,7 +1,4 @@
 package com.openim.tophone.openim;
-import android.app.KeyguardManager;
-import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 import com.openim.tophone.utils.L;
 import java.util.ArrayList;
@@ -136,9 +133,7 @@ public class IMEvent {
         public void onKickedOffline() {
             // 当前用户被踢下线，此时可以 UI 提示用户“您已经在其他端登录了当前账号，是否重新登录？”
             L.d(TAG, "当前用户被踢下线");
-//            Toast.makeText(BaseApp.inst(),
-//                    BaseApp.inst().getString(io.openim.android.ouicore.R.string.kicked_offline_tips),
-//                    Toast.LENGTH_SHORT).show();
+
             for (OnConnListener onConnListener : connListeners) {
                 onConnListener.onKickedOffline();
             }
@@ -148,9 +143,6 @@ public class IMEvent {
         public void onUserTokenExpired() {
             // 登录票据已经过期，请使用新签发的 UserSig 进行登录。
             L.d(TAG, "登录票据已经过期");
-//            Toast.makeText(BaseApp.inst(),
-//                    BaseApp.inst().getString(io.openim.android.ouicore.R.string.token_expired),
-//                    Toast.LENGTH_SHORT).show();
             for (OnConnListener onConnListener : connListeners) {
                 onConnListener.onUserTokenExpired();
             }
@@ -158,9 +150,6 @@ public class IMEvent {
 
         @Override
         public void onUserTokenInvalid(String reason) {
-//            Toast.makeText(BaseApp.inst(),
-//                    BaseApp.inst().getString(R.string.token_invalid),
-//                    Toast.LENGTH_SHORT).show();
             for (OnConnListener onConnListener : connListeners) {
                 onConnListener.onUserTokenInvalid(reason);
             }
@@ -336,9 +325,7 @@ public class IMEvent {
                 //取消播放音乐和推送消息
                 // 收到新消息，界面添加新消息
                 //TODO 自定义指令
-//                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-//                    onAdvanceMsgListener.onRecvNewMessage(msg);
-//                }
+
             }
 
             @Override

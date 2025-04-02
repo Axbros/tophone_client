@@ -14,4 +14,5 @@
     <string name="conn_failed">connect failed</string>
     <string name="syncing">syncing...</string>
     <string name="sync_err">sync error!</string>
+    <string name="logo">Logo</string>
 </resources>

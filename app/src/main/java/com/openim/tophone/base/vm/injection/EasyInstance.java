@@ -26,11 +26,7 @@ class EasyInstance {
     ///注入实例
     public  synchronized <T extends BaseVM>  T put(T dependency, String tag) {
         final String key = _getKey(dependency.getClass(), tag);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            _single.putIfAbsent(key, new _InstanceInfo<>(dependency));
-        } else if (!_single.containsKey(key)) {
-            _single.put(key, new _InstanceInfo<>(dependency));
-        }
+        _single.putIfAbsent(key, new _InstanceInfo<>(dependency));
         L.d(TAG, "Instance " + dependency + " put");
         return find(dependency.getClass(), tag);
     }

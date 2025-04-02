@@ -115,6 +115,7 @@ public class MainApplication extends BaseApp {
         LoginCertificate.clear();
 
         ActivityManager.finishAllExceptActivity();
+        
 //        startActivity(new Intent(BaseApp.inst(), LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 

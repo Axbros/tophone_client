@@ -15,9 +15,6 @@ public class BaseViewModel<T extends IView> extends BaseVM {
     public WeakReference<T> IView;
     protected boolean isDestroy;
 
-    public Context getContext() {
-        return context.get();
-    }
 
     public void setContext(Context context) {
         if (null != this.context) {
@@ -31,12 +28,6 @@ public class BaseViewModel<T extends IView> extends BaseVM {
         this.IView = new WeakReference<T>(iView);
     }
 
-    @Nullable
-    public T getIView() {
-        if (IView == null)
-            return null;
-        return IView.get();
-    }
 
 
     //视图销毁时
@@ -49,9 +40,7 @@ public class BaseViewModel<T extends IView> extends BaseVM {
         isDestroy = false;
     }
 
-    protected void viewPause() {
 
-    }
 
     protected void viewResume() {
         isDestroy = false;

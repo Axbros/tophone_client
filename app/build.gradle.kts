@@ -18,11 +18,21 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+    splits{
+        abi{
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk= true
         }
     }
     compileOptions {
@@ -32,9 +42,9 @@ android {
 }
 
 dependencies {
-    implementation("io.openim:android-sdk:3.8.3.2@aar")
-    implementation("io.openim:core-sdk:3.8.3@aar")
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation(libs.android.sdk)
+    implementation(libs.core.sdk)
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

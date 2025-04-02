@@ -4,7 +4,6 @@ package com.openim.tophone.base.vm.injection;
 import android.widget.Toast;
 
 import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 
 import com.openim.tophone.base.BaseApp;
