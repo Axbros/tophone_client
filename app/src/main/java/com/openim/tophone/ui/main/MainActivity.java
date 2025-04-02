@@ -38,17 +38,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         binding.setUserVM(vm);
         super.onCreate(savedInstanceState);
 
-
-
-
-        checkAndRequestPermissions();
-
+        initPermissions();
         init(getApplicationContext());
-
         EdgeToEdge.enable(this);
-
-
     }
+
+
 
 
     public  void init(Context context) {
@@ -74,7 +69,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         }
     }
 
-    private void checkAndRequestPermissions() {
+    private void initPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
         // 添加网络权限
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.INTERNET)!=PackageManager.PERMISSION_GRANTED){

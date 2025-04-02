@@ -80,7 +80,6 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
     @Deprecated
     protected void bindVM(Class<T> vm) {
         this.vm = new ViewModelProvider(this).get(vm);
-        String vmCanonicalName = this.vm.getClass().getCanonicalName();
         bind();
     }
 
