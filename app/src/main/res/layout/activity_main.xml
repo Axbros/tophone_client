@@ -90,11 +90,14 @@
                         android:textStyle="bold"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
+
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/phone_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         app:layout_constraintEnd_toEndOf="parent"
+                        android:clickable="false"
+                        style="@style/DisabledSwitchMaterialStyle"
                         app:layout_constraintTop_toTopOf="parent" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -111,11 +114,14 @@
                         android:textStyle="bold"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
+
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/sms_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:clickable="false"
                         app:layout_constraintEnd_toEndOf="parent"
+                        style="@style/DisabledSwitchMaterialStyle"
                         app:layout_constraintTop_toTopOf="parent" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
