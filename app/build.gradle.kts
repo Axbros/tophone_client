@@ -32,12 +32,24 @@ android {
 }
 
 dependencies {
-
+    implementation("io.openim:android-sdk:3.8.3.2@aar")
+    implementation("io.openim:core-sdk:3.8.3@aar")
+    implementation("com.google.code.gson:gson:2.9.0")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+    implementation(libs.android.sdk)
+    implementation(libs.library)
+    implementation(libs.fastjson2)
+    implementation(libs.buildinfrastructure)
+    implementation(libs.rxjava)
+    implementation(libs.logging.interceptor)
+    implementation(libs.adapter.rxjava2)
+    implementation(libs.converter.gson)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+
 }
