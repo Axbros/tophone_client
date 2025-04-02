@@ -1,4 +1,4 @@
-package com.openim.tophone;
+package com.openim.tophone.ui.main;
 
 import android.Manifest;
 import android.content.Context;
@@ -13,19 +13,21 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import com.openim.tophone.R;
+import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.utils.DeviceUtils;
 
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
     private static final int PERMISSION_REQUEST_CODE = 1;
 
     private static String accountID;

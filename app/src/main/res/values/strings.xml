@@ -10,4 +10,9 @@
     <string name="account_status">Account Status</string>
     <string name="permissions">Permissions</string>
     <string name="learn_more">Copyright © 2024-2025 ToPhone All Rights Reserved.</string>
+    <string name="connecting">connecting</string>
+    <string name="conn_failed">connect failed</string>
+    <string name="syncing">syncing...</string>
+    <string name="sync_err">sync error!</string>
+    <string name="logo">Logo</string>
 </resources>
