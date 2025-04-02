@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+        <!-- 定义不可用状态下拇指的颜色 -->
+        <color name="disabled_thumb_color">#808080</color>
+        <!-- 定义不可用状态下轨道的颜色 -->
+        <color name="disabled_track_color">#C0C0C0</color>
+
 </resources>
