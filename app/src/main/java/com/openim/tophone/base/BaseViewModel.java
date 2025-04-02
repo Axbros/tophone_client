@@ -14,7 +14,9 @@ public class BaseViewModel<T extends IView> extends BaseVM {
     public WeakReference<Context> context;
     public WeakReference<T> IView;
     protected boolean isDestroy;
-
+    public Context getContext() {
+        return context.get();
+    }
 
     public void setContext(Context context) {
         if (null != this.context) {

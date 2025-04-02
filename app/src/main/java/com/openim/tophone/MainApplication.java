@@ -2,8 +2,8 @@ package com.openim.tophone;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
-import com.openim.tophone.net.RxRetrofit.HttpConfig;
-import com.openim.tophone.net.RxRetrofit.N;
+import com.openim.tophone.net.RXRetrofit.HttpConfig;
+import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.openim.entity.LoginCertificate;
@@ -115,7 +115,7 @@ public class MainApplication extends BaseApp {
         LoginCertificate.clear();
 
         ActivityManager.finishAllExceptActivity();
-        
+
 //        startActivity(new Intent(BaseApp.inst(), LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 

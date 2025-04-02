@@ -15,4 +15,10 @@
     <string name="syncing">syncing...</string>
     <string name="sync_err">sync error!</string>
     <string name="logo">Logo</string>
+    <string name="account_not_exist">account is not exist\n</string>
+    <string name="wrong_password">password is wrong\n</string>
+    <string name="phone_num_registered">phone number is registered</string>
+    <string name="account_registered">account is registered</string>
+    <string name="emil_registered">email is registered\n</string>
+    <string name="network_unavailable_tips">network is unavailable</string>
 </resources>

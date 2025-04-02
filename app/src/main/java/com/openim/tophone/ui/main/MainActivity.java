@@ -8,55 +8,56 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.databinding.DataBindingUtil;
 
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
+import com.openim.tophone.base.vm.State;
+import com.openim.tophone.databinding.ActivityMainBinding;
+import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
-
-
+import java.util.Observable;
+import java.util.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends BaseActivity {
+
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer {
     private static final int PERMISSION_REQUEST_CODE = 1;
-
-    private static String accountID;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
-        checkAndRequestPermissions();
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        // 调用 run 方法获取 accountID
-        run(getApplicationContext());
 
-        // 获取 account_id_text 的引用
-        TextView accountIdTextView = findViewById(R.id.account_id_text);
-        // 设置 account_id_text 的文本为 accountID
-        if (accountIdTextView != null) {
-            accountIdTextView.setText(accountID);
-        }
+        bindVM(UserVM.class);
+        ActivityMainBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        binding.setUserVM(vm);
+        super.onCreate(savedInstanceState);
+
+
+
+
+        checkAndRequestPermissions();
+
+        init(getApplicationContext());
+
+        EdgeToEdge.enable(this);
+
+
     }
 
-    public static void run(Context context) {
+
+    public  void init(Context context) {
+
         // 1.获取设备 ID
-        accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
+        String accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
+        vm.setAccountID(new State<>(accountID));
+        // 2.查询当前设备是否注册
+        vm.checkIfUserExists(accountID);
     }
 
 
@@ -75,6 +76,10 @@ public class MainActivity extends BaseActivity {
 
     private void checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
+        // 添加网络权限
+        if(ContextCompat.checkSelfPermission(this,Manifest.permission.INTERNET)!=PackageManager.PERMISSION_GRANTED){
+            permissionsToRequest.add(Manifest.permission.INTERNET);
+        }
 
         // 检查直接拨打电话权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
@@ -131,5 +136,10 @@ public class MainActivity extends BaseActivity {
                 Toast.makeText(this, "Some permissions not granted", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+
     }
 }

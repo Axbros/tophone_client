@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Rect;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,7 +19,7 @@ import androidx.databinding.ViewDataBinding;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.openim.tophone.base.vm.injection.Easy;
-import com.openim.tophone.net.RxRetrofit.N;
+import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.utils.ActivityManager;
 
 
