@@ -32,29 +32,24 @@ public class UserVM extends BaseViewModel {
     public State<String> accountID = new State<>("");
     public State<String> accountStatus=new State<>("");
 
-    public boolean checkIfUserExists(String email){
+    public void checkIfUserExists(String email){
+
         Parameter parameter=OneselfService.buildPagination(1,1);
         parameter.add("keyword",email).add("normal",1);
 
         N.API(OneselfService.class)
                 .searchUser(parameter.buildJsonBody())
                 .map(OpenIMService.turn(HashMap.class)).compose(N.IOMain()).subscribe(new NetObserver<HashMap>(getContext()){
-
                     @Override
                     public void onSuccess(HashMap hashMap) {
-                        System.out.println("NET:success");
-                        System.out.println("当前账号查询到的数量："+hashMap.get("total"));
+                        if(hashMap.get("total")!=null && (int)hashMap.get("total")>0){
+                            accountStatus.postValue("Registered");
+                        }else{
+                            accountStatus.postValue("Not Registered");
+                        }
                     }
 
 
-
-                    @Override
-                    protected void onFailure(Throwable e) {
-                        super.onFailure(e);
-                        System.out.println("NET:failure");
-                    }
                 });
-
-        return false;
     }
 }

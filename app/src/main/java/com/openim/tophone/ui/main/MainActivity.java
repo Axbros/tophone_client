@@ -22,6 +22,8 @@ import com.openim.tophone.base.vm.State;
 import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
+import com.openim.tophone.utils.L;
+
 import java.util.Observable;
 import java.util.Observer;
 import java.util.ArrayList;
@@ -34,8 +36,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
     protected void onCreate(Bundle savedInstanceState) {
 
         bindVM(UserVM.class);
+//    官方代码 不可用 下面三个是自己的代码    bindViewDataBinding(ActivityMainBinding.inflate(getLayoutInflater()));
         ActivityMainBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         binding.setUserVM(vm);
+        binding.setLifecycleOwner(this);
         super.onCreate(savedInstanceState);
 
         initPermissions();
@@ -46,13 +50,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
 
 
 
-    public  void init(Context context) {
+    public void init(Context context) {
 
         // 1.获取设备 ID
         String accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
         vm.setAccountID(new State<>(accountID));
+        //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(accountID);
+
     }
 
 
