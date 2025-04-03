@@ -2,6 +2,7 @@
 <layout>
 
     <data>
+        <import type="android.view.View" />
         <variable
             name="userVM"
             type="com.openim.tophone.ui.main.vm.UserVM" />
@@ -50,7 +51,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@android:color/black"
-                        android:textSize="16sp"
+
                         android:text="@{userVM.accountID,default=未获取到账号ID}"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -73,8 +74,9 @@
                         android:id="@+id/account_status_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@{userVM.accountStatus,default=未获取到账号状态}"
-                        android:textColor="@android:color/black"
+                        android:textColor="@{ userVM.accountStatus==0 ? @android:color/holo_red_dark : @android:color/holo_green_dark}"
+                        android:text="@{userVM.accountStatus==0 ? @string/account_status_inactive : @string/account_status_active,default=未获取到账号状态}"
+                        android:textStyle="bold"
                         android:textSize="16sp" />
                 </LinearLayout>
 
@@ -107,14 +109,15 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
 
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/phone_switch"
-                            style="@style/DisabledSwitchMaterialStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:clickable="false"
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"
+
+                            android:src="@{userVM.phonePermissions ? @drawable/success :@drawable/wrong}"
+                            />
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <androidx.constraintlayout.widget.ConstraintLayout
@@ -132,40 +135,71 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
 
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/sms_switch"
-                            style="@style/DisabledSwitchMaterialStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:clickable="false"
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"
+
+                            android:src="@{userVM.smsPermissions ? @drawable/success :@drawable/wrong}"
+                            />
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    <androidx.constraintlayout.widget.ConstraintLayout
+                </LinearLayout>
+                <!-- 连接部分 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="16dp"
+                    android:orientation="vertical">
+
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="12dp">
+                        android:text="@string/connection"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-                        <TextView
-                            android:id="@+id/server_permission_label"
-                            android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingTop="16dp">
+
+                        <FrameLayout
+                            android:layout_width="64dp"
+                            android:layout_height="64dp">
+
+                            <ImageView
+                                android:id="@+id/connection_status_image"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:visibility="@{userVM.isLoading ? View.GONE : View.VISIBLE}"
+                                android:src="@{userVM.connectionStatus == true ? @drawable/success :@drawable/wrong}" />
+
+                            <ProgressBar
+                                android:id="@+id/progress_bar"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:visibility="@{userVM.isLoading ? View.VISIBLE : View.GONE}" />
+                        </FrameLayout>
+
+                        <Button
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="@string/server"
+                            android:background="@drawable/rounded_button"
+                            android:layout_marginTop="12dp"
                             android:textSize="18sp"
                             android:textStyle="bold"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            android:textColor="@color/white"
+                            android:text="@{userVM.connectionStatus ? @string/button_connect :@string/permissions}"
+                            android:onClick="handleConnect" />
 
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/server_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
-                    </androidx.constraintlayout.widget.ConstraintLayout>
+                    </LinearLayout>
+
                 </LinearLayout>
-
                 <!-- 链接部分 -->
                 <LinearLayout
                     android:layout_width="match_parent"

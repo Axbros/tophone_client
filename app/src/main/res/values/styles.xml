@@ -8,4 +8,13 @@
         <!-- 设置不可用状态下的透明度 -->
         <item name="android:alpha">0.5</item>
     </style>
+
+    <style name="SuccessSwitchMaterialStyle" parent="Widget.MaterialComponents.CompoundButton.Switch">
+        <!-- 设置拇指在不可用状态下的颜色 -->
+        <item name="thumbTint">@color/success_thumb_color</item>
+        <!-- 设置轨道在不可用状态下的颜色 -->
+        <item name="trackTint">@color/success_track_color</item>
+        <!-- 设置不可用状态下的透明度 -->
+        <item name="android:alpha">0.5</item>
+    </style>
 </resources>

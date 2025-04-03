@@ -20,6 +20,8 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.vm.State;
 import com.openim.tophone.databinding.ActivityMainBinding;
+import com.openim.tophone.openim.IM;
+import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -29,24 +31,30 @@ import java.util.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 
-public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer {
+
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer, OnAdvanceMsgListener {
     private static final int PERMISSION_REQUEST_CODE = 1;
+    private ActivityMainBinding view;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         bindVM(UserVM.class);
 //    官方代码 不可用 下面三个是自己的代码    bindViewDataBinding(ActivityMainBinding.inflate(getLayoutInflater()));
-        ActivityMainBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
-        binding.setUserVM(vm);
-        binding.setLifecycleOwner(this);
+        view = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        view.setUserVM(vm);
+        view.setLifecycleOwner(this);
+
         super.onCreate(savedInstanceState);
 
+   //初始化UI
         initPermissions();
         init(getApplicationContext());
+        //初始化openim
+
         EdgeToEdge.enable(this);
     }
-
 
 
 
@@ -58,6 +66,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(accountID);
+        //添加消息监听器
+        IMEvent.getInstance().addAdvanceMsgListener(this);
 
     }
 
@@ -73,6 +83,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             // 启动该 Intent
             startActivity(intent);
         }
+    }
+
+    public void handleConnect(View v)  {
+        vm.connect();
+        System.out.println("按下了button");
+
     }
 
     private void initPermissions() {
@@ -96,6 +112,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             }
         }
 
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
+                == PackageManager.PERMISSION_GRANTED){
+            vm.setPhonePermissions(new State<>(true));
+        }
+
         // 检查发送短信权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -108,6 +130,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
 
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED){
+            vm.setSmsPermissions(new State<>(true));
+        }
+
         // 如果有需要请求的权限
         if (!permissionsToRequest.isEmpty()) {
             ActivityCompat.requestPermissions(this,
@@ -117,6 +145,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             // 所有权限都已授予
             Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
         }
+
+
+
     }
     //permission
     @Override

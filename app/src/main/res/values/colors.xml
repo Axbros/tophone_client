@@ -8,4 +8,14 @@
         <!-- 定义不可用状态下轨道的颜色 -->
         <color name="disabled_track_color">#C0C0C0</color>
 
+
+    <color name="success_thumb_color">#4CAF50</color>
+
+    <color name="success_track_color">#106210</color>
+
+
+    <color name="primary_track_color">#03A9F4</color>
+    <color name="primary_thumb_color">#0288D1</color>
+
+
 </resources>
