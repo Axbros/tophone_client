@@ -47,9 +47,6 @@ public class MainApplication extends BaseApp {
             return true;
         return file.mkdirs();
     }
-
-
-
     private void initController() {
         Easy.installVM(UserLogic.class);
     }

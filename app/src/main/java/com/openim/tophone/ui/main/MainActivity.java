@@ -15,13 +15,16 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
-
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.State;
+import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.databinding.ActivityMainBinding;
-import com.openim.tophone.openim.IM;
+
 import com.openim.tophone.openim.IMEvent;
+import com.openim.tophone.openim.entity.LoginCertificate;
+import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -36,6 +39,9 @@ import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer, OnAdvanceMsgListener {
     private static final int PERMISSION_REQUEST_CODE = 1;
+    private static String machineCode;
+    private static String TAG="MainActivity";
+    private static LoginCertificate certificate=LoginCertificate.getCache(BaseApp.inst());;
     private ActivityMainBinding view;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,26 +54,43 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
 
         super.onCreate(savedInstanceState);
 
-   //初始化UI
+        //初始化UI
         initPermissions();
         init(getApplicationContext());
-        //初始化openim
 
+        //初始化openim
+        initOpenIM();
         EdgeToEdge.enable(this);
     }
+    public void initOpenIM(){
+        BaseApp.inst().loginCertificate=certificate;
+        UserLogic userLogic=Easy.find(UserLogic.class);
+        userLogic.loginCacheUser(userId -> {
+            L.d(TAG,"Login User ID: "+userId);
+            Toast.makeText(getBaseContext(), "Login User ID: "+userId+" Success!", Toast.LENGTH_SHORT).show();
 
+        });
 
+    }
+    public void handleAccountIDClick(View view) {
+        if (vm.accountID.getValue() == machineCode) {
+            vm.accountID.setValue(certificate.nickname);
+        } else {
+            vm.accountID.setValue(machineCode);
+        }
+    }
 
     public void init(Context context) {
 
         // 1.获取设备 ID
-        String accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
-        vm.setAccountID(new State<>(accountID));
+        machineCode = DeviceUtils.getAndroidId(context) + "@q2q.edu.cn";
+        vm.setAccountID(new State<>(machineCode));
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
-        vm.checkIfUserExists(accountID);
+        vm.checkIfUserExists(machineCode);
         //添加消息监听器
         IMEvent.getInstance().addAdvanceMsgListener(this);
+
 
     }
 
@@ -85,8 +108,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         }
     }
 
-    public void handleConnect(View v)  {
+    public void handleConnect(View v) {
+        System.out.println(BaseApp.inst().loginCertificate);
         vm.connect();
+
         System.out.println("按下了button");
 
     }
@@ -94,7 +119,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
     private void initPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
         // 添加网络权限
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.INTERNET)!=PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.INTERNET);
         }
 
@@ -112,9 +137,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             }
         }
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
-                == PackageManager.PERMISSION_GRANTED){
+                == PackageManager.PERMISSION_GRANTED) {
             vm.setPhonePermissions(new State<>(true));
         }
 
@@ -130,9 +155,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-                == PackageManager.PERMISSION_GRANTED){
+                == PackageManager.PERMISSION_GRANTED) {
             vm.setSmsPermissions(new State<>(true));
         }
 
@@ -147,8 +172,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         }
 
 
-
     }
+
     //permission
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,

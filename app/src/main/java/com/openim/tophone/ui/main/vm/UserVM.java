@@ -1,15 +1,23 @@
 package com.openim.tophone.ui.main.vm;
 
+import android.util.Log;
+import android.widget.Toast;
+
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
 import com.openim.tophone.base.vm.State;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
+import com.openim.tophone.openim.entity.LoginCertificate;
+import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.utils.L;
 
 import java.util.HashMap;
+
+import io.openim.android.sdk.enums.Platform;
 
 public class UserVM extends BaseViewModel {
 
@@ -65,11 +73,12 @@ public class UserVM extends BaseViewModel {
     public State<Boolean> isLoading = new State<>(false);
 
 
-    private String TAG="UserVM";
+    private String TAG = "UserVM";
 
     public void connect() {
         isLoading.setValue(true);
         connectionStatus.setValue(true);
+
     }
 
     public void checkIfUserExists(String email) {
@@ -87,26 +96,32 @@ public class UserVM extends BaseViewModel {
                         Integer total = (Integer) hashMap.get("total");
                         accountStatus.setValue(total);
                         if (total == 0) {
-                            L.d(TAG,"prepare to register account: "+email+"!");
+                            L.d(TAG, "prepare to register account: " + email + "!");
                             //如果没有账号那就注册！
                             Parameter registerParameter = new Parameter();
-                            HashMap user =new HashMap();
-                            user.put("nickname","ToP");
-                            user.put("areaCode","+886");
-                            user.put("email",email);
-                            user.put("password","516f00c9229200d6ce526991cdfdd959");
-                            user.put("birth",00);
-                            registerParameter.add("user",user).add("platform",10).add("verifyCode","666666");
+                            HashMap user = new HashMap();
+                            user.put("email", email);
+                            user.put("password", "516f00c9229200d6ce526991cdfdd959");
+                            registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
 
                             N.API(OpenIMService.class)
                                     .register(registerParameter.buildJsonBody())
-                                    .map(OpenIMService.turn(HashMap.class)).compose(N.IOMain()).subscribe(new NetObserver<>(getContext()) {
-                                                                                                              @Override
-                                                                                                              public void onSuccess(HashMap o) {
-                                                                                                                  L.d(TAG, "register success" + o.toString());
-                                                                                                                  accountStatus.setValue(1);
-                                                                                                              }
-                                                                                                          }
+                                    .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
+                                                                                                                       @Override
+                                                                                                                       public void onSuccess(LoginCertificate o) {
+                                                                                                                           accountID.setValue(o.nickname);
+                                                                                                                           accountStatus.setValue(1);
+                                                                                                                           o.cache(getContext());
+                                                                                                                           Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();
+                                                                                                                       }
+
+                                                                                                                       @Override
+                                                                                                                       protected void onFailure(Throwable e) {
+                                                                                                                           super.onFailure(e);
+                                                                                                                           Log.d(TAG, "Register Error" + e.toString());
+                                                                                                                           Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+                                                                                                                       }
+                                                                                                                   }
                                     );
                         }
                     }

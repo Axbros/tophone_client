@@ -36,11 +36,33 @@ public class UserLogic extends BaseVM {
         }
     }
 
+    public State<LoginStatus> getLoginStatus() {
+        return loginStatus;
+    }
+
+    public void setLoginStatus(State<LoginStatus> loginStatus) {
+        this.loginStatus = loginStatus;
+    }
+
+    public State<ConnectStatus> getConnectStatus() {
+        return connectStatus;
+    }
+
+    public void setConnectStatus(State<ConnectStatus> connectStatus) {
+        this.connectStatus = connectStatus;
+    }
+
+    public State<UserInfo> getInfo() {
+        return info;
+    }
+
+    public void setInfo(State<UserInfo> info) {
+        this.info = info;
+    }
+
     public State<LoginStatus> loginStatus = new State<>(LoginStatus.DEFAULT);
     public State<ConnectStatus> connectStatus = new State<>(ConnectStatus.DEFAULT);
     public State<UserInfo> info = new State<>();
-    //发现页
-    public State<String> discoverPageURL=new State<>("https://docs.openim.io/");
 
     public boolean isCacheUser() {
         return null!= LoginCertificate.getCache(BaseApp.inst());
@@ -66,6 +88,7 @@ public class UserLogic extends BaseVM {
 
             @Override
             public void onSuccess(String data) {
+
                 loginStatus.setValue(LoginStatus.SUCCESS);
                 if (loginCallback != null)
                     loginCallback.accept(BaseApp.inst().loginCertificate.userID);
