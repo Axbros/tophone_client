@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
+
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
@@ -35,14 +36,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
+import io.openim.android.sdk.listener.OnConversationListener;
 
 
-public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer, OnAdvanceMsgListener {
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer, OnAdvanceMsgListener, OnConversationListener {
     private static final int PERMISSION_REQUEST_CODE = 1;
     private static String machineCode;
-    private static String TAG="MainActivity";
-    private static LoginCertificate certificate=LoginCertificate.getCache(BaseApp.inst());;
+    private static String TAG = "MainActivity";
+    private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
+    ;
     private ActivityMainBinding view;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -62,16 +66,22 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         initOpenIM();
         EdgeToEdge.enable(this);
     }
-    public void initOpenIM(){
-        BaseApp.inst().loginCertificate=certificate;
-        UserLogic userLogic=Easy.find(UserLogic.class);
-        userLogic.loginCacheUser(userId -> {
-            L.d(TAG,"Login User ID: "+userId);
-            Toast.makeText(getBaseContext(), "Login User ID: "+userId+" Success!", Toast.LENGTH_SHORT).show();
 
-        });
-
+    public void initOpenIM() {
+        BaseApp.inst().loginCertificate = certificate;
+        UserLogic userLogic = Easy.find(UserLogic.class);
+        if (certificate != null) {
+            userLogic.loginCacheUser(userId -> {
+                vm.accountStatus.setValue("Online");
+                L.d(TAG, "Login User ID: " + userId);
+                Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            vm.login();
+        }
     }
+
+
     public void handleAccountIDClick(View view) {
         if (vm.accountID.getValue() == machineCode) {
             vm.accountID.setValue(certificate.nickname);
@@ -83,14 +93,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
     public void init(Context context) {
 
         // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@q2q.edu.cn";
+        machineCode = DeviceUtils.getAndroidId(context) + "@q36q.edu.cn";
         vm.setAccountID(new State<>(machineCode));
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
+        IMEvent.getInstance().addConversationListener(this);
         //添加消息监听器
         IMEvent.getInstance().addAdvanceMsgListener(this);
-
 
     }
 

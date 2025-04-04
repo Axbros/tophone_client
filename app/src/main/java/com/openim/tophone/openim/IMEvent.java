@@ -1,10 +1,16 @@
 package com.openim.tophone.openim;
+
 import android.util.Log;
+
 import com.openim.tophone.utils.L;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import io.openim.android.sdk.OpenIMClient;
+import io.openim.android.sdk.enums.ConversationType;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
+import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnConnListener;
 import io.openim.android.sdk.listener.OnConversationListener;
 import io.openim.android.sdk.listener.OnFriendshipListener;
@@ -12,6 +18,7 @@ import io.openim.android.sdk.listener.OnGroupListener;
 import io.openim.android.sdk.listener.OnUserListener;
 import io.openim.android.sdk.models.BlacklistInfo;
 import io.openim.android.sdk.models.C2CReadReceiptInfo;
+import io.openim.android.sdk.models.ConversationInfo;
 import io.openim.android.sdk.models.FriendApplicationInfo;
 import io.openim.android.sdk.models.FriendInfo;
 import io.openim.android.sdk.models.GroupApplicationInfo;
@@ -22,7 +29,7 @@ import io.openim.android.sdk.models.KeyValue;
 import io.openim.android.sdk.models.Message;
 import io.openim.android.sdk.models.RevokedInfo;
 
-///im事件 统一处理
+/// im事件 统一处理
 public class IMEvent {
     private static final String TAG = "IMEvent";
     private static IMEvent listener = null;
@@ -39,12 +46,14 @@ public class IMEvent {
         advanceMsgListeners = new ArrayList<>();
         friendshipListeners = new ArrayList<>();
         groupListeners = new ArrayList<>();
+        conversationListeners = new ArrayList<>();
         //监听消息
         advanceMsgListener();
         //自动同意添加好友
-        friendshipListener();
+//        friendshipListener();
         //群组监听 更换甲方
-        groupListeners();
+//        groupListeners();
+        conversationListener();
     }
 
     public static synchronized IMEvent getInstance() {
@@ -62,7 +71,6 @@ public class IMEvent {
     public void removeConnListener(OnConnListener onConnListener) {
         connListeners.remove(onConnListener);
     }
-
 
 
     // 收到新消息，已读回执，消息撤回监听。
@@ -250,7 +258,6 @@ public class IMEvent {
     }
 
 
-
     // 好关系发生变化监听
     private void friendshipListener() {
         OpenIMClient.getInstance().friendshipManager.setOnFriendshipListener(new OnFriendshipListener() {
@@ -263,7 +270,6 @@ public class IMEvent {
             public void onBlacklistDeleted(BlacklistInfo u) {
                 // 从黑名单删除
             }
-
             @Override
             public void onFriendApplicationAccepted(FriendApplicationInfo u) {
                 // 发出或收到的好友申请已同意
@@ -274,7 +280,8 @@ public class IMEvent {
 
             @Override
             public void onFriendApplicationAdded(FriendApplicationInfo u) {
-                // 发出或收到的好友申请被添加
+                // 用户发起好友申请后，申请发起者和接收者都会收到此回调，接收者可以选择同意或拒绝好友申请。
+                L.d(TAG, "onFriendApplicationAdded, friendshipListeners:" + friendshipListeners);
                 for (OnFriendshipListener friendshipListener : friendshipListeners) {
                     friendshipListener.onFriendApplicationAdded(u);
                 }
@@ -316,14 +323,40 @@ public class IMEvent {
         });
     }
 
+
+
+    // 会话新增或改变监听
+    public void addConversationListener(OnConversationListener onConversationListener) {
+        if (!conversationListeners.contains(onConversationListener)) {
+            conversationListeners.add(onConversationListener);
+        }
+    }
+
+    public void removeConversationListener(OnConversationListener onConversationListener) {
+        conversationListeners.remove(onConversationListener);
+    }
+
     // 收到新消息，已读回执，消息撤回监听。
     private void advanceMsgListener() {
         OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
             @Override
             public void onRecvNewMessage(Message msg) {
+
                 Log.d(TAG, "onRecvNewMessage, advanceMsgListeners:" + advanceMsgListeners);
-                //取消播放音乐和推送消息
-                // 收到新消息，界面添加新消息
+                OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
+                    @Override
+                    public void onError(int code, String error) {
+                        L.e(TAG, "onRecvNewMessage, getOneConversation error:" + error);
+                    }
+
+                    @Override
+                    public void onSuccess(ConversationInfo data) {
+                        L.d(TAG, "onRecvNewMessage, getOneConversation success:" + data.getConversationID());
+
+                        OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(data.getConversationID(),null);
+                    }
+                }, msg.getSendID(), ConversationType.SINGLE_CHAT);
+
                 //TODO 自定义指令
 
             }
@@ -331,30 +364,9 @@ public class IMEvent {
             @Override
             public void onRecvC2CReadReceipt(List<C2CReadReceiptInfo> list) {
                 // 消息被阅读回执，将消息标记为已读
+                System.out.println("消息被阅读回执，将消息标记为已读");
                 for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
                     onAdvanceMsgListener.onRecvC2CReadReceipt(list);
-                }
-            }
-
-            @Override
-            public void onRecvMessageRevokedV2(RevokedInfo info) {
-                // 消息成功撤回，从界面移除消息
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvMessageRevokedV2(info);
-                }
-            }
-
-            @Override
-            public void onRecvMessageExtensionsChanged(String msgID, List<KeyValue> list) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvMessageExtensionsChanged(msgID, list);
-                }
-            }
-
-            @Override
-            public void onRecvMessageExtensionsDeleted(String msgID, List<String> list) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvMessageExtensionsDeleted(msgID, list);
                 }
             }
 
@@ -397,17 +409,66 @@ public class IMEvent {
         });
     }
 
-    /**
-     * 用户状态变化
-     *
-     * @param onUserListener
-     */
-    public void removeUserListener(OnUserListener onUserListener) {
-        userListeners.remove(onUserListener);
-    }
+    // 会话新增或改变监听
+    private void conversationListener() {
+        OpenIMClient.getInstance().conversationManager.setOnConversationListener(new OnConversationListener() {
+            @Override
+            public void onConversationChanged(List<ConversationInfo> list) {
+                L.d(TAG, "onConversationChanged, conversationListeners:" + conversationListeners);
+                // 已添加的会话发生改变
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onConversationChanged(list);
+                }
+            }
 
-    public void addUserListener(OnUserListener onUserListener) {
-        if (!userListeners.contains(onUserListener)) userListeners.add(onUserListener);
+            @Override
+            public void onNewConversation(List<ConversationInfo> list) {
+                // 新增会话
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onNewConversation(list);
+                }
+            }
+
+            @Override
+            public void onSyncServerFailed(boolean reinstalled) {
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onSyncServerFailed(reinstalled);
+                }
+            }
+
+            @Override
+            public void onSyncServerFinish(boolean reinstalled) {
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onSyncServerFinish(reinstalled);
+                }
+                Log.d(TAG, "onSyncServerFinish reinstalled:" + reinstalled);
+
+            }
+
+            @Override
+            public void onSyncServerProgress(long progress) {
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onSyncServerProgress(progress);
+                }
+            }
+
+            @Override
+            public void onSyncServerStart(boolean reinstalled) {
+                Log.d(TAG, "onSyncServerStart reinstalled:" + reinstalled);
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onSyncServerStart(reinstalled);
+                }
+            }
+
+            @Override
+            public void onTotalUnreadMessageCountChanged(int i) {
+                // 未读消息数发送变化
+
+                for (OnConversationListener onConversationListener : conversationListeners) {
+                    onConversationListener.onTotalUnreadMessageCountChanged(i);
+                }
+            }
+        });
     }
 }
 

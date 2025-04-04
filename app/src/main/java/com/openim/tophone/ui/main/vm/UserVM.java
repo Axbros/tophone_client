@@ -17,16 +17,18 @@ import com.openim.tophone.utils.L;
 
 import java.util.HashMap;
 
+import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
+import io.openim.android.sdk.listener.OnBase;
 
 public class UserVM extends BaseViewModel {
 
 
-    public State<Integer> getAccountStatus() {
+    public State<String> getAccountStatus() {
         return accountStatus;
     }
 
-    public void setAccountStatus(State<Integer> accountStatus) {
+    public void setAccountStatus(State<String> accountStatus) {
         this.accountStatus = accountStatus;
     }
 
@@ -39,7 +41,7 @@ public class UserVM extends BaseViewModel {
     }
 
     public State<String> accountID = new State<>("");
-    public State<Integer> accountStatus = new State<>(0);
+    public State<String> accountStatus = new State<>("Offline");
 
     public State<Boolean> getPhonePermissions() {
         return phonePermissions;
@@ -81,6 +83,49 @@ public class UserVM extends BaseViewModel {
 
     }
 
+    public void login() {
+
+        Parameter parameter = new Parameter();
+        parameter.add("email", accountID.getValue())
+                .add("password", "516f00c9229200d6ce526991cdfdd959")
+                .add("platform", 2)
+                .add("usedFor", 3)
+                .add("operationID", System.currentTimeMillis() + "");
+        N.API(OpenIMService.class)
+                .login(parameter.buildJsonBody())
+                .compose(N.IOMain())
+                .map(OpenIMService.turn(LoginCertificate.class))
+                .subscribe(new NetObserver<LoginCertificate>(getContext()) {
+
+                    @Override
+                    public void onSuccess(LoginCertificate loginCertificate) {
+                        try {
+                            OpenIMClient.getInstance().login(new OnBase<String>() {
+                                @Override
+                                public void onError(int code, String error) {
+                                    accountStatus.setValue("Offline");
+                                    Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
+                                }
+
+                                @Override
+                                public void onSuccess(String data) {
+                                    //缓存登录信息
+                                    Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
+                                    accountStatus.setValue("Online");
+                                    loginCertificate.cache(getContext());
+                                    BaseApp.inst().loginCertificate = loginCertificate;
+                                }
+                            }, loginCertificate.userID, loginCertificate.imToken);
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+
+                });
+    }
+
     public void checkIfUserExists(String email) {
         phonePermissions.setValue(true);
 
@@ -94,9 +139,9 @@ public class UserVM extends BaseViewModel {
                     public void onSuccess(HashMap hashMap) {
                         L.d(TAG, "current account: " + email + " Total number:" + hashMap.get("total"));
                         Integer total = (Integer) hashMap.get("total");
-                        accountStatus.setValue(total);
                         if (total == 0) {
                             L.d(TAG, "prepare to register account: " + email + "!");
+                            accountStatus.setValue("Unregistered");
                             //如果没有账号那就注册！
                             Parameter registerParameter = new Parameter();
                             HashMap user = new HashMap();
@@ -110,7 +155,7 @@ public class UserVM extends BaseViewModel {
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
                                                                                                                            accountID.setValue(o.nickname);
-                                                                                                                           accountStatus.setValue(1);
+                                                                                                                           accountStatus.setValue("Registered");
                                                                                                                            o.cache(getContext());
                                                                                                                            Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();
                                                                                                                        }
@@ -118,6 +163,7 @@ public class UserVM extends BaseViewModel {
                                                                                                                        @Override
                                                                                                                        protected void onFailure(Throwable e) {
                                                                                                                            super.onFailure(e);
+                                                                                                                           accountStatus.setValue("Register Error");
                                                                                                                            Log.d(TAG, "Register Error" + e.toString());
                                                                                                                            Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
                                                                                                                        }

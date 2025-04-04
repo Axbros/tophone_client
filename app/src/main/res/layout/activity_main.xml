@@ -2,6 +2,7 @@
 <layout>
 
     <data>
+        <import type="android.text.TextUtils"/>
         <import type="android.view.View" />
         <variable
             name="userVM"
@@ -74,10 +75,11 @@
                         android:id="@+id/account_status_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@{ userVM.accountStatus==0 ? @android:color/holo_red_dark : @android:color/holo_green_dark}"
-                        android:text="@{userVM.accountStatus==0 ? @string/account_status_inactive : @string/account_status_active,default=未获取到账号状态}"
+                        android:textColor='@{TextUtils.equals(userVM.accountStatus, "online") ? @android:color/holo_red_dark : @android:color/holo_green_dark}'
+                        android:text='@{userVM.accountStatus}'
                         android:textStyle="bold"
                         android:textSize="16sp" />
+
                 </LinearLayout>
 
                 <!-- 权限部分 -->

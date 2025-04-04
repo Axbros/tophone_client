@@ -47,6 +47,7 @@ public class MainApplication extends BaseApp {
             return true;
         return file.mkdirs();
     }
+
     private void initController() {
         Easy.installVM(UserLogic.class);
     }
@@ -58,7 +59,8 @@ public class MainApplication extends BaseApp {
                     String token = "";
                     try {
                         token = BaseApp.inst().loginCertificate.chatToken;
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                     Request request = chain.request().newBuilder()
                             .addHeader("token", token)
                             .addHeader("operationID", String.valueOf(System.currentTimeMillis()))
@@ -81,12 +83,12 @@ public class MainApplication extends BaseApp {
 
             @Override
             public void onConnectSuccess() {
-
+                L.d(TAG, "onConnectSuccess");
             }
 
             @Override
             public void onConnecting() {
-
+                L.d(TAG, "onConnecting");
             }
 
             @Override
