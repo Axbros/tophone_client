@@ -9,6 +9,7 @@ import com.openim.tophone.base.vm.State;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
+import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.OneselfService;
@@ -19,9 +20,11 @@ import java.util.HashMap;
 
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
+import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
+import io.openim.android.sdk.listener.OnFriendshipListener;
 
-public class UserVM extends BaseViewModel {
+public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
 
     public State<String> getAccountStatus() {

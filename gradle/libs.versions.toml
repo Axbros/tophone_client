@@ -18,7 +18,7 @@ fastjson = "2.0.57"
 rxandroid = "2.1.1"
 
 [libraries]
-core-sdk = { module = "io.openim:core-sdk", version.ref = "coreSdk" }
+core-sdk = { module = "io.openim:core-sdk", version = "3.8.3" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

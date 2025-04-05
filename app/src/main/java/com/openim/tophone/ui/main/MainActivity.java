@@ -35,11 +35,9 @@ import java.util.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.openim.android.sdk.listener.OnAdvanceMsgListener;
-import io.openim.android.sdk.listener.OnConversationListener;
 
 
-public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer, OnAdvanceMsgListener, OnConversationListener {
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer {
     private static final int PERMISSION_REQUEST_CODE = 1;
     private static String machineCode;
     private static String TAG = "MainActivity";
@@ -55,7 +53,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
-
         super.onCreate(savedInstanceState);
 
         //初始化UI
@@ -98,11 +95,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
-        IMEvent.getInstance().addConversationListener(this);
-        //添加消息监听器
-        IMEvent.getInstance().addAdvanceMsgListener(this);
+
+
+
+
+
+
 
     }
+
 
 
     // 实现 openLink 方法

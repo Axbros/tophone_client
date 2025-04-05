@@ -15,7 +15,6 @@ import io.openim.android.sdk.listener.OnConnListener;
 import io.openim.android.sdk.listener.OnConversationListener;
 import io.openim.android.sdk.listener.OnFriendshipListener;
 import io.openim.android.sdk.listener.OnGroupListener;
-import io.openim.android.sdk.listener.OnUserListener;
 import io.openim.android.sdk.models.BlacklistInfo;
 import io.openim.android.sdk.models.C2CReadReceiptInfo;
 import io.openim.android.sdk.models.ConversationInfo;
@@ -27,83 +26,30 @@ import io.openim.android.sdk.models.GroupMembersInfo;
 import io.openim.android.sdk.models.GroupMessageReceipt;
 import io.openim.android.sdk.models.KeyValue;
 import io.openim.android.sdk.models.Message;
-import io.openim.android.sdk.models.RevokedInfo;
 
 /// im事件 统一处理
 public class IMEvent {
     private static final String TAG = "IMEvent";
+
     private static IMEvent listener = null;
-    private List<OnConnListener> connListeners;
-    private List<OnUserListener> userListeners;
     private List<OnAdvanceMsgListener> advanceMsgListeners;
     private List<OnConversationListener> conversationListeners;
-    private List<OnGroupListener> groupListeners;
     private List<OnFriendshipListener> friendshipListeners;
 
     public void init() {
-        connListeners = new ArrayList<>();
-
         advanceMsgListeners = new ArrayList<>();
         friendshipListeners = new ArrayList<>();
-        groupListeners = new ArrayList<>();
         conversationListeners = new ArrayList<>();
         //监听消息
+        friendshipListener();
         advanceMsgListener();
-        //自动同意添加好友
-//        friendshipListener();
-        //群组监听 更换甲方
-//        groupListeners();
         conversationListener();
     }
+
 
     public static synchronized IMEvent getInstance() {
         if (null == listener) listener = new IMEvent();
         return listener;
-    }
-
-    //连接事件
-    public void addConnListener(OnConnListener onConnListener) {
-        if (!connListeners.contains(onConnListener)) {
-            connListeners.add(onConnListener);
-        }
-    }
-
-    public void removeConnListener(OnConnListener onConnListener) {
-        connListeners.remove(onConnListener);
-    }
-
-
-    // 收到新消息，已读回执，消息撤回监听。
-    public void addAdvanceMsgListener(OnAdvanceMsgListener onAdvanceMsgListener) {
-        if (!advanceMsgListeners.contains(onAdvanceMsgListener)) {
-            advanceMsgListeners.add(onAdvanceMsgListener);
-        }
-    }
-
-    public void removeAdvanceMsgListener(OnAdvanceMsgListener onAdvanceMsgListener) {
-        advanceMsgListeners.remove(onAdvanceMsgListener);
-    }
-
-    // 群组关系发生改变监听
-    public void addGroupListener(OnGroupListener onGroupListener) {
-        if (!groupListeners.contains(onGroupListener)) {
-            groupListeners.add(onGroupListener);
-        }
-    }
-
-    public void removeGroupListener(OnGroupListener onGroupListener) {
-        groupListeners.remove(onGroupListener);
-    }
-
-    // 好友关系发生改变监听
-    public void addFriendListener(OnFriendshipListener onFriendshipListener) {
-        if (!friendshipListeners.contains(onFriendshipListener)) {
-            friendshipListeners.add(onFriendshipListener);
-        }
-    }
-
-    public void removeFriendListener(OnFriendshipListener onFriendshipListener) {
-        friendshipListeners.remove(onFriendshipListener);
     }
 
 
@@ -114,27 +60,18 @@ public class IMEvent {
         public void onConnectFailed(int code, String error) {
             // 连接服务器失败，可以提示用户当前网络连接不可用
             L.d(TAG, "连接服务器失败(" + error + ")");
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onConnectFailed(code, error);
-            }
         }
 
         @Override
         public void onConnectSuccess() {
             // 已经成功连接到服务器
             L.d(TAG, "已经成功连接到服务器");
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onConnectSuccess();
-            }
         }
 
         @Override
         public void onConnecting() {
             // 正在连接到服务器，适合在 UI 上展示“正在连接”状态。
             L.d(TAG, "正在连接到服务器...");
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onConnecting();
-            }
         }
 
         @Override
@@ -142,220 +79,93 @@ public class IMEvent {
             // 当前用户被踢下线，此时可以 UI 提示用户“您已经在其他端登录了当前账号，是否重新登录？”
             L.d(TAG, "当前用户被踢下线");
 
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onKickedOffline();
-            }
         }
 
         @Override
         public void onUserTokenExpired() {
             // 登录票据已经过期，请使用新签发的 UserSig 进行登录。
             L.d(TAG, "登录票据已经过期");
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onUserTokenExpired();
-            }
+
         }
 
         @Override
         public void onUserTokenInvalid(String reason) {
-            for (OnConnListener onConnListener : connListeners) {
-                onConnListener.onUserTokenInvalid(reason);
-            }
+            L.d(TAG, "user token invalid");
         }
     };
 
 
-    // 群组关系发生改变监听
-    private void groupListeners() {
-        OpenIMClient.getInstance().groupManager.setOnGroupListener(new OnGroupListener() {
-            @Override
-            public void onGroupApplicationAccepted(GroupApplicationInfo info) {
-                // 发出或收到的组申请被接受
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupApplicationAccepted(info);
-                }
-            }
-
-            @Override
-            public void onGroupApplicationAdded(GroupApplicationInfo info) {
-                // 发出或收到的组申请有新增
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupApplicationAdded(info);
-                }
-            }
-
-            @Override
-            public void onGroupApplicationDeleted(GroupApplicationInfo info) {
-                // 发出或收到的组申请被删除
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupApplicationDeleted(info);
-                }
-            }
-
-            @Override
-            public void onGroupApplicationRejected(GroupApplicationInfo info) {
-                // 发出或收到的组申请被拒绝
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupApplicationRejected(info);
-                }
-            }
-
-            @Override
-            public void onGroupDismissed(GroupInfo info) {
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupDismissed(info);
-                }
-            }
-
-            @Override
-            public void onGroupInfoChanged(GroupInfo info) {
-                // 组资料变更
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupInfoChanged(info);
-                }
-            }
-
-            @Override
-            public void onGroupMemberAdded(GroupMembersInfo info) {
-                // 组成员进入
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupMemberAdded(info);
-                }
-            }
-
-            @Override
-            public void onGroupMemberDeleted(GroupMembersInfo info) {
-                // 组成员退出
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupMemberDeleted(info);
-                }
-            }
-
-            @Override
-            public void onGroupMemberInfoChanged(GroupMembersInfo info) {
-                // 组成员信息发生变化
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onGroupMemberInfoChanged(info);
-                }
-            }
-
-            @Override
-            public void onJoinedGroupAdded(GroupInfo info) {
-                // 创建群： 初始成员收到；邀请进群：被邀请者收到
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onJoinedGroupAdded(info);
-                }
-            }
-
-            @Override
-            public void onJoinedGroupDeleted(GroupInfo info) {
-                // 退出群：退出者收到；踢出群：被踢者收到
-                for (OnGroupListener onGroupListener : groupListeners) {
-                    onGroupListener.onJoinedGroupDeleted(info);
-                }
-            }
-        });
-    }
-
-
-    // 好关系发生变化监听
     private void friendshipListener() {
         OpenIMClient.getInstance().friendshipManager.setOnFriendshipListener(new OnFriendshipListener() {
             @Override
             public void onBlacklistAdded(BlacklistInfo u) {
-                // 拉入黑名单
+                OnFriendshipListener.super.onBlacklistAdded(u);
+                L.d(TAG,"friendshipListener2");
             }
 
             @Override
             public void onBlacklistDeleted(BlacklistInfo u) {
-                // 从黑名单删除
+                OnFriendshipListener.super.onBlacklistDeleted(u);
+                L.d(TAG,"friendshipListener3");
             }
+
             @Override
             public void onFriendApplicationAccepted(FriendApplicationInfo u) {
-                // 发出或收到的好友申请已同意
-                for (OnFriendshipListener friendshipListener : friendshipListeners) {
-                    friendshipListener.onFriendApplicationAccepted(u);
-                }
+                OnFriendshipListener.super.onFriendApplicationAccepted(u);
+                L.d(TAG,"friendshipListener4");
             }
 
             @Override
             public void onFriendApplicationAdded(FriendApplicationInfo u) {
-                // 用户发起好友申请后，申请发起者和接收者都会收到此回调，接收者可以选择同意或拒绝好友申请。
-                L.d(TAG, "onFriendApplicationAdded, friendshipListeners:" + friendshipListeners);
-                for (OnFriendshipListener friendshipListener : friendshipListeners) {
-                    friendshipListener.onFriendApplicationAdded(u);
-                }
+                OnFriendshipListener.super.onFriendApplicationAdded(u);
+                L.d(TAG,"friendshipListener5");
             }
 
             @Override
             public void onFriendApplicationDeleted(FriendApplicationInfo u) {
-                // 发出或收到的好友申请被删除
-                for (OnFriendshipListener friendshipListener : friendshipListeners) {
-                    friendshipListener.onFriendApplicationDeleted(u);
-                }
+                OnFriendshipListener.super.onFriendApplicationDeleted(u);
+                L.d(TAG,"friendshipListener6");
             }
 
             @Override
             public void onFriendApplicationRejected(FriendApplicationInfo u) {
-                // 发出或收到的好友申请被拒绝
-                for (OnFriendshipListener friendshipListener : friendshipListeners) {
-                    friendshipListener.onFriendApplicationRejected(u);
-                }
+                OnFriendshipListener.super.onFriendApplicationRejected(u);
+                L.d(TAG,"friendshipListener7");
             }
 
             @Override
             public void onFriendInfoChanged(FriendInfo u) {
-                // 朋友的资料发生变化
-                for (OnFriendshipListener friendshipListener : friendshipListeners) {
-                    friendshipListener.onFriendInfoChanged(u);
-                }
+                OnFriendshipListener.super.onFriendInfoChanged(u);
+                L.d(TAG,"friendshipListener8");
             }
 
             @Override
             public void onFriendAdded(FriendInfo u) {
-                // 好友被添加
+                OnFriendshipListener.super.onFriendAdded(u);
+                L.d(TAG,"friendshipListener9");
             }
 
             @Override
             public void onFriendDeleted(FriendInfo u) {
-                // 好友被删除
+                OnFriendshipListener.super.onFriendDeleted(u);
+                L.d(TAG,"friendshipListener10");
             }
         });
     }
 
-
-
-    // 会话新增或改变监听
-    public void addConversationListener(OnConversationListener onConversationListener) {
-        if (!conversationListeners.contains(onConversationListener)) {
-            conversationListeners.add(onConversationListener);
-        }
-    }
-
-    public void removeConversationListener(OnConversationListener onConversationListener) {
-        conversationListeners.remove(onConversationListener);
-    }
-
     // 收到新消息，已读回执，消息撤回监听。
+
     private void advanceMsgListener() {
         OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
             @Override
             public void onRecvNewMessage(Message msg) {
-
-                Log.d(TAG, "onRecvNewMessage, advanceMsgListeners:" + advanceMsgListeners);
                 OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
                     @Override
-                    public void onError(int code, String error) {
-                        L.e(TAG, "onRecvNewMessage, getOneConversation error:" + error);
-                    }
-
-                    @Override
                     public void onSuccess(ConversationInfo data) {
-                        L.d(TAG, "onRecvNewMessage, getOneConversation success:" + data.getConversationID());
-
-                        OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(data.getConversationID(),null);
+                        OpenIMClient.getInstance().messageManager.markMessageAsReadByConID(null, data.getConversationID());
                     }
                 }, msg.getSendID(), ConversationType.SINGLE_CHAT);
+                L.d(TAG, "Receive the message : " + msg);
 
                 //TODO 自定义指令
 
@@ -414,7 +224,7 @@ public class IMEvent {
         OpenIMClient.getInstance().conversationManager.setOnConversationListener(new OnConversationListener() {
             @Override
             public void onConversationChanged(List<ConversationInfo> list) {
-                L.d(TAG, "onConversationChanged, conversationListeners:" + conversationListeners);
+
                 // 已添加的会话发生改变
                 for (OnConversationListener onConversationListener : conversationListeners) {
                     onConversationListener.onConversationChanged(list);
