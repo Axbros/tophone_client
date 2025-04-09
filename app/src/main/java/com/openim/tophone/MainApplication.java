@@ -1,5 +1,7 @@
 package com.openim.tophone;
 
+import android.content.Intent;
+import android.os.Build;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
@@ -10,7 +12,7 @@ import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
-
+import com.openim.tophone.service.PhoneState;
 import java.io.File;
 
 import io.openim.android.sdk.BuildConfig;
@@ -25,11 +27,11 @@ public class MainApplication extends BaseApp{
     public void onCreate() {
         L.e(TAG, "-----onCreate------");
         super.onCreate();
-
         initFile();
         initController();
         initNet();
         initIM();
+        initService();
     }
 
 
@@ -79,4 +81,21 @@ public class MainApplication extends BaseApp{
 //        startActivity(new Intent(BaseApp.inst(), LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
+
+    public void initService(){
+        if (!PhoneState.isLive()) {
+            // 8.0前后启动前台服务的方法不同
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent intent = new Intent(this, PhoneState.class);
+                startForegroundService(intent);
+            } else {
+                Intent intent = new Intent(this, PhoneState.class);
+                startService(intent);
+            }
+        }
+    }
+
 }
+
+
+

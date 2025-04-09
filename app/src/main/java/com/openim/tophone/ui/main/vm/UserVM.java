@@ -3,15 +3,15 @@ package com.openim.tophone.ui.main.vm;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.databinding.ObservableField;
+
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
 import com.openim.tophone.base.vm.State;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
-import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.openim.entity.LoginCertificate;
-import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.utils.L;
@@ -63,26 +63,20 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
 
 
-    public State<Boolean> getConnectionStatus() {
-        return connectionStatus;
-    }
-
-    public void setConnectionStatus(State<Boolean> connectionStatus) {
-        this.connectionStatus = connectionStatus;
-    }
 
     public State<Boolean> phonePermissions = new State<>(false);
     public State<Boolean> smsPermissions = new State<>(false);
-    public State<Boolean> connectionStatus = new State<>(false);
+    public ObservableField<Boolean>  connectionStatus = new ObservableField<>(false);
 
-    public State<Boolean> isLoading = new State<>(false);
+    public ObservableField<Boolean> isLoading = new ObservableField<>(false);
+
 
 
     private String TAG = "UserVM";
 
     public void connect() {
-        isLoading.setValue(true);
-        connectionStatus.setValue(true);
+        isLoading.set(true);
+        connectionStatus.set(true);
 
     }
 

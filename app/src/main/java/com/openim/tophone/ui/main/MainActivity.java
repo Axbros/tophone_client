@@ -1,5 +1,7 @@
 package com.openim.tophone.ui.main;
 
+
+
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -23,27 +25,27 @@ import com.openim.tophone.base.vm.State;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.databinding.ActivityMainBinding;
 
-import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
+import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 
-import java.util.Observable;
-import java.util.Observer;
+import androidx.lifecycle.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
 
 
-public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> implements Observer {
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     private static final int PERMISSION_REQUEST_CODE = 1;
     private static String machineCode;
     private static String TAG = "MainActivity";
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
     private ActivityMainBinding view;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,14 +55,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
+        VMStore.init(vm);
         super.onCreate(savedInstanceState);
-
         //初始化UI
         initPermissions();
         init(getApplicationContext());
 
         //初始化openim
         initOpenIM();
+        initObserve();
         EdgeToEdge.enable(this);
     }
 
@@ -96,12 +99,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
 
-
-
-
-
-
-
     }
 
 
@@ -122,9 +119,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
     public void handleConnect(View v) {
         System.out.println(BaseApp.inst().loginCertificate);
         vm.connect();
-
         System.out.println("按下了button");
-
     }
 
     private void initPermissions() {
@@ -205,9 +200,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> impl
             }
         }
     }
-
-    @Override
-    public void update(Observable o, Object arg) {
+    public void initObserve() {
 
     }
+
 }

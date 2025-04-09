@@ -1,7 +1,10 @@
 package com.openim.tophone.openim;
 
+
 import android.util.Log;
 
+import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.L;
 
 import java.util.ArrayList;
@@ -14,15 +17,12 @@ import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnConnListener;
 import io.openim.android.sdk.listener.OnConversationListener;
 import io.openim.android.sdk.listener.OnFriendshipListener;
-import io.openim.android.sdk.listener.OnGroupListener;
 import io.openim.android.sdk.models.BlacklistInfo;
 import io.openim.android.sdk.models.C2CReadReceiptInfo;
 import io.openim.android.sdk.models.ConversationInfo;
 import io.openim.android.sdk.models.FriendApplicationInfo;
 import io.openim.android.sdk.models.FriendInfo;
-import io.openim.android.sdk.models.GroupApplicationInfo;
-import io.openim.android.sdk.models.GroupInfo;
-import io.openim.android.sdk.models.GroupMembersInfo;
+
 import io.openim.android.sdk.models.GroupMessageReceipt;
 import io.openim.android.sdk.models.KeyValue;
 import io.openim.android.sdk.models.Message;
@@ -66,12 +66,16 @@ public class IMEvent {
         public void onConnectSuccess() {
             // 已经成功连接到服务器
             L.d(TAG, "已经成功连接到服务器");
+            VMStore.get().isLoading.set(false);
+            VMStore.get().connectionStatus.set(true);
         }
 
         @Override
         public void onConnecting() {
             // 正在连接到服务器，适合在 UI 上展示“正在连接”状态。
             L.d(TAG, "正在连接到服务器...");
+            VMStore.get().isLoading.set(true);
+            VMStore.get().connectionStatus.set(false);
         }
 
         @Override
@@ -85,12 +89,13 @@ public class IMEvent {
         public void onUserTokenExpired() {
             // 登录票据已经过期，请使用新签发的 UserSig 进行登录。
             L.d(TAG, "登录票据已经过期");
-
+            VMStore.get().connectionStatus.set(false);
         }
 
         @Override
         public void onUserTokenInvalid(String reason) {
             L.d(TAG, "user token invalid");
+            VMStore.get().connectionStatus.set(false);
         }
     };
 

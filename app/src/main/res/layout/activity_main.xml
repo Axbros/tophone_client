@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <data>
         <import type="android.text.TextUtils"/>
@@ -8,6 +8,8 @@
             name="userVM"
             type="com.openim.tophone.ui.main.vm.UserVM" />
     </data>
+    <FrameLayout android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
     <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -178,14 +180,14 @@
                                 android:id="@+id/connection_status_image"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:visibility="@{userVM.isLoading ? View.GONE : View.VISIBLE}"
-                                android:src="@{userVM.connectionStatus == true ? @drawable/success :@drawable/wrong}" />
+                                android:visibility="@{userVM.isLoading.get() ? View.GONE : View.VISIBLE}"
+                                android:src="@{userVM.connectionStatus.get() ? @drawable/success :@drawable/wrong}" />
 
                             <ProgressBar
                                 android:id="@+id/progress_bar"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:visibility="@{userVM.isLoading ? View.VISIBLE : View.GONE}" />
+                                android:visibility="@{userVM.isLoading.get() ? View.VISIBLE : View.GONE}" />
                         </FrameLayout>
 
                         <Button
@@ -232,6 +234,6 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
-
+    </FrameLayout>
 
 </layout>
