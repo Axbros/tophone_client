@@ -31,8 +31,6 @@ import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
-
-import androidx.lifecycle.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,7 +70,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         UserLogic userLogic = Easy.find(UserLogic.class);
         if (certificate != null) {
             userLogic.loginCacheUser(userId -> {
-                vm.accountStatus.setValue("Online");
+                vm.accountStatus.set("Online");
                 L.d(TAG, "Login User ID: " + userId);
                 Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
             });
@@ -83,10 +81,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
 
 
     public void handleAccountIDClick(View view) {
-        if (vm.accountID.getValue() == machineCode) {
-            vm.accountID.setValue(certificate.nickname);
+        if (vm.accountID.get() == machineCode) {
+            vm.accountID.set(certificate.nickname == null ? certificate.userID : certificate.nickname);
         } else {
-            vm.accountID.setValue(machineCode);
+            vm.accountID.set(machineCode);
         }
     }
 
@@ -94,7 +92,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
 
         // 1.获取设备 ID
         machineCode = DeviceUtils.getAndroidId(context) + "@q36q.edu.cn";
-        vm.setAccountID(new State<>(machineCode));
+        vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
@@ -146,7 +144,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 == PackageManager.PERMISSION_GRANTED) {
-            vm.setPhonePermissions(new State<>(true));
+            vm.phonePermissions.set(true);
         }
 
         // 检查发送短信权限
@@ -164,7 +162,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
                 == PackageManager.PERMISSION_GRANTED) {
-            vm.setSmsPermissions(new State<>(true));
+            vm.smsPermissions.set(true);
         }
 
         // 如果有需要请求的权限
