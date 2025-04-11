@@ -21,8 +21,8 @@ import androidx.databinding.DataBindingUtil;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.base.vm.State;
 import com.openim.tophone.base.vm.injection.Easy;
+import com.openim.tophone.database.DatabaseHelper;
 import com.openim.tophone.databinding.ActivityMainBinding;
 
 import com.openim.tophone.openim.entity.LoginCertificate;
@@ -57,6 +57,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         super.onCreate(savedInstanceState);
         //初始化UI
         initPermissions();
+        initUserInfo();
         init(getApplicationContext());
 
         //初始化openim
@@ -64,7 +65,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         initObserve();
         EdgeToEdge.enable(this);
     }
-
+    public void initUserInfo(){
+        LoginCertificate loginCertificate =new LoginCertificate();
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        String userId = dbHelper.getValueByName("userId");
+        String nickName = dbHelper.getValueByName("nickName");
+        loginCertificate.setUserID(userId);
+        loginCertificate.setNickName(nickName);
+    }
     public void initOpenIM() {
         BaseApp.inst().loginCertificate = certificate;
         UserLogic userLogic = Easy.find(UserLogic.class);
@@ -91,7 +99,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     public void init(Context context) {
 
         // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@tsinghuaq1.edu.cn";
+        machineCode = DeviceUtils.getAndroidId(context) + "@peiking.edu.cn";
         vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
@@ -116,7 +124,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
 
     public void handleConnect(View v) {
         vm.handleBtnConnect();
-        System.out.println("按下了button");
     }
 
     private void initPermissions() {

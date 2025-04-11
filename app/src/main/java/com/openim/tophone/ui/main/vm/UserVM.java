@@ -9,6 +9,7 @@ import androidx.databinding.ObservableField;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
 import com.openim.tophone.base.vm.State;
+import com.openim.tophone.database.DatabaseHelper;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
@@ -18,6 +19,7 @@ import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.utils.L;
 
 import java.util.HashMap;
+import java.util.List;
 
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
@@ -34,6 +36,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     public ObservableField<Boolean> smsPermissions = new ObservableField<>(false);
     public ObservableField<Boolean> connectionStatus = new ObservableField<>(false);
     public ObservableField<Boolean> isLoading = new ObservableField<>(false);
+
+
 
     private String TAG = "UserVM";
 
@@ -53,8 +57,10 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
 
     public void login() {
+        DatabaseHelper dbHelper = new DatabaseHelper(getContext());
+        String email = dbHelper.getValueByName("email");
         Parameter parameter = new Parameter();
-        parameter.add("email", accountID.get())
+        parameter.add("email", email)
                 .add("password", "516f00c9229200d6ce526991cdfdd959")
                 .add("platform", 2)
                 .add("usedFor", 3)
@@ -64,7 +70,6 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 .compose(N.IOMain())
                 .map(OpenIMService.turn(LoginCertificate.class))
                 .subscribe(new NetObserver<LoginCertificate>(getContext()) {
-
                     @Override
                     public void onSuccess(LoginCertificate loginCertificate) {
                         try {
@@ -80,6 +85,12 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     //缓存登录信息
                                     Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
                                     accountStatus.set("Online");
+                                    connectionStatus.set(true);
+
+                                    String userId = dbHelper.getValueByName("userId");
+                                    String nickName = dbHelper.getValueByName("nickName");
+                                    loginCertificate.userID=userId;
+                                    loginCertificate.nickName=nickName;
                                     loginCertificate.cache(getContext());
                                     BaseApp.inst().loginCertificate = loginCertificate;
                                 }
@@ -87,6 +98,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
                         } catch (Exception e) {
                             e.printStackTrace();
+                            connectionStatus.set(false);
                         }
                     }
 
@@ -107,11 +119,12 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
             @Override
             public void onSuccess(String data) {
+                LoginCertificate.clear();
                 OnBase.super.onSuccess(data);
             }
         });
 
-        LoginCertificate.clear();
+
 
     }
 
@@ -144,8 +157,14 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
+                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(getContext());
+//                                                                                                                           注册成功把userID和nickname存入数据库
+                                                                                                                           dbHelper.insertData("userId",o.userID);
+                                                                                                                           dbHelper.insertData("nickName",o.nickName);
+                                                                                                                           dbHelper.insertData("email",email);
                                                                                                                            accountID.set(o.nickName);
                                                                                                                            accountStatus.set("Registered");
+                                                                                                                           connectionStatus.set(true);
                                                                                                                            o.cache(getContext());
                                                                                                                            Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();
                                                                                                                        }
@@ -155,6 +174,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                                                                                                            super.onFailure(e);
                                                                                                                            accountStatus.set("Register Error");
                                                                                                                            Log.d(TAG, "Register Error" + e.toString());
+                                                                                                                           accountID.set(e.toString());
                                                                                                                            Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
                                                                                                                        }
                                                                                                                    }
