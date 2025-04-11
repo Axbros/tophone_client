@@ -69,7 +69,6 @@ public class MainApplication extends BaseApp{
 
     private void initIM() {
         IM.initSdk(this);
-
     }
 
 

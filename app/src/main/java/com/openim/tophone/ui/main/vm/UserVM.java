@@ -89,7 +89,6 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
 
     public void checkIfUserExists(String email) {
-        phonePermissions.set(true);
 
         Parameter parameter = OneselfService.buildPagination(1, 1);
         parameter.add("keyword", email).add("normal", 1);
@@ -109,6 +108,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             HashMap user = new HashMap();
                             user.put("email", email);
                             user.put("password", "516f00c9229200d6ce526991cdfdd959");
+                            user.put("nickname","android");
+                            user.put("areaCode","+853");
                             registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
 
                             N.API(OpenIMService.class)
@@ -116,7 +117,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
-                                                                                                                           accountID.set(o.nickname);
+                                                                                                                           accountID.set(o.nickName);
                                                                                                                            accountStatus.set("Registered");
                                                                                                                            o.cache(getContext());
                                                                                                                            Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();

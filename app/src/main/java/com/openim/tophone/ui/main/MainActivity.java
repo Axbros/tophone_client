@@ -82,7 +82,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
 
     public void handleAccountIDClick(View view) {
         if (vm.accountID.get() == machineCode) {
-            vm.accountID.set(certificate.nickname == null ? certificate.userID : certificate.nickname);
+            vm.accountID.set(certificate.nickName);
         } else {
             vm.accountID.set(machineCode);
         }
@@ -91,7 +91,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     public void init(Context context) {
 
         // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@q36q.edu.cn";
+        machineCode = DeviceUtils.getAndroidId(context) + "@tsinghuaq1.edu.cn";
         vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
