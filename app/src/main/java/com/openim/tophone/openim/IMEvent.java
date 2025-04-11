@@ -62,6 +62,7 @@ public class IMEvent {
         public void onConnectFailed(int code, String error) {
             // 连接服务器失败，可以提示用户当前网络连接不可用
             L.d(TAG, "连接服务器失败(" + error + ")");
+            VMStore.get().connectionStatus.set(false);
         }
 
         @Override
@@ -127,6 +128,17 @@ public class IMEvent {
             @Override
             public void onFriendApplicationAdded(FriendApplicationInfo u) {
                 OnFriendshipListener.super.onFriendApplicationAdded(u);
+                OpenIMClient.getInstance().friendshipManager.acceptFriendApplication(new OnBase<String>() {
+                    @Override
+                    public void onError(int code, String error) {
+                        OnBase.super.onError(code, error);
+                    }
+
+                    @Override
+                    public void onSuccess(String data) {
+                        OnBase.super.onSuccess(data);
+                    }
+                },u.getFromUserID(),"");
                 L.d(TAG,"friendshipListener5");
             }
 
