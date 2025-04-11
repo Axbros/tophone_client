@@ -115,8 +115,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     }
 
     public void handleConnect(View v) {
-        System.out.println(BaseApp.inst().loginCertificate);
-        vm.connect();
+        vm.handleBtnConnect();
         System.out.println("按下了button");
     }
 

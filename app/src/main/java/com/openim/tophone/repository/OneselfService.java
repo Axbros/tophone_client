@@ -32,17 +32,9 @@ public interface OneselfService {
         return new Parameter().add("pagination", pagination);
     }
 
-    @POST
-    Observable<ResponseBody> getUsersOnlineStatus(@Url String url, @Header("token") String token,
-                                                  @Body RequestBody requestBody);
-
-
 
     @POST("user/search/full")
     Observable<ResponseBody> searchUser(@Body RequestBody requestBody);
-
-    @POST("user/find/full")
-    Observable<ResponseBody> getUsersFullInfo(@Body RequestBody requestBody);
 
 
 }

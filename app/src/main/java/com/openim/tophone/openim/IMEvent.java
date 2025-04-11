@@ -31,6 +31,8 @@ import io.openim.android.sdk.models.Message;
 public class IMEvent {
     private static final String TAG = "IMEvent";
 
+
+
     private static IMEvent listener = null;
     private List<OnAdvanceMsgListener> advanceMsgListeners;
     private List<OnConversationListener> conversationListeners;
@@ -82,6 +84,8 @@ public class IMEvent {
         public void onKickedOffline() {
             // 当前用户被踢下线，此时可以 UI 提示用户“您已经在其他端登录了当前账号，是否重新登录？”
             L.d(TAG, "当前用户被踢下线");
+            VMStore.get().isLoading.set(false);
+            VMStore.get().connectionStatus.set(false);
 
         }
 

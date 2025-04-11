@@ -1,6 +1,7 @@
 package com.openim.tophone.ui.main.vm;
 
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.databinding.ObservableField;
@@ -26,27 +27,32 @@ import io.openim.android.sdk.listener.OnFriendshipListener;
 
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
-    public ObservableField<String>  accountID = new ObservableField<>("");
-    public ObservableField<String>  accountStatus = new ObservableField<>("Offline");
+    public ObservableField<String> accountID = new ObservableField<>("");
+    public ObservableField<String> accountStatus = new ObservableField<>("Offline");
 
     public ObservableField<Boolean> phonePermissions = new ObservableField<>(false);
     public ObservableField<Boolean> smsPermissions = new ObservableField<>(false);
-    public ObservableField<Boolean>  connectionStatus = new ObservableField<>(false);
-
+    public ObservableField<Boolean> connectionStatus = new ObservableField<>(false);
     public ObservableField<Boolean> isLoading = new ObservableField<>(false);
-
-
 
     private String TAG = "UserVM";
 
-    public void connect() {
+    public void handleBtnConnect() {
         isLoading.set(true);
-        connectionStatus.set(true);
+        Boolean status = connectionStatus.get();
+        if (status) {
+//            登陆状态点击按钮就给他下线
+            logout();
+        } else {
+            login();
+        }
+
+        connectionStatus.set(!status);
+        isLoading.set(false);
 
     }
 
     public void login() {
-
         Parameter parameter = new Parameter();
         parameter.add("email", accountID.get())
                 .add("password", "516f00c9229200d6ce526991cdfdd959")
@@ -88,6 +94,27 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 });
     }
 
+    public void logout(){
+        LoginCertificate cert_cache=LoginCertificate.getCache(getContext());
+        Parameter parameter = new Parameter();
+        parameter.add("userID",cert_cache.userID);
+        parameter.add("platformID",Platform.ANDROID);
+        OpenIMClient.getInstance().logout(new OnBase<String>() {
+            @Override
+            public void onError(int code, String error) {
+                OnBase.super.onError(code, error);
+            }
+
+            @Override
+            public void onSuccess(String data) {
+                OnBase.super.onSuccess(data);
+            }
+        });
+
+        LoginCertificate.clear();
+
+    }
+
     public void checkIfUserExists(String email) {
 
         Parameter parameter = OneselfService.buildPagination(1, 1);
@@ -108,8 +135,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             HashMap user = new HashMap();
                             user.put("email", email);
                             user.put("password", "516f00c9229200d6ce526991cdfdd959");
-                            user.put("nickname","android");
-                            user.put("areaCode","+853");
+                            user.put("nickname", "android");
+                            user.put("areaCode", "+853");
                             registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
 
                             N.API(OpenIMService.class)

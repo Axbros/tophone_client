@@ -25,4 +25,5 @@
     <string name="account_status_inactive">Unregistered</string>
     <string name="network_unavailable_tips">network is unavailable</string>
     <string name="button_connect">Connect</string>
+    <string name="button_disconnect">DisConnect</string>
 </resources>
