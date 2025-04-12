@@ -1,7 +1,6 @@
 package com.openim.tophone.ui.main;
 
 
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Toast;
 
@@ -27,16 +27,17 @@ import com.openim.tophone.databinding.ActivityMainBinding;
 
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
+import com.openim.tophone.service.ForegroundService;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
+
 import java.util.ArrayList;
 import java.util.List;
 
 
-
-public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
     private static String machineCode;
     private static String TAG = "MainActivity";
@@ -65,14 +66,16 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         initObserve();
         EdgeToEdge.enable(this);
     }
-    public void initUserInfo(){
-        LoginCertificate loginCertificate =new LoginCertificate();
+
+    public void initUserInfo() {
+        LoginCertificate loginCertificate = new LoginCertificate();
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         String userId = dbHelper.getValueByName("userId");
         String nickName = dbHelper.getValueByName("nickName");
         loginCertificate.setUserID(userId);
         loginCertificate.setNickName(nickName);
     }
+
     public void initOpenIM() {
         BaseApp.inst().loginCertificate = certificate;
         UserLogic userLogic = Easy.find(UserLogic.class);
@@ -108,7 +111,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     }
 
 
-
     // 实现 openLink 方法
     public void openLink(View view) {
         // 这里假设要打开的链接是 www.tophone.cc
@@ -127,8 +129,33 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
     }
 
     private void initPermissions() {
+
+
         List<String> permissionsToRequest = new ArrayList<>();
+        //添加通知权限
+
+        Intent intent = new Intent();
+        String packageName = getPackageName();
+        intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_PHONE_STATE},
+                    PERMISSION_REQUEST_CODE);
+        } else {
+            Intent serviceIntent = new Intent(this, ForegroundService.class);
+            startForegroundService(serviceIntent);
+        }
+
+
+        // 过滤电池优化权限
+
+        intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        intent.setData(Uri.parse("package:" + packageName));
+        startActivity(intent);
         // 添加网络权限
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.INTERNET);
         }
@@ -142,9 +169,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
         // 检查接听电话权限（注意：接听电话权限在 Android 8.0 及以上版本需要特殊处理）
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                permissionsToRequest.add(Manifest.permission.ANSWER_PHONE_CALLS);
-            }
+            permissionsToRequest.add(Manifest.permission.ANSWER_PHONE_CALLS);
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
@@ -204,6 +229,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding>  {
             }
         }
     }
+
     public void initObserve() {
 
     }

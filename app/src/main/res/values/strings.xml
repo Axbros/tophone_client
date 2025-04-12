@@ -26,4 +26,5 @@
     <string name="network_unavailable_tips">network is unavailable</string>
     <string name="button_connect">Connect</string>
     <string name="button_disconnect">DisConnect</string>
+    <string name="msg_notification">Message Notification</string>
 </resources>

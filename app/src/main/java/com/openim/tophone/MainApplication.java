@@ -1,5 +1,6 @@
 package com.openim.tophone;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import com.openim.tophone.base.BaseApp;
@@ -22,18 +23,23 @@ import okhttp3.Request;
 
 public class MainApplication extends BaseApp{
     private static final String TAG = BaseApp.class.getSimpleName();
+    private static Context instance;
 
     @Override
     public void onCreate() {
         L.e(TAG, "-----onCreate------");
+
         super.onCreate();
+        instance=this;
         initFile();
         initController();
         initNet();
         initIM();
         initService();
     }
-
+    public static Context getContext() {
+        return instance.getApplicationContext();
+    }
 
     private void initFile() {
         buildDirectory(Constants.File_DIR);

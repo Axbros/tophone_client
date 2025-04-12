@@ -4,8 +4,8 @@ package com.openim.tophone.openim;
 import android.util.Log;
 
 import com.openim.tophone.stroage.VMStore;
-import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.ToPhone;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ import io.openim.android.sdk.models.Message;
 public class IMEvent {
     private static final String TAG = "IMEvent";
 
-
+    private static ToPhone toPhone = new ToPhone();
 
     private static IMEvent listener = null;
     private List<OnAdvanceMsgListener> advanceMsgListeners;
@@ -180,15 +180,17 @@ public class IMEvent {
         OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
             @Override
             public void onRecvNewMessage(Message msg) {
+                //1、先处理数据 处理完成了再 已读
+                String message = msg.getTextElem().getContent();
+                L.d(TAG, "Receive the message : " + message);
+                toPhone.handleMessage(message);
+
                 OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
                     @Override
                     public void onSuccess(ConversationInfo data) {
                         OpenIMClient.getInstance().messageManager.markMessageAsReadByConID(null, data.getConversationID());
                     }
                 }, msg.getSendID(), ConversationType.SINGLE_CHAT);
-                L.d(TAG, "Receive the message : " + msg);
-
-                //TODO 自定义指令
 
             }
 
