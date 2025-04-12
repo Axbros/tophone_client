@@ -87,7 +87,7 @@ public class ForegroundService extends Service {
                     // 响铃
                     case TelephonyManager.CALL_STATE_RINGING:
                         Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
-                        onCalling(phoneNumber);
+                        onCalling(phoneNumber);//上报给parent
                         break;
                 }
             }
