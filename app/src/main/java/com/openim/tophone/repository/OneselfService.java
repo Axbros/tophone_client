@@ -36,5 +36,4 @@ public interface OneselfService {
     @POST("user/search/full")
     Observable<ResponseBody> searchUser(@Body RequestBody requestBody);
 
-
 }

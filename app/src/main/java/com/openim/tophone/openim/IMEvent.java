@@ -1,8 +1,5 @@
 package com.openim.tophone.openim;
 
-
-import android.util.Log;
-
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.ToPhone;
@@ -15,16 +12,15 @@ import io.openim.android.sdk.enums.ConversationType;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnConnListener;
-import io.openim.android.sdk.listener.OnConversationListener;
 import io.openim.android.sdk.listener.OnFriendshipListener;
+import io.openim.android.sdk.listener.OnGroupListener;
 import io.openim.android.sdk.models.BlacklistInfo;
-import io.openim.android.sdk.models.C2CReadReceiptInfo;
 import io.openim.android.sdk.models.ConversationInfo;
 import io.openim.android.sdk.models.FriendApplicationInfo;
 import io.openim.android.sdk.models.FriendInfo;
 
-import io.openim.android.sdk.models.GroupMessageReceipt;
-import io.openim.android.sdk.models.KeyValue;
+import io.openim.android.sdk.models.GroupInfo;
+import io.openim.android.sdk.models.GroupMembersInfo;
 import io.openim.android.sdk.models.Message;
 
 /// im事件 统一处理
@@ -35,17 +31,16 @@ public class IMEvent {
 
     private static IMEvent listener = null;
     private List<OnAdvanceMsgListener> advanceMsgListeners;
-    private List<OnConversationListener> conversationListeners;
     private List<OnFriendshipListener> friendshipListeners;
-
+    private List<OnGroupListener> groupListeners;
     public void init() {
         advanceMsgListeners = new ArrayList<>();
         friendshipListeners = new ArrayList<>();
-        conversationListeners = new ArrayList<>();
+        groupListeners = new ArrayList<>();
         //监听消息
         friendshipListener();
         advanceMsgListener();
-        conversationListener();
+        groupListeners();
     }
 
 
@@ -193,116 +188,23 @@ public class IMEvent {
                 }, msg.getSendID(), ConversationType.SINGLE_CHAT);
 
             }
-
-            @Override
-            public void onRecvC2CReadReceipt(List<C2CReadReceiptInfo> list) {
-                // 消息被阅读回执，将消息标记为已读
-                System.out.println("消息被阅读回执，将消息标记为已读");
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvC2CReadReceipt(list);
-                }
-            }
-
-            @Override
-            public void onRecvMessageExtensionsAdded(String msgID, List<KeyValue> list) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvMessageExtensionsAdded(msgID, list);
-                }
-            }
-
-            @Override
-            public void onMsgDeleted(Message message) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onMsgDeleted(message);
-                }
-            }
-
-            @Override
-            public void onRecvOfflineNewMessage(List<Message> msg) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvOfflineNewMessage(msg);
-                }
-            }
-
-            @Override
-            public void onRecvGroupMessageReadReceipt(GroupMessageReceipt groupMessageReceipt) {
-                // 消息被阅读回执，将消息标记为已读
-                Log.d(TAG, "onRecvGroupMessageReadReceipt, advanceMsgListeners:" + advanceMsgListeners);
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvGroupMessageReadReceipt(groupMessageReceipt);
-                }
-            }
-
-            @Override
-            public void onRecvOnlineOnlyMessage(String s) {
-                for (OnAdvanceMsgListener onAdvanceMsgListener : advanceMsgListeners) {
-                    onAdvanceMsgListener.onRecvOnlineOnlyMessage(s);
-                }
-            }
         });
     }
 
-    // 会话新增或改变监听
-    private void conversationListener() {
-        OpenIMClient.getInstance().conversationManager.setOnConversationListener(new OnConversationListener() {
-            @Override
-            public void onConversationChanged(List<ConversationInfo> list) {
 
-                // 已添加的会话发生改变
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onConversationChanged(list);
-                }
+
+    // 群组关系发生改变监听
+    private void groupListeners() {
+        OpenIMClient.getInstance().groupManager.setOnGroupListener(new OnGroupListener() {
+            @Override
+            public void onGroupMemberInfoChanged(GroupMembersInfo info) {
+                // 组成员信息发生变化 包括权限 等 Parent应该在刚初始化的时候就获取 这里监听变更 然后实时更新
+                L.d(TAG,"Group Member Info Changed!");
             }
 
-            @Override
-            public void onNewConversation(List<ConversationInfo> list) {
-                // 新增会话
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onNewConversation(list);
-                }
-            }
-
-            @Override
-            public void onSyncServerFailed(boolean reinstalled) {
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onSyncServerFailed(reinstalled);
-                }
-            }
-
-            @Override
-            public void onSyncServerFinish(boolean reinstalled) {
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onSyncServerFinish(reinstalled);
-                }
-                Log.d(TAG, "onSyncServerFinish reinstalled:" + reinstalled);
-
-            }
-
-            @Override
-            public void onSyncServerProgress(long progress) {
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onSyncServerProgress(progress);
-                }
-            }
-
-            @Override
-            public void onSyncServerStart(boolean reinstalled) {
-                Log.d(TAG, "onSyncServerStart reinstalled:" + reinstalled);
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onSyncServerStart(reinstalled);
-                }
-            }
-
-            @Override
-            public void onTotalUnreadMessageCountChanged(int i) {
-                // 未读消息数发送变化
-
-                for (OnConversationListener onConversationListener : conversationListeners) {
-                    onConversationListener.onTotalUnreadMessageCountChanged(i);
-                }
-            }
         });
     }
+
 }
 
 

@@ -4,6 +4,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.constraintlayout.widget.Group;
 import androidx.databinding.ObservableField;
 
 import com.openim.tophone.base.BaseApp;
@@ -16,7 +17,10 @@ import com.openim.tophone.net.RXRetrofit.Parameter;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
+import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +30,7 @@ import io.openim.android.sdk.enums.Platform;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnFriendshipListener;
+import io.openim.android.sdk.models.GroupInfo;
 
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
@@ -84,15 +89,17 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                 public void onSuccess(String data) {
                                     //缓存登录信息
                                     Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
-                                    accountStatus.set("Online");
                                     connectionStatus.set(true);
-
                                     String userId = dbHelper.getValueByName("userId");
                                     String nickName = dbHelper.getValueByName("nickName");
                                     loginCertificate.userID=userId;
                                     loginCertificate.nickName=nickName;
                                     loginCertificate.cache(getContext());
                                     BaseApp.inst().loginCertificate = loginCertificate;
+                                    //登陆成功后就获取群信息
+                                    getGroupOwner();
+
+
                                 }
                             }, loginCertificate.userID, loginCertificate.imToken);
 
@@ -128,6 +135,32 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
     }
 
+
+    public void getGroupOwner(){
+        OpenIMClient.getInstance().groupManager.getJoinedGroupList(new OnBase<List<GroupInfo>>() {
+            @Override
+            public void onError(int code, String error) {
+                OnBase.super.onError(code, error);
+                L.e(TAG,"getJoinedGroupList error!");
+            }
+
+            @Override
+            public void onSuccess(List<GroupInfo> data) {
+                OnBase.super.onSuccess(data);
+                if(data.size()==1){
+                    GroupInfo groupInfo = data.get(0);
+                    String groupName=groupInfo.getGroupName();
+                    String ownerUserId=groupInfo.getOwnerUserID();
+                    SharedPreferencesUtil sharedPreferencesUtil=new SharedPreferencesUtil(getContext());
+                    sharedPreferencesUtil.setCache(Constants.getGroupOwnerKey(),ownerUserId);
+                    VMStore.get().accountStatus.set("「"+groupName+"」："+ownerUserId);
+                }else{
+                    VMStore.get().accountStatus.set("Group Joined is not equal 1 ! the size is : "+data.size());
+                }
+                L.d(TAG,"getJoinedGroupList Success!");
+            }
+        });
+    }
     public void checkIfUserExists(String email) {
 
         Parameter parameter = OneselfService.buildPagination(1, 1);
@@ -157,8 +190,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
-                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(getContext());
 //                                                                                                                           注册成功把userID和nickname存入数据库
+                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(getContext());
                                                                                                                            dbHelper.insertData("userId",o.userID);
                                                                                                                            dbHelper.insertData("nickName",o.nickName);
                                                                                                                            dbHelper.insertData("email",email);

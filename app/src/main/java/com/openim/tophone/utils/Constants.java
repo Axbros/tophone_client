@@ -17,7 +17,12 @@ public class Constants {
     private static final String IM_API = "http://" + DEFAULT_HOST + ":10002"; //10002
     private static final String IM_WS = "ws://" + DEFAULT_HOST + ":10001"; //10001
 
+    private static final String GROUP_OWNER_KEY = "ownerUserID";
 
+
+    public static String getGroupOwnerKey(){
+        return GROUP_OWNER_KEY;
+    }
 
     public static String getImApiUrl() {
         String url = SharedPreferencesUtil.get(BaseApp.inst()).getString("IM_API_URL");
