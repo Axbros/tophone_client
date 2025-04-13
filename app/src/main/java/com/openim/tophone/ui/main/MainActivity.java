@@ -1,5 +1,6 @@
 package com.openim.tophone.ui.main;
 
+
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -7,56 +8,106 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.databinding.DataBindingUtil;
 
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
-import com.openim.tophone.utils.DeviceUtils;
+import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.base.vm.injection.Easy;
+import com.openim.tophone.database.DatabaseHelper;
+import com.openim.tophone.databinding.ActivityMainBinding;
 
+import com.openim.tophone.openim.entity.LoginCertificate;
+import com.openim.tophone.openim.vm.UserLogic;
+import com.openim.tophone.service.ForegroundService;
+import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.ui.main.vm.UserVM;
+import com.openim.tophone.utils.DeviceUtils;
+import com.openim.tophone.utils.L;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends BaseActivity {
-    private static final int PERMISSION_REQUEST_CODE = 1;
 
-    private static String accountID;
+public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
+    private static final int PERMISSION_REQUEST_CODE = 1;
+    private static String machineCode;
+    private static String TAG = "MainActivity";
+    private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
+    ;
+    private ActivityMainBinding view;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
-        checkAndRequestPermissions();
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        // 调用 run 方法获取 accountID
-        run(getApplicationContext());
 
-        // 获取 account_id_text 的引用
-        TextView accountIdTextView = findViewById(R.id.account_id_text);
-        // 设置 account_id_text 的文本为 accountID
-        if (accountIdTextView != null) {
-            accountIdTextView.setText(accountID);
+        bindVM(UserVM.class);
+//    官方代码 不可用 下面三个是自己的代码    bindViewDataBinding(ActivityMainBinding.inflate(getLayoutInflater()));
+        view = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        view.setUserVM(vm);
+        view.setLifecycleOwner(this);
+        VMStore.init(vm);
+        super.onCreate(savedInstanceState);
+        //初始化UI
+        initPermissions();
+        initUserInfo();
+        init(getApplicationContext());
+
+        //初始化openim
+        initOpenIM();
+        initObserve();
+        EdgeToEdge.enable(this);
+    }
+
+    public void initUserInfo() {
+        LoginCertificate loginCertificate = new LoginCertificate();
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        String userId = dbHelper.getValueByName("userId");
+        String nickName = dbHelper.getValueByName("nickName");
+        loginCertificate.setUserID(userId);
+        loginCertificate.setNickName(nickName);
+    }
+
+    public void initOpenIM() {
+        BaseApp.inst().loginCertificate = certificate;
+        UserLogic userLogic = Easy.find(UserLogic.class);
+        if (certificate != null) {
+            userLogic.loginCacheUser(userId -> {
+                vm.accountStatus.set("Online");
+                L.d(TAG, "Login User ID: " + userId);
+                Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            vm.login();
         }
     }
 
-    public static void run(Context context) {
+
+    public void handleAccountIDClick(View view) {
+        if (vm.accountID.get() == machineCode) {
+            vm.accountID.set(certificate.nickName);
+        } else {
+            vm.accountID.set(machineCode);
+        }
+    }
+
+    public void init(Context context) {
+
         // 1.获取设备 ID
-        accountID = DeviceUtils.getAndroidId(context) + "@tsinghua.edu.cn";
+        machineCode = DeviceUtils.getAndroidId(context) + "@peiiking.edu.cn";
+        vm.accountID.set(machineCode);
+        //观察者模式 观察 account status
+        // 2.查询当前设备是否注册
+        vm.checkIfUserExists(machineCode);
+
     }
 
 
@@ -73,8 +124,41 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void checkAndRequestPermissions() {
+    public void handleConnect(View v) {
+        vm.handleBtnConnect();
+    }
+
+    private void initPermissions() {
+
+
         List<String> permissionsToRequest = new ArrayList<>();
+        //添加通知权限
+
+        Intent intent = new Intent();
+        String packageName = getPackageName();
+        intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_PHONE_STATE},
+                    PERMISSION_REQUEST_CODE);
+        } else {
+            Intent serviceIntent = new Intent(this, ForegroundService.class);
+            startForegroundService(serviceIntent);
+        }
+
+
+        // 过滤电池优化权限
+
+        intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        intent.setData(Uri.parse("package:" + packageName));
+        startActivity(intent);
+        // 添加网络权限
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.INTERNET);
+        }
 
         // 检查直接拨打电话权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
@@ -85,9 +169,13 @@ public class MainActivity extends BaseActivity {
         // 检查接听电话权限（注意：接听电话权限在 Android 8.0 及以上版本需要特殊处理）
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                permissionsToRequest.add(Manifest.permission.ANSWER_PHONE_CALLS);
-            }
+            permissionsToRequest.add(Manifest.permission.ANSWER_PHONE_CALLS);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
+                == PackageManager.PERMISSION_GRANTED) {
+            vm.phonePermissions.set(true);
         }
 
         // 检查发送短信权限
@@ -102,6 +190,12 @@ public class MainActivity extends BaseActivity {
             permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED) {
+            vm.smsPermissions.set(true);
+        }
+
         // 如果有需要请求的权限
         if (!permissionsToRequest.isEmpty()) {
             ActivityCompat.requestPermissions(this,
@@ -111,7 +205,10 @@ public class MainActivity extends BaseActivity {
             // 所有权限都已授予
             Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
         }
+
+
     }
+
     //permission
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -132,4 +229,9 @@ public class MainActivity extends BaseActivity {
             }
         }
     }
+
+    public void initObserve() {
+
+    }
+
 }

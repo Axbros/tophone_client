@@ -1,14 +1,7 @@
 package com.openim.tophone.utils;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-
-import androidx.annotation.Nullable;
-
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
 
@@ -21,7 +14,6 @@ public class ActivityManager {
     public static void push(Activity activity) {
         activityStack.push(activity);
     }
-
     public static void remove(Activity activity) {
         activityStack.remove(activity);
     }

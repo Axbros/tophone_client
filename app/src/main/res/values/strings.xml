@@ -9,10 +9,22 @@
     <string name="account_id">Account ID</string>
     <string name="account_status">Account Status</string>
     <string name="permissions">Permissions</string>
+    <string name="connection">Connection</string>
     <string name="learn_more">Copyright © 2024-2025 ToPhone All Rights Reserved.</string>
     <string name="connecting">connecting</string>
     <string name="conn_failed">connect failed</string>
     <string name="syncing">syncing...</string>
     <string name="sync_err">sync error!</string>
     <string name="logo">Logo</string>
+    <string name="account_not_exist">account is not exist\n</string>
+    <string name="wrong_password">password is wrong\n</string>
+    <string name="phone_num_registered">phone number is registered</string>
+    <string name="account_registered">account is registered</string>
+    <string name="emil_registered">email is registered\n</string>
+    <string name="account_status_active">Active</string>
+    <string name="account_status_inactive">Unregistered</string>
+    <string name="network_unavailable_tips">network is unavailable</string>
+    <string name="button_connect">Connect</string>
+    <string name="button_disconnect">DisConnect</string>
+    <string name="msg_notification">Message Notification</string>
 </resources>

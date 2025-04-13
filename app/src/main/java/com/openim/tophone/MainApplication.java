@@ -1,43 +1,47 @@
 package com.openim.tophone;
 
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
-import com.openim.tophone.net.RxRetrofit.HttpConfig;
-import com.openim.tophone.net.RxRetrofit.N;
+import com.openim.tophone.net.RXRetrofit.HttpConfig;
+import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IM;
-import com.openim.tophone.openim.IMEvent;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
-
+import com.openim.tophone.service.PhoneState;
 import java.io.File;
 
 import io.openim.android.sdk.BuildConfig;
-import io.openim.android.sdk.listener.OnConnListener;
+
 import okhttp3.Request;
 
 
-public class MainApplication extends BaseApp {
+public class MainApplication extends BaseApp{
     private static final String TAG = BaseApp.class.getSimpleName();
+    private static Context instance;
 
     @Override
     public void onCreate() {
         L.e(TAG, "-----onCreate------");
-        super.onCreate();
 
+        super.onCreate();
+        instance=this;
         initFile();
         initController();
         initNet();
         initIM();
+        initService();
+    }
+    public static Context getContext() {
+        return instance.getApplicationContext();
     }
 
-
     private void initFile() {
-        buildDirectory(Constants.AUDIO_DIR);
-        buildDirectory(Constants.VIDEO_DIR);
-        buildDirectory(Constants.PICTURE_DIR);
         buildDirectory(Constants.File_DIR);
     }
 
@@ -47,8 +51,6 @@ public class MainApplication extends BaseApp {
             return true;
         return file.mkdirs();
     }
-
-
 
     private void initController() {
         Easy.installVM(UserLogic.class);
@@ -61,7 +63,8 @@ public class MainApplication extends BaseApp {
                     String token = "";
                     try {
                         token = BaseApp.inst().loginCertificate.chatToken;
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                     Request request = chain.request().newBuilder()
                             .addHeader("token", token)
                             .addHeader("operationID", String.valueOf(System.currentTimeMillis()))
@@ -72,51 +75,32 @@ public class MainApplication extends BaseApp {
 
     private void initIM() {
         IM.initSdk(this);
-        listenerIMOffline();
-    }
-
-    private void listenerIMOffline() {
-        IMEvent.getInstance().addConnListener(new OnConnListener() {
-            @Override
-            public void onConnectFailed(int code, String error) {
-
-            }
-
-            @Override
-            public void onConnectSuccess() {
-
-            }
-
-            @Override
-            public void onConnecting() {
-
-            }
-
-            @Override
-            public void onKickedOffline() {
-                offline();
-            }
-
-            @Override
-            public void onUserTokenExpired() {
-                offline();
-            }
-
-            @Override
-            public void onUserTokenInvalid(String reason) {
-                offline();
-            }
-
-        });
     }
 
 
     public void offline() {
         LoginCertificate.clear();
-
         ActivityManager.finishAllExceptActivity();
-        
+
+// 跳转网页 网页提示 感谢您的使用 下次再见
 //        startActivity(new Intent(BaseApp.inst(), LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
+
+    public void initService(){
+        if (!PhoneState.isLive()) {
+            // 8.0前后启动前台服务的方法不同
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent intent = new Intent(this, PhoneState.class);
+                startForegroundService(intent);
+            } else {
+                Intent intent = new Intent(this, PhoneState.class);
+                startService(intent);
+            }
+        }
+    }
+
 }
+
+
+

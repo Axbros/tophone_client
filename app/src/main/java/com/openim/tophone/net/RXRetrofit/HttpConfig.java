@@ -1,4 +1,4 @@
-package com.openim.tophone.net.RxRetrofit;
+package com.openim.tophone.net.RXRetrofit;
 
 import java.util.ArrayList;
 import java.util.List;
