@@ -80,8 +80,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         BaseApp.inst().loginCertificate = certificate;
         UserLogic userLogic = Easy.find(UserLogic.class);
         if (certificate != null) {
-            vm.getGroupOwner();
             userLogic.loginCacheUser(userId -> {
+                vm.getGroupOwner();
                 L.d(TAG, "Login User ID: " + userId);
                 Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
             });

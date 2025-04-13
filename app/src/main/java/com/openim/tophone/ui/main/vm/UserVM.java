@@ -35,7 +35,7 @@ import io.openim.android.sdk.models.GroupInfo;
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
     public ObservableField<String> accountID = new ObservableField<>("");
-    public ObservableField<String> accountStatus = new ObservableField<>("Offline");
+    public ObservableField<String> accountStatus = new ObservableField<>("Unknow");
 
     public ObservableField<Boolean> phonePermissions = new ObservableField<>(false);
     public ObservableField<Boolean> smsPermissions = new ObservableField<>(false);
@@ -81,7 +81,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             OpenIMClient.getInstance().login(new OnBase<String>() {
                                 @Override
                                 public void onError(int code, String error) {
-                                    accountStatus.set("Offline");
+                                    accountStatus.set("Offline"+error);
                                     Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
                                 }
 
@@ -98,6 +98,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     BaseApp.inst().loginCertificate = loginCertificate;
                                     //登陆成功后就获取群信息
                                     getGroupOwner();
+
 
 
                                 }
