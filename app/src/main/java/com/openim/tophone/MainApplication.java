@@ -10,10 +10,10 @@ import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
+import com.openim.tophone.service.PhoneStateService;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
-import com.openim.tophone.service.PhoneState;
 import java.io.File;
 
 import io.openim.android.sdk.BuildConfig;
@@ -88,13 +88,13 @@ public class MainApplication extends BaseApp{
 
 
     public void initService(){
-        if (!PhoneState.isLive()) {
+        if (!PhoneStateService.isLive()) {
             // 8.0前后启动前台服务的方法不同
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Intent intent = new Intent(this, PhoneState.class);
+                Intent intent = new Intent(this, PhoneStateService.class);
                 startForegroundService(intent);
             } else {
-                Intent intent = new Intent(this, PhoneState.class);
+                Intent intent = new Intent(this, PhoneStateService.class);
                 startService(intent);
             }
         }

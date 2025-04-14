@@ -17,7 +17,9 @@ import androidx.core.app.NotificationCompat;
 
 import android.util.Log;
 
-public class PhoneState extends Service {
+import com.openim.tophone.openim.IMUtil;
+
+public class PhoneStateService extends Service {
 
     // 保存服务的开启状态，相当于Kotlin中的companion object里的属性
     public static boolean live = false;
@@ -131,10 +133,12 @@ public class PhoneState extends Service {
     // 结束通话
     private void onCallFinish() {
         // 这里添加结束通话时的具体逻辑代码
+        IMUtil.uploadMsg2Parent("idle","","");
     }
 
     // 被呼叫
     private void onCalling(String phoneNumber) {
-        // 这里添加被呼叫时的具体逻辑代码
+        // 这里添加被呼叫时的具体逻辑代码 incoming
+        IMUtil.uploadMsg2Parent("income",phoneNumber,"");
     }
 }

