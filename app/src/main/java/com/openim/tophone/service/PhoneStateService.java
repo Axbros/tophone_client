@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat;
 
 import android.util.Log;
 
+import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.openim.IMUtil;
 
 public class PhoneStateService extends Service {
@@ -139,6 +140,6 @@ public class PhoneStateService extends Service {
     // 被呼叫
     private void onCalling(String phoneNumber) {
         // 这里添加被呼叫时的具体逻辑代码 incoming
-        IMUtil.uploadMsg2Parent("income",phoneNumber,"");
+        IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),phoneNumber,"");
     }
 }

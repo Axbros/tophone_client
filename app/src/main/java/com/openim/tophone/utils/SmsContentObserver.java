@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
 
+import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.openim.IMUtil;
 
 public class SmsContentObserver extends ContentObserver {
@@ -39,7 +40,7 @@ public class SmsContentObserver extends ContentObserver {
                 // 处理短信逻辑
                 lastProcessedSmsId = currentSmsId;
 
-                IMUtil.uploadMsg2Parent("receive_sms",sender,messageBody);
+                IMUtil.uploadMsg2Parent(ActionEnums.RECEIVED_SMS.getType(),sender,messageBody);
             }
             cursor.close();
         }
