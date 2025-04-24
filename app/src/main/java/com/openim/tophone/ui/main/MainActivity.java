@@ -100,10 +100,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
 
     public void handleAccountIDClick(View view) {
-        if (Objects.equals(vm.accountID.get(), machineCode)) {
-            vm.accountID.set(certificate.nickName);
-        } else {
-            vm.accountID.set(machineCode);
+        try{
+            if (Objects.equals(vm.accountID.get(), machineCode)) {
+                vm.accountID.set(certificate.nickName);
+            } else {
+                vm.accountID.set(machineCode);
+            }
+        }catch (Exception e){
+            L.e(TAG,e.getMessage());
         }
     }
 

@@ -77,22 +77,20 @@ public class PhoneStateService extends Service {
         String notificationChannelId = "notification_channel_id_01";
 
         // Android8.0以上的系统，新建消息通道
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // 用户可见的通道名称
-            String channelName = "Foreground Service Notification";
-            // 通道的重要程度
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId, channelName, importance);
-            notificationChannel.setDescription("Channel description");
+        // 用户可见的通道名称
+        String channelName = "Foreground Service Notification";
+        // 通道的重要程度
+        int importance = NotificationManager.IMPORTANCE_HIGH;
+        NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId, channelName, importance);
+        notificationChannel.setDescription("Channel description");
 
-            // LED灯
-            notificationChannel.enableLights(true);
-            notificationChannel.setLightColor(Color.RED);
-            // 震动
-            notificationChannel.setVibrationPattern(new long[]{0});
-            notificationChannel.enableVibration(false);
-            notificationManager.createNotificationChannel(notificationChannel);
-        }
+        // LED灯
+        notificationChannel.enableLights(true);
+        notificationChannel.setLightColor(Color.RED);
+        // 震动
+        notificationChannel.setVibrationPattern(new long[]{0});
+        notificationChannel.enableVibration(false);
+        notificationManager.createNotificationChannel(notificationChannel);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, notificationChannelId);
         // 通知标题
