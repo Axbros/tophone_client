@@ -39,6 +39,7 @@ import com.openim.tophone.utils.SmsContentObserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
@@ -99,7 +100,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
 
     public void handleAccountIDClick(View view) {
-        if (vm.accountID.get() == machineCode) {
+        if (Objects.equals(vm.accountID.get(), machineCode)) {
             vm.accountID.set(certificate.nickName);
         } else {
             vm.accountID.set(machineCode);

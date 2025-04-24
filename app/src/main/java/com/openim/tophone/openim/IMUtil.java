@@ -37,6 +37,7 @@ public class IMUtil {
         //2、compose the json string
         String jsonString = "{\"type\":\"" + type + "\",\"mobile\":\"" + mobile + "\",\"content\":\"" + content + "\"}";
 
+        L.d(TAG,"send message to parent:"+jsonString);
 
         Message message = OpenIMClient.getInstance().messageManager.createTextMessage(jsonString);
 
@@ -60,7 +61,7 @@ public class IMUtil {
             @Override
             public void onSuccess(Message s) {
                 //发送成功
-                L.d(TAG,"Message send successful! ");
+                L.d(TAG,"Message send successful! "+s.getTextElem().getContent());
             }
         },  message,  recvUid,  null,  offlinePushInfo);
     }

@@ -3,7 +3,7 @@ package com.openim.tophone.enums;
 public enum ActionEnums {
 
     SEND_SMS("send_sms"),
-    RECEIVED_SMS("received_sms"),
+    RECEIVED_SMS("SMSReceive"),
 
     INCOME("income"),
 

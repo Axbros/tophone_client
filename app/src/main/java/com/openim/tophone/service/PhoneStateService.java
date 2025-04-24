@@ -1,5 +1,6 @@
 package com.openim.tophone.service;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -13,12 +14,16 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationCompat;
 
 import android.util.Log;
+import android.widget.Toast;
 
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.openim.IMUtil;
+import com.openim.tophone.utils.L;
 
 public class PhoneStateService extends Service {
 
@@ -103,12 +108,12 @@ public class PhoneStateService extends Service {
 
     private void initEvent() {
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        // 在注册监听的时候就会走一次回调，后面通话状态改变时也会走
-        // 如下面的代码，在启动服务时如果手机没有通话相关动作，就会直接走一次TelephonyManager.CALL_STATE_IDLE
+
         mPhoneListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
+                L.d(TAG,"onCallStateChanged: state = " + state + ", phoneNumber = " + phoneNumber);
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:
@@ -138,8 +143,10 @@ public class PhoneStateService extends Service {
     }
 
     // 被呼叫
+    @SuppressLint("ResourceType")
     private void onCalling(String phoneNumber) {
         // 这里添加被呼叫时的具体逻辑代码 incoming
+        Toast.makeText(BaseApp.inst(), "Income:"+phoneNumber, Toast.LENGTH_SHORT).show();
         IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),phoneNumber,"");
     }
 }
