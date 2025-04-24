@@ -18,7 +18,7 @@ public class SharedPreferencesUtil {
     private SharedPreferences.Editor editor = null; // 创建一个接口对象
 
     @SuppressLint("CommitPrefEdits")
-    private SharedPreferencesUtil(Context context) {
+    public SharedPreferencesUtil(Context context) {
         /***
          * 传入上下文获取SharedPreferences对象的实例 参数分别为存储的文件名和存储模式
          */

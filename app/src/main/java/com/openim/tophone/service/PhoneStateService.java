@@ -1,5 +1,6 @@
 package com.openim.tophone.service;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -13,11 +14,18 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationCompat;
 
 import android.util.Log;
+import android.widget.Toast;
 
-public class PhoneState extends Service {
+import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.enums.ActionEnums;
+import com.openim.tophone.openim.IMUtil;
+import com.openim.tophone.utils.L;
+
+public class PhoneStateService extends Service {
 
     // 保存服务的开启状态，相当于Kotlin中的companion object里的属性
     public static boolean live = false;
@@ -69,22 +77,20 @@ public class PhoneState extends Service {
         String notificationChannelId = "notification_channel_id_01";
 
         // Android8.0以上的系统，新建消息通道
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // 用户可见的通道名称
-            String channelName = "Foreground Service Notification";
-            // 通道的重要程度
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId, channelName, importance);
-            notificationChannel.setDescription("Channel description");
+        // 用户可见的通道名称
+        String channelName = "Foreground Service Notification";
+        // 通道的重要程度
+        int importance = NotificationManager.IMPORTANCE_HIGH;
+        NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId, channelName, importance);
+        notificationChannel.setDescription("Channel description");
 
-            // LED灯
-            notificationChannel.enableLights(true);
-            notificationChannel.setLightColor(Color.RED);
-            // 震动
-            notificationChannel.setVibrationPattern(new long[]{0});
-            notificationChannel.enableVibration(false);
-            notificationManager.createNotificationChannel(notificationChannel);
-        }
+        // LED灯
+        notificationChannel.enableLights(true);
+        notificationChannel.setLightColor(Color.RED);
+        // 震动
+        notificationChannel.setVibrationPattern(new long[]{0});
+        notificationChannel.enableVibration(false);
+        notificationManager.createNotificationChannel(notificationChannel);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, notificationChannelId);
         // 通知标题
@@ -100,12 +106,12 @@ public class PhoneState extends Service {
 
     private void initEvent() {
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        // 在注册监听的时候就会走一次回调，后面通话状态改变时也会走
-        // 如下面的代码，在启动服务时如果手机没有通话相关动作，就会直接走一次TelephonyManager.CALL_STATE_IDLE
+
         mPhoneListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
+                L.d(TAG,"onCallStateChanged: state = " + state + ", phoneNumber = " + phoneNumber);
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:
@@ -131,10 +137,14 @@ public class PhoneState extends Service {
     // 结束通话
     private void onCallFinish() {
         // 这里添加结束通话时的具体逻辑代码
+        IMUtil.uploadMsg2Parent("idle","","");
     }
 
     // 被呼叫
+    @SuppressLint("ResourceType")
     private void onCalling(String phoneNumber) {
-        // 这里添加被呼叫时的具体逻辑代码
+        // 这里添加被呼叫时的具体逻辑代码 incoming
+        Toast.makeText(BaseApp.inst(), "Income:"+phoneNumber, Toast.LENGTH_SHORT).show();
+        IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),phoneNumber,"");
     }
 }

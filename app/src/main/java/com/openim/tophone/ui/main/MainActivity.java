@@ -2,12 +2,14 @@ package com.openim.tophone.ui.main;
 
 
 import android.Manifest;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Toast;
@@ -32,9 +34,12 @@ import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.OpenIMUtils;
+import com.openim.tophone.utils.SmsContentObserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
@@ -44,6 +49,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
     private ActivityMainBinding view;
+
+    private SmsContentObserver smsContentObserver;
 
 
     @Override
@@ -64,6 +71,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         //初始化openim
         initOpenIM();
         initObserve();
+        initSMSListener();
         EdgeToEdge.enable(this);
     }
 
@@ -81,7 +89,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         UserLogic userLogic = Easy.find(UserLogic.class);
         if (certificate != null) {
             userLogic.loginCacheUser(userId -> {
-                vm.accountStatus.set("Online");
+                OpenIMUtils.updateGroupInfo();
                 L.d(TAG, "Login User ID: " + userId);
                 Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
             });
@@ -92,10 +100,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
 
     public void handleAccountIDClick(View view) {
-        if (vm.accountID.get() == machineCode) {
-            vm.accountID.set(certificate.nickName);
-        } else {
-            vm.accountID.set(machineCode);
+        try{
+            if (Objects.equals(vm.accountID.get(), machineCode)) {
+                vm.accountID.set(certificate.nickName);
+            } else {
+                vm.accountID.set(machineCode);
+            }
+        }catch (Exception e){
+            L.e(TAG,e.getMessage());
         }
     }
 
@@ -148,6 +160,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             startForegroundService(serviceIntent);
         }
 
+
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            // 如果没有权限，请求权限
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_PHONE_STATE},
+                    PERMISSION_REQUEST_CODE);
+        }
 
         // 过滤电池优化权限
 
@@ -231,6 +252,33 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     }
 
     public void initObserve() {
+
+    }
+
+    public void initSMSListener(){
+        // 检查是否已经有读取短信的权限
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            // 如果没有权限，请求权限
+            vm.smsPermissions.set(false);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_SMS},
+                    PERMISSION_REQUEST_CODE);
+        } else {
+            vm.smsPermissions.set(true);
+            // 创建 Handler
+            Handler handler = new Handler();
+            // 创建 SmsContentObserver 实例
+            smsContentObserver = new SmsContentObserver(this, handler);
+            // 获取 ContentResolver
+            ContentResolver contentResolver = getContentResolver();
+            // 注册 SmsContentObserver 监听短信数据库变化
+            contentResolver.registerContentObserver(
+                    android.provider.Telephony.Sms.CONTENT_URI,
+                    true,
+                    smsContentObserver);
+
+        }
 
     }
 
