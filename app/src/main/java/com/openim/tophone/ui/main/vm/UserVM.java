@@ -20,6 +20,7 @@ import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.OpenIMUtils;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.HashMap;
@@ -35,7 +36,7 @@ import io.openim.android.sdk.models.GroupInfo;
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
     public ObservableField<String> accountID = new ObservableField<>("");
-    public ObservableField<String> accountStatus = new ObservableField<>("Unknow");
+    public ObservableField<String> GroupInfoLabel = new ObservableField<>("Unknow");
 
     public ObservableField<Boolean> phonePermissions = new ObservableField<>(false);
     public ObservableField<Boolean> smsPermissions = new ObservableField<>(false);
@@ -81,7 +82,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             OpenIMClient.getInstance().login(new OnBase<String>() {
                                 @Override
                                 public void onError(int code, String error) {
-                                    accountStatus.set("Offline"+error);
+                                    GroupInfoLabel.set("Offline"+error);
                                     Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
                                 }
 
@@ -97,10 +98,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     loginCertificate.cache(getContext());
                                     BaseApp.inst().loginCertificate = loginCertificate;
                                     //登陆成功后就获取群信息
-                                    getGroupOwner();
-
-
-
+                                    OpenIMUtils.updateGroupInfo();
                                 }
                             }, loginCertificate.userID, loginCertificate.imToken);
 
@@ -137,31 +135,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
 
 
-    public void getGroupOwner(){
-        OpenIMClient.getInstance().groupManager.getJoinedGroupList(new OnBase<List<GroupInfo>>() {
-            @Override
-            public void onError(int code, String error) {
-                OnBase.super.onError(code, error);
-                L.e(TAG,"getJoinedGroupList error!");
-            }
 
-            @Override
-            public void onSuccess(List<GroupInfo> data) {
-                OnBase.super.onSuccess(data);
-                if(data.size()==1){
-                    GroupInfo groupInfo = data.get(0);
-                    String groupName=groupInfo.getGroupName();
-                    String ownerUserId=groupInfo.getOwnerUserID();
-                    SharedPreferencesUtil sharedPreferencesUtil=new SharedPreferencesUtil(getContext());
-                    sharedPreferencesUtil.setCache(Constants.getGroupOwnerKey(),ownerUserId);
-                    VMStore.get().accountStatus.set("「"+groupName+"」："+ownerUserId);
-                }else{
-                    VMStore.get().accountStatus.set("Group Joined is not equal 1 ! the size is : "+data.size());
-                }
-                L.d(TAG,"getJoinedGroupList Success!");
-            }
-        });
-    }
     public void checkIfUserExists(String email) {
 
         Parameter parameter = OneselfService.buildPagination(1, 1);
@@ -176,7 +150,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                         Integer total = (Integer) hashMap.get("total");
                         if (total == 0) {
                             L.d(TAG, "prepare to register account: " + email + "!");
-                            accountStatus.set("Unregistered");
+                            GroupInfoLabel.set("Unregistered");
                             //如果没有账号那就注册！
                             Parameter registerParameter = new Parameter();
                             HashMap user = new HashMap();
@@ -197,7 +171,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                                                                                                            dbHelper.insertData("nickName",o.nickName);
                                                                                                                            dbHelper.insertData("email",email);
                                                                                                                            accountID.set(o.nickName);
-                                                                                                                           accountStatus.set("Registered");
+                                                                                                                           GroupInfoLabel.set("Registered");
                                                                                                                            connectionStatus.set(true);
                                                                                                                            o.cache(getContext());
                                                                                                                            Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();
@@ -206,7 +180,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                                                                                                        @Override
                                                                                                                        protected void onFailure(Throwable e) {
                                                                                                                            super.onFailure(e);
-                                                                                                                           accountStatus.set("Register Error");
+                                                                                                                           GroupInfoLabel.set("Register Error");
                                                                                                                            Log.d(TAG, "Register Error" + e.toString());
                                                                                                                            accountID.set(e.toString());
                                                                                                                            Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();

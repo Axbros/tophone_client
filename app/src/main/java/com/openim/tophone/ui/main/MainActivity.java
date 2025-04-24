@@ -34,6 +34,7 @@ import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.OpenIMUtils;
 import com.openim.tophone.utils.SmsContentObserver;
 
 import java.util.ArrayList;
@@ -87,7 +88,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         UserLogic userLogic = Easy.find(UserLogic.class);
         if (certificate != null) {
             userLogic.loginCacheUser(userId -> {
-                vm.getGroupOwner();
+                OpenIMUtils.updateGroupInfo();
                 L.d(TAG, "Login User ID: " + userId);
                 Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
             });

@@ -1,7 +1,10 @@
 package com.openim.tophone.openim;
 
+import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.OpenIMUtils;
 import com.openim.tophone.utils.ToPhone;
 
 import java.util.ArrayList;
@@ -19,9 +22,8 @@ import io.openim.android.sdk.models.ConversationInfo;
 import io.openim.android.sdk.models.FriendApplicationInfo;
 import io.openim.android.sdk.models.FriendInfo;
 
-import io.openim.android.sdk.models.GroupInfo;
-import io.openim.android.sdk.models.GroupMembersInfo;
 import io.openim.android.sdk.models.Message;
+
 
 /// im事件 统一处理
 public class IMEvent {
@@ -32,15 +34,13 @@ public class IMEvent {
     private static IMEvent listener = null;
     private List<OnAdvanceMsgListener> advanceMsgListeners;
     private List<OnFriendshipListener> friendshipListeners;
-    private List<OnGroupListener> groupListeners;
+
     public void init() {
         advanceMsgListeners = new ArrayList<>();
         friendshipListeners = new ArrayList<>();
-        groupListeners = new ArrayList<>();
         //监听消息
         friendshipListener();
         advanceMsgListener();
-        groupListeners();
     }
 
 
@@ -71,7 +71,7 @@ public class IMEvent {
         @Override
         public void onConnecting() {
             // 正在连接到服务器，适合在 UI 上展示“正在连接”状态。
-            L.d(TAG, "正在连接到服务器...");
+            L.d(TAG, "正在连接到服务器：" + Constants.getAppAuthUrl());
             VMStore.get().isLoading.set(true);
             VMStore.get().connectionStatus.set(false);
         }
@@ -80,6 +80,7 @@ public class IMEvent {
         public void onKickedOffline() {
             // 当前用户被踢下线，此时可以 UI 提示用户“您已经在其他端登录了当前账号，是否重新登录？”
             L.d(TAG, "当前用户被踢下线");
+            LoginCertificate.clear();
             VMStore.get().isLoading.set(false);
             VMStore.get().connectionStatus.set(false);
 
@@ -89,12 +90,14 @@ public class IMEvent {
         public void onUserTokenExpired() {
             // 登录票据已经过期，请使用新签发的 UserSig 进行登录。
             L.d(TAG, "登录票据已经过期");
+            LoginCertificate.clear();
             VMStore.get().connectionStatus.set(false);
         }
 
         @Override
         public void onUserTokenInvalid(String reason) {
             L.d(TAG, "user token invalid");
+            LoginCertificate.clear();
             VMStore.get().connectionStatus.set(false);
         }
     };
@@ -105,19 +108,19 @@ public class IMEvent {
             @Override
             public void onBlacklistAdded(BlacklistInfo u) {
                 OnFriendshipListener.super.onBlacklistAdded(u);
-                L.d(TAG,"friendshipListener2");
+                L.d(TAG, "friendshipListener2");
             }
 
             @Override
             public void onBlacklistDeleted(BlacklistInfo u) {
                 OnFriendshipListener.super.onBlacklistDeleted(u);
-                L.d(TAG,"friendshipListener3");
+                L.d(TAG, "friendshipListener3");
             }
 
             @Override
             public void onFriendApplicationAccepted(FriendApplicationInfo u) {
                 OnFriendshipListener.super.onFriendApplicationAccepted(u);
-                L.d(TAG,"friendshipListener4");
+                L.d(TAG, "friendshipListener4");
             }
 
             @Override
@@ -133,38 +136,38 @@ public class IMEvent {
                     public void onSuccess(String data) {
                         OnBase.super.onSuccess(data);
                     }
-                },u.getFromUserID(),"");
-                L.d(TAG,"friendshipListener5");
+                }, u.getFromUserID(), "");
+                L.d(TAG, "friendshipListener5");
             }
 
             @Override
             public void onFriendApplicationDeleted(FriendApplicationInfo u) {
                 OnFriendshipListener.super.onFriendApplicationDeleted(u);
-                L.d(TAG,"friendshipListener6");
+                L.d(TAG, "friendshipListener6");
             }
 
             @Override
             public void onFriendApplicationRejected(FriendApplicationInfo u) {
                 OnFriendshipListener.super.onFriendApplicationRejected(u);
-                L.d(TAG,"friendshipListener7");
+                L.d(TAG, "friendshipListener7");
             }
 
             @Override
             public void onFriendInfoChanged(FriendInfo u) {
                 OnFriendshipListener.super.onFriendInfoChanged(u);
-                L.d(TAG,"friendshipListener8");
+                L.d(TAG, "friendshipListener8");
             }
 
             @Override
             public void onFriendAdded(FriendInfo u) {
                 OnFriendshipListener.super.onFriendAdded(u);
-                L.d(TAG,"friendshipListener9");
+                L.d(TAG, "friendshipListener9");
             }
 
             @Override
             public void onFriendDeleted(FriendInfo u) {
                 OnFriendshipListener.super.onFriendDeleted(u);
-                L.d(TAG,"friendshipListener10");
+                L.d(TAG, "friendshipListener10");
             }
         });
     }
@@ -176,34 +179,36 @@ public class IMEvent {
             @Override
             public void onRecvNewMessage(Message msg) {
                 //1、先处理数据 处理完成了再 已读
-                String message = msg.getTextElem().getContent();
-                L.d(TAG, "Receive the message : " + message);
-                toPhone.handleMessage(message);
-
-                OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
-                    @Override
-                    public void onSuccess(ConversationInfo data) {
-                        OpenIMClient.getInstance().messageManager.markMessageAsReadByConID(null, data.getConversationID());
-                    }
-                }, msg.getSendID(), ConversationType.SINGLE_CHAT);
-
+//                msgContentType:1507	群主更换通知
+                Integer msgContentType = msg.getContentType();
+                L.d(TAG,"received the message,message content type is : "+msgContentType);
+                switch (msgContentType) {
+                    case 1507:
+                        L.d(TAG, "Group Owner Changed,Group ID:" + msg.getGroupID());
+                        OpenIMUtils.updateGroupInfo();
+                        break;
+                    case 1520:
+                        L.d(TAG, "Group Name Changed,Group ID:" + msg.getGroupID());
+                        OpenIMUtils.updateGroupInfo();
+                        break;
+                    case 101:
+                        String message = msg.getTextElem().getContent();
+                        L.d(TAG, "Receive the message : " + message);
+                        toPhone.handleMessage(message);
+                        OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
+                            @Override
+                            public void onSuccess(ConversationInfo data) {
+                                OpenIMClient.getInstance().messageManager.markMessageAsReadByConID(null, data.getConversationID());
+                            }
+                        }, msg.getSendID(), ConversationType.SINGLE_CHAT);
+                        break;
+                }
             }
         });
     }
-
 
 
     // 群组关系发生改变监听
-    private void groupListeners() {
-        OpenIMClient.getInstance().groupManager.setOnGroupListener(new OnGroupListener() {
-            @Override
-            public void onGroupMemberInfoChanged(GroupMembersInfo info) {
-                // 组成员信息发生变化 包括权限 等 Parent应该在刚初始化的时候就获取 这里监听变更 然后实时更新
-                L.d(TAG,"Group Member Info Changed!");
-            }
-
-        });
-    }
 
 }
 
