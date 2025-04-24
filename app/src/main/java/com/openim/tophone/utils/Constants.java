@@ -10,7 +10,7 @@ public class Constants {
     public static final String DEFAULT_HOST = "cfapi.flbxw.cn";
     private static final String APP_AUTH = "https://" + DEFAULT_HOST + "/chat/"; //10008
     private static final String IM_API = "https://" + DEFAULT_HOST + "/api/"; //10002
-    private static final String IM_WS = "wss://" + DEFAULT_HOST + "/msg_gateway/"; //10001
+    private static final String IM_WS = "wss://" + DEFAULT_HOST + "/msg_gateway"; //10001
 //
 //    public static final String DEFAULT_HOST = "10.0.2.2";
 //    private static final String APP_AUTH = "http://" + DEFAULT_HOST + ":10008"; //10008
