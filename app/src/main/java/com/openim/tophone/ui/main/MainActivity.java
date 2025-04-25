@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
@@ -52,7 +51,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private SmsContentObserver smsContentObserver;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -67,7 +65,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         initPermissions();
         initUserInfo();
         init(getApplicationContext());
-
         //初始化openim
         initOpenIM();
         initObserve();

@@ -117,7 +117,7 @@ public class PhoneStateService extends Service {
                     case TelephonyManager.CALL_STATE_IDLE:
                         // Toast.makeText(MyService.this, "挂断" + phoneNumber, Toast.LENGTH_SHORT).show();
                         Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
-                        onCallFinish();
+                        onCallFinish(phoneNumber);
                         break;
                     // 接听
                     case TelephonyManager.CALL_STATE_OFFHOOK:
@@ -135,9 +135,9 @@ public class PhoneStateService extends Service {
     }
 
     // 结束通话
-    private void onCallFinish() {
+    private void onCallFinish(String phoneNumber) {
         // 这里添加结束通话时的具体逻辑代码
-        IMUtil.uploadMsg2Parent("idle","","");
+        IMUtil.uploadMsg2Parent("idle","+86"+phoneNumber,"");
     }
 
     // 被呼叫
@@ -145,6 +145,6 @@ public class PhoneStateService extends Service {
     private void onCalling(String phoneNumber) {
         // 这里添加被呼叫时的具体逻辑代码 incoming
         Toast.makeText(BaseApp.inst(), "Income:"+phoneNumber, Toast.LENGTH_SHORT).show();
-        IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),phoneNumber,"");
+        IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),"+86"+phoneNumber,"");
     }
 }
