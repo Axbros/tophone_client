@@ -23,22 +23,17 @@ import okhttp3.Request;
 
 public class MainApplication extends BaseApp{
     private static final String TAG = BaseApp.class.getSimpleName();
-    private static Context instance;
 
     @Override
     public void onCreate() {
         L.e(TAG, "-----onCreate------");
 
         super.onCreate();
-        instance=this;
         initFile();
         initController();
         initNet();
         initIM();
         initService();
-    }
-    public static Context getContext() {
-        return instance.getApplicationContext();
     }
 
     private void initFile() {

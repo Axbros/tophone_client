@@ -3,20 +3,15 @@ package com.openim.tophone.utils;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
-import android.view.KeyEvent;
-
-import com.openim.tophone.MainApplication;
-import com.openim.tophone.ui.main.MainActivity;
-
+import com.openim.tophone.base.BaseApp;
 
 public class PhoneUtils {
 
-    private Context context = MainApplication.getContext();
+    private final Context context = BaseApp.inst();
 
     @SuppressLint("MissingPermission")
     public void hangUpCall() {
