@@ -8,6 +8,11 @@ import com.openim.tophone.openim.IM;
  * 常量类，包含一些常用的 URL 和键名等常量
  */
 public class Constants {
+    public static final String DB_NAME_USERID="userId";
+    public static final String DB_NAME_NICKNAME="nickName";
+
+    public static final String DB_NAME_EMAIL="email";
+
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
     // 是否为本地环境的标识
