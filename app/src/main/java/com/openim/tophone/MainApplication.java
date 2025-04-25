@@ -37,7 +37,7 @@ public class MainApplication extends BaseApp{
     }
 
     private void initFile() {
-        buildDirectory(Constants.File_DIR);
+        buildDirectory(Constants.getFileDir());
     }
 
     private boolean buildDirectory(String path) {

@@ -1,46 +1,71 @@
 package com.openim.tophone.utils;
 
 import android.text.TextUtils;
-
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.openim.IM;
 
+/**
+ * 常量类，包含一些常用的 URL 和键名等常量
+ */
 public class Constants {
+    private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
-//    public static final String DEFAULT_HOST = "cfapi.flbxw.cn";
-//    private static final String APP_AUTH = "https://" + DEFAULT_HOST + "/chat/"; //10008
-//    private static final String IM_API = "https://" + DEFAULT_HOST + "/api/"; //10002
-//    private static final String IM_WS = "wss://" + DEFAULT_HOST + "/msg_gateway"; //10001
-//
-    public static final String DEFAULT_HOST = "10.0.2.2";
-    private static final String APP_AUTH = "http://" + DEFAULT_HOST + ":10008"; //10008
-    private static final String IM_API = "http://" + DEFAULT_HOST + ":10002"; //10002
-    private static final String IM_WS = "ws://" + DEFAULT_HOST + ":10001"; //10001
+    // 是否为本地环境的标识
+    private static final boolean IS_LOCAL_ENV = true;
 
+    // 默认主机地址
+    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "10.0.2.2" : "cfapi.flbxw.cn";
+
+    // APP 认证 URL
+    private static final String APP_AUTH = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10008" : "/chat/");
+
+    // IM API URL
+    private static final String IM_API = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10002" : "/api/");
+
+    // IM WebSocket URL
+    private static final String IM_WS = (IS_LOCAL_ENV ? "ws://" : "wss://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10001" : "/msg_gateway");
+
+    // 群组所有者键名
     private static final String GROUP_OWNER_KEY = "ownerUserID";
 
-
-    public static String getGroupOwnerKey(){
+    /**
+     * 获取群组所有者键名
+     *
+     * @return 群组所有者键名
+     */
+    public static String getGroupOwnerKey() {
         return GROUP_OWNER_KEY;
     }
 
+    /**
+     * 获取 IM API 的 URL
+     *
+     * @return IM API 的 URL
+     */
     public static String getImApiUrl() {
         return IM_API;
     }
 
-
+    /**
+     * 获取 APP 认证的 URL
+     *
+     * @return APP 认证的 URL
+     */
     public static String getAppAuthUrl() {
-      return APP_AUTH;
-
+        return APP_AUTH;
     }
 
+    /**
+     * 获取 IM WebSocket 的 URL
+     *
+     * @return IM WebSocket 的 URL
+     */
     public static String getImWsUrl() {
-         return IM_WS;
+        return IM_WS;
     }
 
-
-    //文件夹
-    public static final String File_DIR = IM.getStorageDir() + "/file/";
-
-
+    // 文件存储目录
+    public static String getFileDir(){
+        return FILE_DIR;
+    }
 }
