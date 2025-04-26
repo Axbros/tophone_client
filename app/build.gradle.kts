@@ -11,13 +11,14 @@ android {
         enable = true
     }
     namespace = "com.openim.tophone"
-    compileSdk = 34
+
 
     defaultConfig {
         applicationId = "com.openim.tophone"
-        minSdk = 30
-        targetSdk = 34
-        versionCode = 11
+        minSdk     = 30
+        targetSdk  = 34
+        compileSdk = 34
+        versionCode = 11    
         versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

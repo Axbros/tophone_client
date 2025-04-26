@@ -11,6 +11,7 @@ import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.LoginStatus;
+import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnMsgSendCallback;
 import io.openim.android.sdk.models.Message;
 import io.openim.android.sdk.models.OfflinePushInfo;
@@ -64,5 +65,16 @@ public class IMUtil {
                 L.d(TAG,"Message send successful! "+s.getTextElem().getContent());
             }
         },  message,  recvUid,  null,  offlinePushInfo);
+    }
+
+    public static class IMCallBack<T> implements OnBase<T> {
+        @Override
+        public void onError(int code, String error) {
+            L.e("IMCallBack", "onError:(" + code + ")" + error);
+        }
+
+        public void onSuccess(T data) {
+
+        }
     }
 }

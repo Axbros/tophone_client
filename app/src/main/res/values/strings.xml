@@ -27,4 +27,5 @@
     <string name="button_connect">Connect</string>
     <string name="button_disconnect">DisConnect</string>
     <string name="msg_notification">Message Notification</string>
+    <string name="upload_logs">Upload Logs</string>
 </resources>

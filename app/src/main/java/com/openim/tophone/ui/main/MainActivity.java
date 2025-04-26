@@ -26,6 +26,7 @@ import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.database.DatabaseHelper;
 import com.openim.tophone.databinding.ActivityMainBinding;
 
+import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.service.ForegroundService;
@@ -40,6 +41,8 @@ import com.openim.tophone.utils.SmsContentObserver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import io.openim.android.sdk.OpenIMClient;
 
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
@@ -137,6 +140,22 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     public void handleConnect(View v) {
         vm.handleBtnConnect();
+    }
+
+    public void handleUploadLogsBtnClick(View v){
+        OpenIMClient.getInstance().uploadLogs(new IMUtil.IMCallBack<String>(){
+            @Override
+            public void onSuccess(String data) {
+                Toast.makeText(BaseApp.inst(),"✅Upload successed!",Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onError(int code, String error) {
+                Toast.makeText(BaseApp.inst(),"❌Upload failed!"+error,Toast.LENGTH_SHORT).show();
+                L.e("IMCallBack", "uploadLogs onError:(" + code + ")" + error);
+            }
+        },new ArrayList<>(),500,"",(l, l1) -> {
+            L.d("testprogress", "current:" + l + "total:" + l1);
+        });
     }
 
     private void initPermissions() {
