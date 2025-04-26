@@ -1,5 +1,6 @@
 package com.openim.tophone.database;
 import android.annotation.SuppressLint;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -71,31 +72,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // 读取所有数据的方法
-    public List<DataItem> getAllData() {
-        List<DataItem> dataList = new ArrayList<>();
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_NAME,
-                new String[]{COLUMN_ID, COLUMN_NAME, COLUMN_VALUE},
-                null,
-                null,
-                null,
-                null,
-                null);
 
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                @SuppressLint("Range") int id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
-                @SuppressLint("Range") String nameValue = cursor.getString(cursor.getColumnIndex(COLUMN_NAME));
-                @SuppressLint("Range") String value = cursor.getString(cursor.getColumnIndex(COLUMN_VALUE));
-                DataItem item = new DataItem(id, nameValue, value);
-                dataList.add(item);
-            } while (cursor.moveToNext());
-            cursor.close();
-        }
+    // 根据 name 更新 value 的方法
+    public void updateValueByName(String name, String newValue) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_VALUE, newValue);
 
+        String selection = COLUMN_NAME + " =?";
+        String[] selectionArgs = {name};
+
+        db.update(TABLE_NAME, values, selection, selectionArgs);
         db.close();
-        return dataList;
     }
+
 
     // 定义一个数据类来存储表中的每一行数据
     public static class DataItem {
@@ -103,22 +93,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         private String name;
         private String value;
 
-        public DataItem(int id, String name, String value) {
-            this.id = id;
-            this.name = name;
-            this.value = value;
-        }
-
-        public int getId() {
-            return id;
-        }
 
         public String getName() {
             return name;
         }
 
-        public String getValue() {
-            return value;
-        }
+
     }
 }

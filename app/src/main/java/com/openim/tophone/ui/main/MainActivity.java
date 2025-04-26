@@ -31,6 +31,7 @@ import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.service.ForegroundService;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
+import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.OpenIMUtils;
@@ -74,9 +75,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     public void initUserInfo() {
         LoginCertificate loginCertificate = new LoginCertificate();
-        DatabaseHelper dbHelper = new DatabaseHelper(this);
-        String userId = dbHelper.getValueByName("userId");
-        String nickName = dbHelper.getValueByName("nickName");
+        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
+        String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
+        String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
         loginCertificate.setUserID(userId);
         loginCertificate.setNickName(nickName);
     }
@@ -97,6 +98,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
 
     public void handleAccountIDClick(View view) {
+
         try{
             if (Objects.equals(vm.accountID.get(), machineCode)) {
                 vm.accountID.set(certificate.nickName);

@@ -4,6 +4,7 @@ package com.openim.tophone.net.RXRetrofit;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.widget.Toast;
 
 import com.openim.tophone.net.RXRetrofit.Exception.NetworkException;
 import com.openim.tophone.net.RXRetrofit.Exception.RXRetrofitException;
@@ -66,6 +67,7 @@ public abstract class NetObserver<T> implements Observer<T> {
         onComplete();
         if (!isConnected()) {
             e = new NetworkException();
+            Toast.makeText(BaseApp.inst(),"网络错误！",Toast.LENGTH_SHORT);
         }
         e.printStackTrace();
         if (HttpConfig.isDebug) {

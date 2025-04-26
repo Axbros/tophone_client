@@ -15,6 +15,7 @@ import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
 import com.openim.tophone.openim.entity.LoginCertificate;
+import com.openim.tophone.openim.entity.OpenIMUserInfoResp;
 import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.stroage.VMStore;
@@ -32,6 +33,7 @@ import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnFriendshipListener;
 import io.openim.android.sdk.models.GroupInfo;
+import io.openim.android.sdk.models.UserInfo;
 
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
 
@@ -63,8 +65,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
 
     public void login() {
-        DatabaseHelper dbHelper = new DatabaseHelper(getContext());
-        String email = dbHelper.getValueByName("email");
+        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
+        String email = dbHelper.getValueByName(Constants.DB_NAME_EMAIL);
         Parameter parameter = new Parameter();
         parameter.add("email", email)
                 .add("password", "516f00c9229200d6ce526991cdfdd959")
@@ -91,8 +93,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     //缓存登录信息
                                     Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
                                     connectionStatus.set(true);
-                                    String userId = dbHelper.getValueByName("userId");
-                                    String nickName = dbHelper.getValueByName("nickName");
+                                    String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
+                                    String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
                                     loginCertificate.userID=userId;
                                     loginCertificate.nickName=nickName;
                                     loginCertificate.cache(getContext());
@@ -115,6 +117,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     public void logout(){
         LoginCertificate cert_cache=LoginCertificate.getCache(getContext());
         Parameter parameter = new Parameter();
+        assert cert_cache != null;
         parameter.add("userID",cert_cache.userID);
         parameter.add("platformID",Platform.ANDROID);
         OpenIMClient.getInstance().logout(new OnBase<String>() {
@@ -143,11 +146,12 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
         N.API(OneselfService.class)
                 .searchUser(parameter.buildJsonBody())
-                .map(OpenIMService.turn(HashMap.class)).compose(N.IOMain()).subscribe(new NetObserver<>(getContext()) {
+                .map(OpenIMService.turn(OpenIMUserInfoResp.class)).compose(N.IOMain()).subscribe(new NetObserver<OpenIMUserInfoResp>(getContext()) {
+
                     @Override
-                    public void onSuccess(HashMap hashMap) {
-                        L.d(TAG, "current account: " + email + " Total number:" + hashMap.get("total"));
-                        Integer total = (Integer) hashMap.get("total");
+                    public void onSuccess(OpenIMUserInfoResp userInfoResp) {
+                        L.d(TAG, "current account: " + email + " Total number:" + userInfoResp.total);
+                        Integer total = userInfoResp.total;
                         if (total == 0) {
                             L.d(TAG, "prepare to register account: " + email + "!");
                             GroupInfoLabel.set("Unregistered");
@@ -166,7 +170,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
 //                                                                                                                           注册成功把userID和nickname存入数据库
-                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(getContext());
+                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
                                                                                                                            dbHelper.insertData("userId",o.userID);
                                                                                                                            dbHelper.insertData("nickName",o.nickName);
                                                                                                                            dbHelper.insertData("email",email);
@@ -188,6 +192,21 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                                                                                                    }
                                     );
                         }
+                        else{
+                            UserInfo userInfo = userInfoResp.users.get(0);
+                            DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
+                            dbHelper.updateValueByName(Constants.DB_NAME_NICKNAME,userInfo.getNickname());
+                        }
+                    }
+
+                    @Override
+                    protected void onFailure(Throwable e) {
+                        super.onFailure(e);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        super.onError(e);
                     }
                 });
     }
