@@ -11,6 +11,8 @@
 /.idea
 .DS_Store
 /build
+/app/release
+/release
 /captures
 .externalNativeBuild
 .cxx
