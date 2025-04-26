@@ -8,6 +8,8 @@ import com.openim.tophone.openim.IM;
  * 常量类，包含一些常用的 URL 和键名等常量
  */
 public class Constants {
+    // 是否为本地环境的标识
+    private static final boolean IS_LOCAL_ENV = false;
     public static final String DB_NAME_USERID="userId";
     public static final String DB_NAME_NICKNAME="nickName";
 
@@ -15,8 +17,7 @@ public class Constants {
 
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
-    // 是否为本地环境的标识
-    private static final boolean IS_LOCAL_ENV = false;
+
 
     // 默认主机地址
     public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "10.0.2.2" : "cfapi.flbxw.cn";
