@@ -77,7 +77,4 @@ public class Constants {
         return FILE_DIR;
     }
 
-    public static String getLogFilePath(){
-        return LOG_FILE_PATH;
-    }
 }

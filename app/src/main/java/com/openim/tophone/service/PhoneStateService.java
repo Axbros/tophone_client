@@ -8,23 +8,17 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.IBinder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
-
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationCompat;
-
 import android.util.Log;
 import android.widget.Toast;
-
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.utils.L;
-
 public class PhoneStateService extends Service {
 
     // 保存服务的开启状态，相当于Kotlin中的companion object里的属性

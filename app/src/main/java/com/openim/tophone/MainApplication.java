@@ -39,7 +39,6 @@ public class MainApplication extends BaseApp{
 
     private void initFile() {
         buildDirectory(Constants.getFileDir());
-        createFile(Constants.getLogFilePath());
     }
 
     private boolean buildDirectory(String path) {
@@ -47,22 +46,6 @@ public class MainApplication extends BaseApp{
         if (file.exists())
             return true;
         return file.mkdirs();
-    }
-
-    public static boolean createFile(String filePath) {
-        File file = new File(filePath);
-        // 若文件已存在则直接返回 true
-        if (file.exists()) {
-            return true;
-        }
-        try {
-            // 尝试创建新文件
-            return file.createNewFile();
-        } catch (IOException e) {
-            // 若创建文件时发生 I/O 异常，则打印错误信息并返回 false
-            System.err.println("创建文件时出错: " + e.getMessage());
-            return false;
-        }
     }
 
     private void initController() {
