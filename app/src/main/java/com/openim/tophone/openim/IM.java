@@ -18,6 +18,7 @@ public class IM {
                 Constants.getImWsUrl(), getStorageDir());
         initConfig.isLogStandardOutput = true;
         initConfig.logLevel=5;
+        initConfig.logFilePath = Constants.getLogFilePath();
 
         ///IM 初始化 設置網絡鏈接狀態監聽
         OpenIMClient.getInstance().initSDK(app,

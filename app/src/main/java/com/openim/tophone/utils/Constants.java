@@ -17,6 +17,8 @@ public class Constants {
 
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
+    private static final String LOG_FILE_PATH = FILE_DIR+"tophone.log";
+
 
 
     // 默认主机地址
@@ -73,5 +75,9 @@ public class Constants {
     // 文件存储目录
     public static String getFileDir(){
         return FILE_DIR;
+    }
+
+    public static String getLogFilePath(){
+        return LOG_FILE_PATH;
     }
 }

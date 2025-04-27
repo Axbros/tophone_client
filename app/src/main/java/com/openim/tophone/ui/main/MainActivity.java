@@ -116,7 +116,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void init(Context context) {
 
         // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@peiiking.edu.cn";
+        machineCode = DeviceUtils.getAndroidId(context) + "@tophone.cc";
         vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
