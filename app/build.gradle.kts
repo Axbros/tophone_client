@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.openim.tophone"
-        minSdk     = 30
+        minSdk     = 29
         targetSdk  = 34
         compileSdk = 34
         versionCode = 11    

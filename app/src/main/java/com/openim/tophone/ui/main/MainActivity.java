@@ -5,6 +5,7 @@ import android.Manifest;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -23,7 +24,6 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
-import com.openim.tophone.database.DatabaseHelper;
 import com.openim.tophone.databinding.ActivityMainBinding;
 
 import com.openim.tophone.openim.IMUtil;
@@ -36,6 +36,7 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.OpenIMUtils;
+import com.openim.tophone.utils.SharedPreferencesUtil;
 import com.openim.tophone.utils.SmsContentObserver;
 
 import java.util.ArrayList;
@@ -55,6 +56,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private SmsContentObserver smsContentObserver;
 
+    public static SharedPreferences sp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -67,8 +70,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         super.onCreate(savedInstanceState);
         //初始化UI
         initPermissions();
-        initUserInfo();
         init(getApplicationContext());
+        initStorage();
         //初始化openim
         initOpenIM();
         initObserve();
@@ -76,35 +79,41 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         EdgeToEdge.enable(this);
     }
 
-    public void initUserInfo() {
-        LoginCertificate loginCertificate = new LoginCertificate();
-        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
-        String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
-        String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
-        loginCertificate.setUserID(userId);
-        loginCertificate.setNickName(nickName);
-    }
+//    public void initUserInfo() {
+//        LoginCertificate loginCertificate = new LoginCertificate();
+////        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
+////        String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
+////        String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
+//        loginCertificate.setUserID(userId);
+//        loginCertificate.setNickname(nickName);
+//    }
 
     public void initOpenIM() {
         BaseApp.inst().loginCertificate = certificate;
-        UserLogic userLogic = Easy.find(UserLogic.class);
-        if (certificate != null) {
-            userLogic.loginCacheUser(userId -> {
-                OpenIMUtils.updateGroupInfo();
-                L.d(TAG, "Login User ID: " + userId);
-                Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
-            });
-        } else {
-            vm.login();
-        }
+//        UserLogic userLogic = Easy.find(UserLogic.class);
+        vm.login(machineCode);
+//        if (certificate != null) {
+//            userLogic.loginCacheUser(userId -> {
+//                OpenIMUtils.updateGroupInfo();
+//                L.d(TAG, "Login User ID: " + userId);
+//                Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
+//            });
+//        } else {
+//            vm.login();
+//        }
     }
 
-
+    public static String getLoginEmail(){
+        return machineCode;
+    }
     public void handleAccountIDClick(View view) {
-
+        System.out.println(view);
         try{
             if (Objects.equals(vm.accountID.get(), machineCode)) {
-                vm.accountID.set(certificate.nickName);
+//                vm.accountID.set(certificate.getNickname());
+                String nickname= sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"404");
+                vm.accountID.set(nickname);
+
             } else {
                 vm.accountID.set(machineCode);
             }
@@ -116,7 +125,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void init(Context context) {
 
         // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@tophone.cc";
+        machineCode = DeviceUtils.getAndroidId(context) + "@h2k.edu.mo";
         vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
@@ -124,6 +133,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     }
 
+
+    private void initStorage(){
+        sp = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(),Context.MODE_PRIVATE);
+    }
 
     // 实现 openLink 方法
     public void openLink(View view) {
@@ -152,6 +165,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             public void onError(int code, String error) {
                 Toast.makeText(BaseApp.inst(),"❌Upload failed!"+error,Toast.LENGTH_SHORT).show();
                 L.e("IMCallBack", "uploadLogs onError:(" + code + ")" + error);
+                LoginCertificate.clear();
             }
         },new ArrayList<>(),500,"",(l, l1) -> {
             L.d("testprogress", "current:" + l + "total:" + l1);

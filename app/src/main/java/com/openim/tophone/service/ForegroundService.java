@@ -12,10 +12,14 @@ import android.os.IBinder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
 import com.openim.tophone.R;
+import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.enums.ActionEnums;
+import com.openim.tophone.openim.IMUtil;
 
 public class ForegroundService extends Service {
 
@@ -83,12 +87,16 @@ public class ForegroundService extends Service {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
+                if (phoneNumber.isEmpty()) {
+                    Log.e(TAG, "phoneNumber is null");
+                    return;
+                }
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:
                         // Toast.makeText(MyService.this, "挂断" + phoneNumber, Toast.LENGTH_SHORT).show();
                         Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
-                        onCallFinish();
+                        onCallFinish(phoneNumber);
                         break;
                     // 接听
                     case TelephonyManager.CALL_STATE_OFFHOOK:
@@ -106,13 +114,16 @@ public class ForegroundService extends Service {
     }
 
     // 结束通话
-    private void onCallFinish() {
+    private void onCallFinish(String phoneNumber) {
         // 这里添加结束通话时的具体逻辑代码
+        IMUtil.uploadMsg2Parent("idle",phoneNumber,"");
     }
 
     // 被呼叫
     private void onCalling(String phoneNumber) {
         // 这里添加被呼叫时的具体逻辑代码
+        Toast.makeText(BaseApp.inst(), "Income:"+phoneNumber, Toast.LENGTH_SHORT).show();
+        IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(),phoneNumber,"");
     }
 }
 

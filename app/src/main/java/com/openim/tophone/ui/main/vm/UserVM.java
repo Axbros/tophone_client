@@ -1,16 +1,16 @@
 package com.openim.tophone.ui.main.vm;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
-import androidx.constraintlayout.widget.Group;
 import androidx.databinding.ObservableField;
 
+import com.openim.tophone.MainApplication;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
-import com.openim.tophone.base.vm.State;
-import com.openim.tophone.database.DatabaseHelper;
+
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
@@ -18,21 +18,20 @@ import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.entity.OpenIMUserInfoResp;
 import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
-import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.OpenIMUtils;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
+
 import java.util.HashMap;
-import java.util.List;
 
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnFriendshipListener;
-import io.openim.android.sdk.models.GroupInfo;
 import io.openim.android.sdk.models.UserInfo;
 
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
@@ -56,7 +55,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 //            登陆状态点击按钮就给他下线
             logout();
         } else {
-            login();
+            login(MainActivity.getLoginEmail());
         }
 
         connectionStatus.set(!status);
@@ -64,9 +63,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
     }
 
-    public void login() {
-        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
-        String email = dbHelper.getValueByName(Constants.DB_NAME_EMAIL);
+    public void login(String email) {
+
         Parameter parameter = new Parameter();
         parameter.add("email", email)
                 .add("password", "516f00c9229200d6ce526991cdfdd959")
@@ -93,10 +91,6 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     //缓存登录信息
                                     Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
                                     connectionStatus.set(true);
-                                    String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
-                                    String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
-                                    loginCertificate.userID=userId;
-                                    loginCertificate.nickName=nickName;
                                     loginCertificate.cache(getContext());
                                     BaseApp.inst().loginCertificate = loginCertificate;
                                     //登陆成功后就获取群信息
@@ -163,18 +157,17 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             user.put("nickname", "android");
                             user.put("areaCode", "+853");
                             registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
-
+                            //开始注册
                             N.API(OpenIMService.class)
                                     .register(registerParameter.buildJsonBody())
                                     .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
                                                                                                                        @Override
                                                                                                                        public void onSuccess(LoginCertificate o) {
-//                                                                                                                           注册成功把userID和nickname存入数据库
-                                                                                                                           DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
-                                                                                                                           dbHelper.insertData("userId",o.userID);
-                                                                                                                           dbHelper.insertData("nickName",o.nickName);
-                                                                                                                           dbHelper.insertData("email",email);
-                                                                                                                           accountID.set(o.nickName);
+//
+                                                                                                                           SharedPreferences sp =BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+                                                                                                                           MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(),o.getNickname()).apply();
+
+                                                                                                                           accountID.set(o.nickname);
                                                                                                                            GroupInfoLabel.set("Registered");
                                                                                                                            connectionStatus.set(true);
                                                                                                                            o.cache(getContext());
@@ -194,8 +187,10 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                         }
                         else{
                             UserInfo userInfo = userInfoResp.users.get(0);
-                            DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
-                            dbHelper.updateValueByName(Constants.DB_NAME_NICKNAME,userInfo.getNickname());
+//                            每次登陆更新 登陆证书的用户名
+                            MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(),userInfo.getNickname()).apply();
+
+
                         }
                     }
 

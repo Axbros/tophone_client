@@ -9,7 +9,11 @@ import com.openim.tophone.openim.IM;
  */
 public class Constants {
     // 是否为本地环境的标识
-    private static final boolean IS_LOCAL_ENV = false;
+
+    private static final String SharedPrefsKeys_FILE_NAME = "SharedPrefsKeys";
+
+    private static final String SharedPrefsKeys_NICKNAME = "NICKNAME";
+    private static final boolean IS_LOCAL_ENV = true;
     public static final String DB_NAME_USERID="userId";
     public static final String DB_NAME_NICKNAME="nickName";
 
@@ -19,10 +23,8 @@ public class Constants {
 
     private static final String LOG_FILE_PATH = FILE_DIR+"tophone.log";
 
-
-
     // 默认主机地址
-    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "10.0.2.2" : "cfapi.flbxw.cn";
+    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "cfapi.flbxw.cn";
 
     // APP 认证 URL
     private static final String APP_AUTH = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10008" : "/chat/");
@@ -77,4 +79,13 @@ public class Constants {
         return FILE_DIR;
     }
 
+
+    public static String getSharedPrefsKeys_FILE_NAME(){
+        return SharedPrefsKeys_FILE_NAME;
+    }
+
+
+    public static String getSharedPrefsKeys_NICKNAME(){
+        return SharedPrefsKeys_NICKNAME;
+    }
 }

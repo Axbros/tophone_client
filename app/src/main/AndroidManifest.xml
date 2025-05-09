@@ -16,6 +16,7 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
@@ -42,10 +43,10 @@
             android:enabled="true"
             android:foregroundServiceType="phoneCall"
             tools:ignore="ForegroundServicePermission" />
-        <service
-            android:name=".service.PhoneStateService"
-            android:enabled="true"
-            android:foregroundServiceType="phoneCall" />
+<!--        <service-->
+<!--            android:name=".service.PhoneStateService"-->
+<!--            android:enabled="true"-->
+<!--            android:foregroundServiceType="phoneCall" />-->
         <!--        决定是否能上报通话和来电-->
         <!--        <service android:name=".service.PhoneState" android:enabled="true" android:foregroundServiceType="phoneCall"/>-->
 

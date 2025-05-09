@@ -13,7 +13,7 @@ public class HttpConfig {
     String baseUrl;
     long writeTimeOut = 10;
     long readTimeOut = 10;
-    long connectTimeOut = 15;
+    long connectTimeOut = 25;
     List<Interceptor> interceptors;
 
     public HttpConfig addInterceptor(Interceptor interceptor) {

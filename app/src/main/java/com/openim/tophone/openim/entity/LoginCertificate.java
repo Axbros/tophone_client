@@ -4,20 +4,20 @@ import android.content.Context;
 import android.util.Log;
 
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.database.DatabaseHelper;
 import com.openim.tophone.net.bage.GsonHel;
+import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
 public class LoginCertificate {
     private static final String TAG = "LoginCertificate";
 
-    public String getNickName() {
-        return nickName;
+    public String getNickname() {
+        return nickname;
     }
 
-    public void setNickName(String nickName) {
-        this.nickName = nickName;
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public String getUserID() {
@@ -44,7 +44,7 @@ public class LoginCertificate {
         this.chatToken = chatToken;
     }
 
-    public String nickName;
+    public String nickname;
     public String userID;
     public String imToken;
     public String chatToken;
@@ -66,6 +66,7 @@ public class LoginCertificate {
     }
 
     public static void clear() {
+        MainActivity.sp.edit().clear().apply();
         SharedPreferencesUtil.remove(BaseApp.inst(),
                 "user.LoginCertificate");
         L.e(TAG,"LoginCertificate 已移除");
