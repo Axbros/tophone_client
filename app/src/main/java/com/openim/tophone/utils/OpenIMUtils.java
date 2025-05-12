@@ -50,14 +50,14 @@ public class OpenIMUtils {
                             SharedPreferencesUtil sharedPreferencesUtil=new SharedPreferencesUtil(BaseApp.inst());
                             sharedPreferencesUtil.setCache(Constants.getGroupOwnerKey(),ownerUserId);
                             String groupOwner = data.get(0).getNickname();
-                            VMStore.get().GroupInfoLabel.set(groupName+"("+groupOwner+")");
+                            VMStore.get().groupInfoLabel.setValue(groupName+"("+groupOwner+")");
                             L.d(TAG,"Get Group Info Success！Group Name:"+groupName+" Group Owner:"+groupOwner+" Group Owner Id:"+ownerUserId);
                         }
                     }, userIdList);
 
 
                 }else{
-                    VMStore.get().GroupInfoLabel.set("Group Joined is not equal 1 ! the size is : "+data.size());
+                    VMStore.get().groupInfoLabel.setValue("Group Joined is not equal 1 ! the size is : "+data.size());
                 }
                 L.d(TAG,"getJoinedGroupList Success!");
             }

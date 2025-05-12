@@ -52,8 +52,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
     private ActivityMainBinding view;
-
-    private String phoneNumber;
+    
 
     public static SharedPreferences sp;
 
@@ -113,16 +112,16 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void handleAccountIDClick(View view) {
         System.out.println(view);
         try{
-            if (Objects.equals(vm.accountID.get(), machineCode)) {
-//                vm.accountID.set(certificate.getNickname());
+            if (Objects.equals(vm.accountID.getValue(), machineCode)) {
+//                vm.accountID.setValue(certificate.getNickname());
                 String nickname= sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"404");
-                vm.accountID.set(nickname);
+                vm.accountID.setValue(nickname);
 
             } else {
                 TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
 
-                vm.accountID.set(phoneNumber.isEmpty()?machineCode:phoneNumber );
+                vm.accountID.setValue(machineCode);
             }
         }catch (Exception e){
             L.e(TAG,e.getMessage());
@@ -139,7 +138,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
         machineCode=machineCode.replace("+86","");
 
-        vm.accountID.set(machineCode);
+        vm.accountID.setValue(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
@@ -243,7 +242,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 == PackageManager.PERMISSION_GRANTED) {
-            vm.phonePermissions.set(true);
+            vm.phonePermissions.setValue(true);
         }
 
         // 检查发送短信权限
@@ -261,7 +260,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
                 == PackageManager.PERMISSION_GRANTED) {
-            vm.smsPermissions.set(true);
+            vm.smsPermissions.setValue(true);
         }
 
         // 如果有需要请求的权限
@@ -321,12 +320,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             // 如果没有权限，请求权限
-            vm.smsPermissions.set(false);
+            vm.smsPermissions.setValue(false);
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.READ_SMS},
                     PERMISSION_REQUEST_CODE);
         } else {
-            vm.smsPermissions.set(true);
+            vm.smsPermissions.setValue(true);
 
         }
 

@@ -57,23 +57,23 @@ public class IMEvent {
         public void onConnectFailed(int code, String error) {
             // 连接服务器失败，可以提示用户当前网络连接不可用
             L.d(TAG, "连接服务器失败(" + error + ")");
-            VMStore.get().connectionStatus.set(false);
+            VMStore.get().connectionStatus.setValue(false);
         }
 
         @Override
         public void onConnectSuccess() {
             // 已经成功连接到服务器
             L.d(TAG, "已经成功连接到服务器");
-            VMStore.get().isLoading.set(false);
-            VMStore.get().connectionStatus.set(true);
+            VMStore.get().isLoading.setValue(false);
+            VMStore.get().connectionStatus.setValue(true);
         }
 
         @Override
         public void onConnecting() {
             // 正在连接到服务器，适合在 UI 上展示“正在连接”状态。
             L.d(TAG, "正在连接到服务器：" + Constants.getAppAuthUrl());
-            VMStore.get().isLoading.set(true);
-            VMStore.get().connectionStatus.set(false);
+            VMStore.get().isLoading.setValue(true);
+            VMStore.get().connectionStatus.setValue(false);
         }
 
         @Override
@@ -81,8 +81,8 @@ public class IMEvent {
             // 当前用户被踢下线，此时可以 UI 提示用户“您已经在其他端登录了当前账号，是否重新登录？”
             L.d(TAG, "当前用户被踢下线");
             LoginCertificate.clear();
-            VMStore.get().isLoading.set(false);
-            VMStore.get().connectionStatus.set(false);
+            VMStore.get().isLoading.setValue(false);
+            VMStore.get().connectionStatus.setValue(false);
 
         }
 
@@ -91,14 +91,14 @@ public class IMEvent {
             // 登录票据已经过期，请使用新签发的 UserSig 进行登录。
             L.d(TAG, "登录票据已经过期");
             LoginCertificate.clear();
-            VMStore.get().connectionStatus.set(false);
+            VMStore.get().connectionStatus.setValue(false);
         }
 
         @Override
         public void onUserTokenInvalid(String reason) {
             L.d(TAG, "user token invalid");
             LoginCertificate.clear();
-            VMStore.get().connectionStatus.set(false);
+            VMStore.get().connectionStatus.setValue(false);
         }
     };
 

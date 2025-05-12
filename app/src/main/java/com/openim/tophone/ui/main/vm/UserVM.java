@@ -1,16 +1,11 @@
 package com.openim.tophone.ui.main.vm;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Toast;
-
-import androidx.databinding.ObservableField;
-
-import com.openim.tophone.MainApplication;
+import androidx.lifecycle.MutableLiveData;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
-
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.net.RXRetrofit.NetObserver;
 import com.openim.tophone.net.RXRetrofit.Parameter;
@@ -20,54 +15,38 @@ import com.openim.tophone.repository.OneselfService;
 import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.Constants;
-import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.OpenIMUtils;
-import com.openim.tophone.utils.SharedPreferencesUtil;
-
-
 import java.util.HashMap;
-
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.listener.OnFriendshipListener;
-import io.openim.android.sdk.models.UserInfo;
-
 public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFriendshipListener {
-
-    public ObservableField<String> accountID = new ObservableField<>("");
-    public ObservableField<String> GroupInfoLabel = new ObservableField<>("Unknow");
-
-    public ObservableField<Boolean> phonePermissions = new ObservableField<>(false);
-    public ObservableField<Boolean> smsPermissions = new ObservableField<>(false);
-    public ObservableField<Boolean> connectionStatus = new ObservableField<>(false);
-    public ObservableField<Boolean> isLoading = new ObservableField<>(false);
-
-
-
-    private String TAG = "UserVM";
-
+    public MutableLiveData<String> accountID = new MutableLiveData<>("");
+    public MutableLiveData<String> groupInfoLabel = new MutableLiveData<>("Unknown");
+    public MutableLiveData<Boolean> phonePermissions = new MutableLiveData<>(false);
+    public MutableLiveData<Boolean> smsPermissions = new MutableLiveData<>(false);
+    public MutableLiveData<Boolean> connectionStatus = new MutableLiveData<>(false);
+    public MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private static final String DEFAULT_PASSWORD = "516f00c9229200d6ce526991cdfdd959";
+    private static final String DEFAULT_NICKNAME = "android";
+    private static final String EMAIL_SUFFIX = "@qq.com";
+    private static final String VERIFY_CODE = "666666";
+    private final String TAG = "UserVM";
     public void handleBtnConnect() {
-        isLoading.set(true);
-        Boolean status = connectionStatus.get();
+        isLoading.setValue(true);
+        boolean status = connectionStatus.getValue();
         if (status) {
-//            登陆状态点击按钮就给他下线
             logout();
         } else {
             login(MainActivity.getLoginEmail());
         }
-        isLoading.set(false);
+        isLoading.setValue(false);
     }
-
     public void login(String machineCode) {
-        String email = machineCode+"@qq.com";
-        Parameter parameter = new Parameter();
-        parameter.add("email", email)
-                .add("password", "516f00c9229200d6ce526991cdfdd959")
-                .add("platform", 2)
-                .add("usedFor", 3)
-                .add("operationID", System.currentTimeMillis() + "");
+        String email = machineCode + EMAIL_SUFFIX;
+        Parameter parameter = createLoginParameter(email);
         N.API(OpenIMService.class)
                 .login(parameter.buildJsonBody())
                 .compose(N.IOMain())
@@ -75,134 +54,142 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 .subscribe(new NetObserver<LoginCertificate>(getContext()) {
                     @Override
                     public void onSuccess(LoginCertificate loginCertificate) {
-                        try {
-                            OpenIMClient.getInstance().login(new OnBase<String>() {
-                                @Override
-                                public void onError(int code, String error) {
-                                    GroupInfoLabel.set("Offline"+error);
-                                    Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
-                                }
-
-                                @Override
-                                public void onSuccess(String data) {
-                                    //缓存登录信息
-                                    Log.d(TAG, "LoginCertificate OpenIMClient.getInstance().login onSuccess");
-                                    connectionStatus.set(true);
-                                    loginCertificate.cache(getContext());
-                                    BaseApp.inst().loginCertificate = loginCertificate;
-                                    //登陆成功后就获取群信息
-                                    OpenIMUtils.updateGroupInfo();
-                                    connectionStatus.set(true);
-                                }
-                            }, loginCertificate.userID, loginCertificate.imToken);
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            connectionStatus.set(false);
-                        }
+                        handleLoginSuccess(loginCertificate);
                     }
-
-
+                    @Override
+                    public void onError(Throwable e) {
+                        handleLoginError(e);
+                    }
                 });
     }
-
-    public void logout(){
-        LoginCertificate cert_cache=LoginCertificate.getCache(getContext());
+    private Parameter createLoginParameter(String email) {
         Parameter parameter = new Parameter();
-        assert cert_cache != null;
-        parameter.add("userID",cert_cache.userID);
-        parameter.add("platformID",Platform.ANDROID);
+        parameter.add("email", email)
+                .add("password", DEFAULT_PASSWORD)
+                .add("platform", 2)
+                .add("usedFor", 3)
+                .add("operationID", System.currentTimeMillis() + "");
+        return parameter;
+    }
+    private void handleLoginSuccess(LoginCertificate loginCertificate) {
+        try {
+            OpenIMClient.getInstance().login(new OnBase<String>() {
+                @Override
+                public void onSuccess(String data) {
+                    onLoginSuccess(data, loginCertificate);
+                }
+                @Override
+                public void onError(int code, String error) {
+                    onLoginError(error);
+                }
+            }, loginCertificate.userID, loginCertificate.imToken);
+        } catch (Exception e) {
+            connectionStatus.setValue(false);
+            e.printStackTrace();
+        }
+    }
+    private void onLoginSuccess(String data, LoginCertificate loginCertificate) {
+        connectionStatus.setValue(true);
+        loginCertificate.cache(getContext());
+        BaseApp.inst().loginCertificate = loginCertificate;
+        OpenIMUtils.updateGroupInfo();
+    }
+    private void onLoginError(String error) {
+        groupInfoLabel.setValue("Offline: " + error);
+        connectionStatus.setValue(false);
+        Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
+    }
+    private void handleLoginError(Throwable e) {
+        connectionStatus.setValue(false);
+        Log.d("UserVM", "Login failed", e);
+    }
+    public void logout() {
+        LoginCertificate certCache = LoginCertificate.getCache(getContext());
+        if (certCache == null) return;
+        Parameter parameter = new Parameter();
+        parameter.add("userID", certCache.userID)
+                .add("platformID", Platform.ANDROID);
         OpenIMClient.getInstance().logout(new OnBase<String>() {
-            @Override
-            public void onError(int code, String error) {
-                OnBase.super.onError(code, error);
-            }
-
             @Override
             public void onSuccess(String data) {
                 LoginCertificate.clear();
-                OnBase.super.onSuccess(data);
+                connectionStatus.setValue(false);
+            }
+            @Override
+            public void onError(int code, String error) {
+                connectionStatus.setValue(false);
             }
         });
-
-
-
     }
-
-
-
     public void checkIfUserExists(String machineCode) {
-
-        String email = machineCode+ "@qq.com";
-
+        String email = machineCode + EMAIL_SUFFIX;
         Parameter parameter = OneselfService.buildPagination(1, 1);
         parameter.add("keyword", email).add("normal", 1);
-
         N.API(OneselfService.class)
                 .searchUser(parameter.buildJsonBody())
-                .map(OpenIMService.turn(OpenIMUserInfoResp.class)).compose(N.IOMain()).subscribe(new NetObserver<OpenIMUserInfoResp>(getContext()) {
-
+                .map(OpenIMService.turn(OpenIMUserInfoResp.class))
+                .compose(N.IOMain())
+                .subscribe(new NetObserver<OpenIMUserInfoResp>(getContext()) {
                     @Override
                     public void onSuccess(OpenIMUserInfoResp userInfoResp) {
-                        L.d(TAG, "current account: " + email + " Total number:" + userInfoResp.total);
-                        Integer total = userInfoResp.total;
-                        if (total == 0) {
-                            L.d(TAG, "prepare to register account: " + email + "!");
-                            GroupInfoLabel.set("Unregistered");
-                            //如果没有账号那就注册！
-                            Parameter registerParameter = new Parameter();
-                            HashMap user = new HashMap();
-                            user.put("email", email);
-                            user.put("password", "516f00c9229200d6ce526991cdfdd959");
-                            user.put("nickname", "android");
-                            user.put("areaCode", "+86");
-                            registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
-                            //开始注册
-                            N.API(OpenIMService.class)
-                                    .register(registerParameter.buildJsonBody())
-                                    .map(OpenIMService.turn(LoginCertificate.class)).compose(N.IOMain()).subscribe(new NetObserver<LoginCertificate>(getContext()) {
-                                                                                                                       @Override
-                                                                                                                       public void onSuccess(LoginCertificate o) {
-//
-                                                                                                                           SharedPreferences sp =BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
-                                                                                                                           MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(),o.getNickname()).apply();
-
-                                                                                                                           accountID.set(o.nickname);
-                                                                                                                           GroupInfoLabel.set("Registered");
-                                                                                                                           connectionStatus.set(true);
-                                                                                                                           o.cache(getContext());
-                                                                                                                           Toast.makeText(getContext(), "LoginCertificate register onSuccess", Toast.LENGTH_SHORT).show();
-                                                                                                                       }
-
-                                                                                                                       @Override
-                                                                                                                       protected void onFailure(Throwable e) {
-                                                                                                                           super.onFailure(e);
-                                                                                                                           GroupInfoLabel.set("Register Error");
-                                                                                                                           Log.d(TAG, "Register Error" + e.toString());
-                                                                                                                           accountID.set(e.toString());
-                                                                                                                           Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                                                                                                                       }
-                                                                                                                   }
-                                    );
-                        }
-                        else{
-                            UserInfo userInfo = userInfoResp.users.get(0);
-//                            每次登陆更新 登陆证书的用户名
-                            MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(),userInfo.getNickname()).apply();
-
-
-                        }
+                        handleUserExistence(userInfoResp, email);
                     }
-
-                    @Override
-                    protected void onFailure(Throwable e) {
-                        super.onFailure(e);
-                    }
-
                     @Override
                     public void onError(Throwable e) {
                         super.onError(e);
                     }
                 });
+    }
+    private void handleUserExistence(OpenIMUserInfoResp userInfoResp, String email) {
+        if (userInfoResp.total == 0) {
+            registerUser(email);
+        } else {
+            updateUserInfo(userInfoResp.users.get(0).getNickname());
+        }
+    }
+    private void registerUser(String email) {
+        Parameter registerParameter = createRegisterParameter(email);
+        N.API(OpenIMService.class)
+                .register(registerParameter.buildJsonBody())
+                .map(OpenIMService.turn(LoginCertificate.class))
+                .compose(N.IOMain())
+                .subscribe(new NetObserver<LoginCertificate>(getContext()) {
+                    @Override
+                    public void onSuccess(LoginCertificate loginCertificate) {
+                        handleRegisterSuccess(loginCertificate);
+                    }
+                    @Override
+                    public void onFailure(Throwable e) {
+                        super.onFailure(e);
+                        groupInfoLabel.setValue("Register Error");
+                        Log.d(TAG, "Register Error: " + e.toString());
+                    }
+                });
+    }
+    private Parameter createRegisterParameter(String email) {
+        Parameter registerParameter = new Parameter();
+        HashMap<String, String> user = new HashMap<>();
+        user.put("email", email);
+        user.put("password", DEFAULT_PASSWORD);
+        user.put("nickname", DEFAULT_NICKNAME);
+        user.put("areaCode", "+86");
+        registerParameter.add("user", user)
+                .add("verifyCode", VERIFY_CODE)
+                .add("autoLogin", true)
+                .add("platform", Platform.ANDROID);
+        return registerParameter;
+    }
+    private void handleRegisterSuccess(LoginCertificate loginCertificate) {
+        SharedPreferences sp = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+        MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(), loginCertificate.getNickname()).apply();
+        accountID.setValue(loginCertificate.nickname);
+        groupInfoLabel.setValue("Registered");
+        connectionStatus.setValue(true);
+        loginCertificate.cache(getContext());
+        Toast.makeText(getContext(), "Registration Successful", Toast.LENGTH_SHORT).show();
+    }
+    private void updateUserInfo(String nickname) {
+        MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(), nickname).apply();
+        accountID.setValue(nickname);
     }
 }
