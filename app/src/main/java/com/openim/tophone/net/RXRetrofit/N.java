@@ -1,5 +1,4 @@
 package com.openim.tophone.net.RXRetrofit;
-
 import android.content.Context;
 import com.openim.tophone.utils.L;
 import java.util.HashMap;
@@ -15,8 +14,6 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
-
-
 /**
  * 网络请求类
  */
@@ -25,7 +22,6 @@ public class N {
     public static N instance = null;
     private static Retrofit mRetrofit;
     private static HashMap<String, ListCompositeDisposable> disposableHashMap = null;
-
     public static void init(HttpConfig config) {
         getInstance(config);
     }
@@ -33,19 +29,16 @@ public class N {
         initException();
         return mRetrofit.create(service);
     }
-
     private static void initException() {
         if (null == mRetrofit)
             throw new NullPointerException("N is not initialized");
     }
-
     private N(HttpConfig httpConfig) {
         initMap();
         OkHttpClient.Builder build = new OkHttpClient.Builder()
                 .connectTimeout(httpConfig.connectTimeOut, TimeUnit.SECONDS)
                 .readTimeout(httpConfig.readTimeOut, TimeUnit.SECONDS)
                 .writeTimeout(httpConfig.writeTimeOut, TimeUnit.SECONDS);
-
         if (null != httpConfig.interceptors) {
             for (Interceptor interceptor : httpConfig.interceptors) {
                 build.addInterceptor(interceptor);
@@ -53,7 +46,6 @@ public class N {
         }
         if (HttpConfig.isDebug)
             build.addInterceptor(LogInterceptor());//添加日志拦截器
-
         mRetrofit = new Retrofit.Builder()
                 .baseUrl(httpConfig.baseUrl)
                 .addConverterFactory(GsonConverterFactory.create())//添加gson转换器
@@ -61,8 +53,6 @@ public class N {
                 .client(build.build())
                 .build();
     }
-
-
     private static synchronized void getInstance(HttpConfig httpConfig) {
         if (null == instance) {
             instance = new N(httpConfig);
@@ -72,21 +62,16 @@ public class N {
         String sign = context.getClass().getSimpleName();
         clearDispose(sign);
     }
-
-
     public static void clearDispose(String sign) {
         initMap();
         ListCompositeDisposable disposable = disposableHashMap.get(sign);
         if (null != disposable)
             disposable.clear();
     }
-
-
     private static synchronized void initMap() {
         if (null == disposableHashMap)
             disposableHashMap = new HashMap<>();
     }
-
     //日志拦截器
     public HttpLoggingInterceptor LogInterceptor() {
         return new HttpLoggingInterceptor(message -> L.w(TAG, message)).setLevel(HttpLoggingInterceptor.Level.HEADERS);//设置打印数据的级别
@@ -94,12 +79,9 @@ public class N {
     public static <T> ObservableTransformer<T, T> IOMain() {
         return upstream -> upstream.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
     }
-
     public static <T> ObservableTransformer<T, T> computationMain() {
         return upstream -> upstream.subscribeOn(Schedulers.computation()).observeOn(AndroidSchedulers.mainThread());
     }
-
-
     public static void addDispose(String sign, Disposable d) {
         initMap();
         ListCompositeDisposable disposable = disposableHashMap.get(sign);
@@ -111,6 +93,4 @@ public class N {
             disposableHashMap.put(sign, listCompositeDisposable);
         }
     }
-
-
 }

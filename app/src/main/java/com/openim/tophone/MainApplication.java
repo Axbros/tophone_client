@@ -10,8 +10,6 @@ import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
-
-import com.openim.tophone.service.ForegroundService;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
