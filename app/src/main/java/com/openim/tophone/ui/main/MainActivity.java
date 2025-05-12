@@ -2,15 +2,19 @@ package com.openim.tophone.ui.main;
 
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+import android.telecom.TelecomManager;
+import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Toast;
 
@@ -23,21 +27,16 @@ import androidx.databinding.DataBindingUtil;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.databinding.ActivityMainBinding;
 
 import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
-import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.service.ForegroundService;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
-import com.openim.tophone.utils.OpenIMUtils;
-import com.openim.tophone.utils.SharedPreferencesUtil;
-import com.openim.tophone.utils.SmsContentObserver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +53,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     ;
     private ActivityMainBinding view;
 
-    private SmsContentObserver smsContentObserver;
+    private String phoneNumber;
 
     public static SharedPreferences sp;
 
@@ -72,35 +71,40 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         initPermissions();
         init(getApplicationContext());
         initStorage();
+        requestDefaultDialer();
         //初始化openim
         initOpenIM();
         initObserve();
         initSMSListener();
+
         EdgeToEdge.enable(this);
     }
 
-//    public void initUserInfo() {
-//        LoginCertificate loginCertificate = new LoginCertificate();
-////        DatabaseHelper dbHelper = new DatabaseHelper(BaseApp.inst());
-////        String userId = dbHelper.getValueByName(Constants.DB_NAME_USERID);
-////        String nickName = dbHelper.getValueByName(Constants.DB_NAME_NICKNAME);
-//        loginCertificate.setUserID(userId);
-//        loginCertificate.setNickname(nickName);
-//    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 123) {
+            if (resultCode == RESULT_OK) {
+                Toast.makeText(this, "设置为默认拨号器成功！", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "未设置为默认拨号器，无法获取号码", Toast.LENGTH_LONG).show();
+                new AlertDialog.Builder(this)
+                        .setTitle("权限提示")
+                        .setMessage("为了正常获取来电号码，需要将本应用设置为默认拨号器，是否前往设置？")
+                        .setPositiveButton("前往设置", (dialog, which) -> {
+                            Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+                            intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
+                            startActivity(intent);
+                        })
+                        .setNegativeButton("取消", null)
+                        .show();
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 
     public void initOpenIM() {
         BaseApp.inst().loginCertificate = certificate;
-//        UserLogic userLogic = Easy.find(UserLogic.class);
         vm.login(machineCode);
-//        if (certificate != null) {
-//            userLogic.loginCacheUser(userId -> {
-//                OpenIMUtils.updateGroupInfo();
-//                L.d(TAG, "Login User ID: " + userId);
-//                Toast.makeText(getBaseContext(), "Login User ID: " + userId + " Success!", Toast.LENGTH_SHORT).show();
-//            });
-//        } else {
-//            vm.login();
-//        }
     }
 
     public static String getLoginEmail(){
@@ -115,7 +119,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
                 vm.accountID.set(nickname);
 
             } else {
-                vm.accountID.set(machineCode);
+                TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+
+
+                vm.accountID.set(phoneNumber.isEmpty()?machineCode:phoneNumber );
             }
         }catch (Exception e){
             L.e(TAG,e.getMessage());
@@ -123,9 +130,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     }
 
     public void init(Context context) {
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            machineCode = DeviceUtils.getAndroidId(context);
+            return;
+        }
+        machineCode = telephonyManager.getLine1Number();
 
-        // 1.获取设备 ID
-        machineCode = DeviceUtils.getAndroidId(context) + "@h2k.edu.mo";
+        machineCode=machineCode.replace("+86","");
+
         vm.accountID.set(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
@@ -192,7 +205,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             startForegroundService(serviceIntent);
         }
 
-
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, 888);
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -284,9 +299,23 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     }
 
     public void initObserve() {
+        Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+        intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
+        startActivity(intent);
 
     }
-
+    public void requestDefaultDialer() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            TelecomManager telecomManager = (TelecomManager) getSystemService(TELECOM_SERVICE);
+            if (telecomManager != null && !getPackageName().equals(telecomManager.getDefaultDialerPackage())) {
+                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+                intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
+                startActivityForResult(intent, 123); // 可以用来回调判断是否成功
+            } else {
+                Toast.makeText(this, "当前已是默认拨号器", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
     public void initSMSListener(){
         // 检查是否已经有读取短信的权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
@@ -298,17 +327,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
                     PERMISSION_REQUEST_CODE);
         } else {
             vm.smsPermissions.set(true);
-            // 创建 Handler
-            Handler handler = new Handler();
-            // 创建 SmsContentObserver 实例
-            smsContentObserver = new SmsContentObserver(this, handler);
-            // 获取 ContentResolver
-            ContentResolver contentResolver = getContentResolver();
-            // 注册 SmsContentObserver 监听短信数据库变化
-            contentResolver.registerContentObserver(
-                    android.provider.Telephony.Sms.CONTENT_URI,
-                    true,
-                    smsContentObserver);
 
         }
 

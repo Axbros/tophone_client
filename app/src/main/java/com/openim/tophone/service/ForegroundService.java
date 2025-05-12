@@ -66,6 +66,9 @@ public class ForegroundService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (telephonyManager != null && mPhoneListener != null) {
+            telephonyManager.listen(mPhoneListener, PhoneStateListener.LISTEN_NONE);
+        }
         stopForeground(true);
     }
 
@@ -87,10 +90,12 @@ public class ForegroundService extends Service {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
-                if (phoneNumber.isEmpty()) {
-                    Log.e(TAG, "phoneNumber is null");
+                if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+                    Log.e(TAG, "phoneNumber is null or empty");
+                    Toast.makeText(BaseApp.inst(),"监听到通话信息，但是由于没有权限无法获取电话号码，上报取消，请检查权限问题！",Toast.LENGTH_LONG).show();
                     return;
                 }
+
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:

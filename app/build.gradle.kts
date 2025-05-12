@@ -16,10 +16,10 @@ android {
     defaultConfig {
         applicationId = "com.openim.tophone"
         minSdk     = 29
-        targetSdk  = 34
+        targetSdk  = 33
         compileSdk = 34
-        versionCode = 11    
-        versionName = "1.1"
+        versionCode = 116
+        versionName = "1.1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -39,7 +39,7 @@ android {
         abi{
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            include("armeabi-v7a", "arm64-v8a")
             isUniversalApk= true
         }
     }

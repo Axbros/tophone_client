@@ -57,14 +57,11 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
         } else {
             login(MainActivity.getLoginEmail());
         }
-
-        connectionStatus.set(!status);
         isLoading.set(false);
-
     }
 
-    public void login(String email) {
-
+    public void login(String machineCode) {
+        String email = machineCode+"@qq.com";
         Parameter parameter = new Parameter();
         parameter.add("email", email)
                 .add("password", "516f00c9229200d6ce526991cdfdd959")
@@ -95,6 +92,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                                     BaseApp.inst().loginCertificate = loginCertificate;
                                     //登陆成功后就获取群信息
                                     OpenIMUtils.updateGroupInfo();
+                                    connectionStatus.set(true);
                                 }
                             }, loginCertificate.userID, loginCertificate.imToken);
 
@@ -133,7 +131,9 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
 
 
 
-    public void checkIfUserExists(String email) {
+    public void checkIfUserExists(String machineCode) {
+
+        String email = machineCode+ "@qq.com";
 
         Parameter parameter = OneselfService.buildPagination(1, 1);
         parameter.add("keyword", email).add("normal", 1);
@@ -155,7 +155,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                             user.put("email", email);
                             user.put("password", "516f00c9229200d6ce526991cdfdd959");
                             user.put("nickname", "android");
-                            user.put("areaCode", "+853");
+                            user.put("areaCode", "+86");
                             registerParameter.add("user", user).add("verifyCode", "666666").add("autoLogin", true).add("platform", Platform.ANDROID);
                             //开始注册
                             N.API(OpenIMService.class)
