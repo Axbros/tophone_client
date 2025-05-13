@@ -89,7 +89,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
 
-        machineCode=machineCode.substring(machineCode.length()-8);
+//        machineCode=machineCode.substring(machineCode.length()-8);
         vm.accountID.setValue(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册

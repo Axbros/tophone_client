@@ -29,7 +29,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     public MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private static final String DEFAULT_PASSWORD = "516f00c9229200d6ce526991cdfdd959";
     private static final String DEFAULT_NICKNAME = "android";
-    private static final String EMAIL_SUFFIX = "@qq.com";
+    private static final String EMAIL_SUFFIX = "@tsinghua.edu.cn";
     private static final String VERIFY_CODE = "666666";
     private final String TAG = "UserVM";
     public void handleBtnConnect() {
