@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
 }
-
 android {
 
     dataBinding{
@@ -15,12 +14,11 @@ android {
 
     defaultConfig {
         applicationId = "com.openim.tophone"
-        minSdk     = 29
-        targetSdk  = 33
-        compileSdk = 34
-        versionCode = 117
-        versionName = "1.1.7"
-
+        minSdk     = 26
+        targetSdk  = 32
+        compileSdk = 33
+        versionCode = 118
+        versionName = "1.1.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -48,6 +46,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 }
+configurations.all {
+    resolutionStrategy {
+        force("androidx.activity:activity:1.7.2")
+    }
+}
 
 dependencies {
     implementation(libs.android.sdk)
@@ -58,16 +61,12 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.fastjson2)
-    implementation(libs.buildinfrastructure)
     implementation(libs.logging.interceptor)
     implementation(libs.adapter.rxjava2)
     implementation(libs.converter.gson)
-    implementation(libs.fastjson)
     implementation(libs.rxjava)
     implementation(libs.rxandroid)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-
-
 }

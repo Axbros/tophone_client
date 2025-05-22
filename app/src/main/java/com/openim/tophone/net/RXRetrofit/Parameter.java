@@ -1,6 +1,6 @@
 package com.openim.tophone.net.RXRetrofit;
+import com.alibaba.fastjson2.JSONArray;
 
-import com.alibaba.fastjson.JSONArray;
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.List;

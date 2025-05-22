@@ -1,9 +1,6 @@
 package com.openim.tophone.openim;
 
-import android.content.Context;
 
-import com.alibaba.fastjson.JSONObject;
-import com.google.gson.Gson;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;

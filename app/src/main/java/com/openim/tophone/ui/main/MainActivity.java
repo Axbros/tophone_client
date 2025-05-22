@@ -12,11 +12,12 @@ import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Toast;
-import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
+import androidx.lifecycle.ViewModelProvider;
+
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
@@ -25,6 +26,7 @@ import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
+import com.openim.tophone.utils.CallLogUtils;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -44,23 +46,18 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        bindVM(UserVM.class);
-//    官方代码 不可用 下面三个是自己的代码    bindViewDataBinding(ActivityMainBinding.inflate(getLayoutInflater()));
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        // 2. 初始化 ViewModel
+        vm = new ViewModelProvider(this).get(UserVM.class);
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
         VMStore.init(vm);
 
         //初始化UI
-        initPermissions();
-        init(getApplicationContext());
-        initStorage();
-        requestDefaultDialer();
-        //初始化openim
-        initOpenIM();
-        initObserve();
-        initSMSListener();
-        EdgeToEdge.enable(this);
+        if (checkAndRequestPermissions()) {
+            startAppInitialization();
+        }
+
     }
     public void initOpenIM() {
         vm.isLoading.setValue(true);
@@ -86,6 +83,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }
     }
     public void init(Context context) {
+        CallLogUtils callLogUtils = new CallLogUtils();
+        callLogUtils.getCallLogDetails();
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
 
@@ -129,117 +128,125 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             L.d("testprogress", "current:" + l + "total:" + l1);
         });
     }
-    private void initPermissions() {
+    private boolean checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
-        //添加通知权限
-        Intent intent = new Intent();
-        String packageName = getPackageName();
-        intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-        intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName);
+
+        // 常规权限列表
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_PHONE_STATE},
-                    PERMISSION_REQUEST_CODE);
-        } else {
-            Intent serviceIntent = new Intent(this, PhoneStateService.class);
-            startForegroundService(serviceIntent);
+            permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE);
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, 888);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                != PackageManager.PERMISSION_GRANTED) {
-            // 如果没有权限，请求权限
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_PHONE_STATE},
-                    PERMISSION_REQUEST_CODE);
-        }
-        // 过滤电池优化权限
-        intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-        intent.setData(Uri.parse("package:" + packageName));
-        startActivity(intent);
-        // 添加网络权限
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.INTERNET);
-        }
-        // 检查直接拨打电话权限
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.CALL_PHONE);
         }
-        // 检查接听电话权限（注意：接听电话权限在 Android 8.0 及以上版本需要特殊处理）
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.ANSWER_PHONE_CALLS);
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS)
-                == PackageManager.PERMISSION_GRANTED) {
-            vm.phonePermissions.setValue(true);
-        }
-        // 检查发送短信权限
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.SEND_SMS);
         }
-        // 检查监听收到短信权限
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-                == PackageManager.PERMISSION_GRANTED) {
-            vm.smsPermissions.setValue(true);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.READ_CALL_LOG);
         }
-        // 如果有需要请求的权限
+
+        // ✅ 如果还有权限没获取，发起请求
         if (!permissionsToRequest.isEmpty()) {
             ActivityCompat.requestPermissions(this,
                     permissionsToRequest.toArray(new String[0]),
                     PERMISSION_REQUEST_CODE);
-        } else {
-            // 所有权限都已授予
-            Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
+            return false;
         }
+
+        // ✅ 权限都已授予，执行后续初始化逻辑
+        handlePostPermissionLogic();
+        return true;
     }
-    //permission
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            boolean allPermissionsGranted = true;
+            boolean allGranted = true;
             for (int result : grantResults) {
                 if (result != PackageManager.PERMISSION_GRANTED) {
-                    allPermissionsGranted = false;
+                    allGranted = false;
                     break;
                 }
             }
-            if (allPermissionsGranted) {
-                Toast.makeText(this, "All permissions granted", Toast.LENGTH_SHORT).show();
+
+            if (allGranted) {
+                Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
+                handlePostPermissionLogic();
             } else {
-                Toast.makeText(this, "Some permissions not granted", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "部分权限未授予，应用可能无法正常运行", Toast.LENGTH_LONG).show();
             }
         }
     }
+    private void handlePostPermissionLogic() {
+        // 启动 PhoneStateService
+        Intent serviceIntent = new Intent(this, PhoneStateService.class);
+        startForegroundService(serviceIntent);
+
+        // 更新权限状态
+        vm.phonePermissions.setValue(true);
+        vm.smsPermissions.setValue(true);
+
+        // 忽略电池优化（跳转设置）
+        Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        batteryIntent.setData(Uri.parse("package:" + getPackageName()));
+        startActivity(batteryIntent);
+
+        // 打开通知设置页面（可选）
+        Intent notificationIntent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        notificationIntent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        startActivity(notificationIntent);
+
+        // 执行初始化逻辑
+        startAppInitialization();
+    }
+    private void startAppInitialization() {
+        initStorage();          // 初始化 SharedPreferences
+        init(getApplicationContext());  // 设置 machineCode、calllog、accountID、检查用户存在
+
+//        requestDefaultDialer(); // 申请默认拨号器权限（系统弹窗）
+
+        initOpenIM();           // OpenIM 登录
+        initObserve();          // 设置观察者（如拨号器观察）
+        initSMSListener();      // 短信权限状态设置
+    }
+
+
+    //permission
+
     public void initObserve() {
         Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
         intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
         startActivity(intent);
     }
-    public void requestDefaultDialer() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            TelecomManager telecomManager = (TelecomManager) getSystemService(TELECOM_SERVICE);
-            if (telecomManager != null && !getPackageName().equals(telecomManager.getDefaultDialerPackage())) {
-                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
-                intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
-                startActivityForResult(intent, 123); // 可以用来回调判断是否成功
-            } else {
-                Toast.makeText(this, "当前已是默认拨号器", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+//    public void requestDefaultDialer() {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            TelecomManager telecomManager = (TelecomManager) getSystemService(TELECOM_SERVICE);
+//            if (telecomManager != null && !getPackageName().equals(telecomManager.getDefaultDialerPackage())) {
+//                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+//                intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
+//                startActivityForResult(intent, 123); // 可以用来回调判断是否成功
+//            } else {
+//                Toast.makeText(this, "当前已是默认拨号器", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
     public void initSMSListener(){
         // 检查是否已经有读取短信的权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
