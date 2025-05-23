@@ -21,7 +21,9 @@
             android:orientation="vertical">
             <include
                 android:id="@+id/header_include"
-                layout="@layout/header_layout" />
+                layout="@layout/header_layout"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"/>
             <!-- 为 header 下方的父 LinearLayout 添加 paddingStart 和 paddingEnd -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -55,6 +57,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:visibility="@{userVM.isGroupInfoVisible ? View.VISIBLE : View.GONE}"
                     android:paddingTop="16dp">
                     <TextView
                         android:layout_width="wrap_content"
@@ -66,7 +69,7 @@
                         android:id="@+id/account_status_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor='@{@android:color/holo_green_dark}'
+                        android:textColor='@{@android:color/holo_red_dark}'
                         android:text='@{userVM.groupInfoLabel}'
                         android:textStyle="bold"
                         android:textSize="16sp" />
@@ -194,6 +197,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/learn_more"
                         android:textSize="14sp"
+                        android:textAlignment="center"
                         android:textStyle="bold" />
                     <TextView
                         android:id="@+id/link_text"

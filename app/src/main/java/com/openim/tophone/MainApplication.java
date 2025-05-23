@@ -3,6 +3,9 @@ package com.openim.tophone;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
+import android.provider.CallLog;
+
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
@@ -11,6 +14,7 @@ import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.utils.ActivityManager;
+//import com.openim.tophone.utils.CallLogObserver;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
 import java.io.File;
@@ -83,7 +87,14 @@ public class MainApplication extends BaseApp{
 
 
     public void initService() {
-//    ForegroundService
+//        Context context = BaseApp.inst();
+//        CallLogObserver observer = new CallLogObserver(new Handler(),context);
+//        context.getContentResolver().registerContentObserver(
+//                CallLog.Calls.CONTENT_URI,
+//                true,
+//                observer
+//        );
+
     }
 
 }

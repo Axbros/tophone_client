@@ -26,7 +26,6 @@ import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
-import com.openim.tophone.utils.CallLogUtils;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -52,6 +51,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
         VMStore.init(vm);
+
 
         //初始化UI
         if (checkAndRequestPermissions()) {
@@ -83,8 +83,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }
     }
     public void init(Context context) {
-        CallLogUtils callLogUtils = new CallLogUtils();
-        callLogUtils.getCallLogDetails();
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
 
@@ -204,14 +202,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         vm.smsPermissions.setValue(true);
 
         // 忽略电池优化（跳转设置）
-        Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-        batteryIntent.setData(Uri.parse("package:" + getPackageName()));
-        startActivity(batteryIntent);
+//        Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+//        batteryIntent.setData(Uri.parse("package:" + getPackageName()));
+//        startActivity(batteryIntent);
 
         // 打开通知设置页面（可选）
-        Intent notificationIntent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-        notificationIntent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-        startActivity(notificationIntent);
+//        Intent notificationIntent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+//        notificationIntent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+//        startActivity(notificationIntent);
 
         // 执行初始化逻辑
         startAppInitialization();
@@ -235,18 +233,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
         startActivity(intent);
     }
-//    public void requestDefaultDialer() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//            TelecomManager telecomManager = (TelecomManager) getSystemService(TELECOM_SERVICE);
-//            if (telecomManager != null && !getPackageName().equals(telecomManager.getDefaultDialerPackage())) {
-//                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
-//                intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
-//                startActivityForResult(intent, 123); // 可以用来回调判断是否成功
-//            } else {
-//                Toast.makeText(this, "当前已是默认拨号器", Toast.LENGTH_SHORT).show();
-//            }
-//        }
-//    }
+
     public void initSMSListener(){
         // 检查是否已经有读取短信的权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)

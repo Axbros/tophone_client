@@ -27,6 +27,9 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     public MutableLiveData<Boolean> smsPermissions = new MutableLiveData<>(false);
     public MutableLiveData<Boolean> connectionStatus = new MutableLiveData<>(false);
     public MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+
+    public MutableLiveData<Boolean> isGroupInfoVisible = new MutableLiveData<>(true);
+
     private static final String DEFAULT_PASSWORD = "516f00c9229200d6ce526991cdfdd959";
     private static final String DEFAULT_NICKNAME = "android";
     private static final String EMAIL_SUFFIX = "@tsinghua.edu.cn";
@@ -34,7 +37,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     private final String TAG = "UserVM";
     public void handleBtnConnect() {
         isLoading.setValue(true);
-        boolean status = connectionStatus.getValue();
+        boolean status = Boolean.TRUE.equals(connectionStatus.getValue());
         if (status) {
             logout();
         } else {
@@ -49,7 +52,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 .login(parameter.buildJsonBody())
                 .compose(N.IOMain())
                 .map(OpenIMService.turn(LoginCertificate.class))
-                .subscribe(new NetObserver<LoginCertificate>(getContext()) {
+                .subscribe(new NetObserver<LoginCertificate>(BaseApp.inst()) {
                     @Override
                     public void onSuccess(LoginCertificate loginCertificate) {
                         handleLoginSuccess(loginCertificate);
@@ -88,21 +91,24 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
     private void onLoginSuccess(String data, LoginCertificate loginCertificate) {
         connectionStatus.setValue(true);
-        loginCertificate.cache(getContext());
+        isGroupInfoVisible.setValue(true);
+        loginCertificate.cache(BaseApp.inst());
         BaseApp.inst().loginCertificate = loginCertificate;
         OpenIMUtils.updateGroupInfo();
     }
     private void onLoginError(String error) {
         groupInfoLabel.setValue("Offline: " + error);
+        isGroupInfoVisible.setValue(false);
         connectionStatus.setValue(false);
-        Toast.makeText(getContext(), "LoginCertificate OpenIMClient.getInstance().login onError", Toast.LENGTH_SHORT).show();
+        logout();
+        Toast.makeText(BaseApp.inst(), error, Toast.LENGTH_SHORT).show();
     }
     private void handleLoginError(Throwable e) {
         connectionStatus.setValue(false);
         Log.d("UserVM", "Login failed", e);
     }
     public void logout() {
-        LoginCertificate certCache = LoginCertificate.getCache(getContext());
+        LoginCertificate certCache = LoginCertificate.getCache(BaseApp.inst());
         if (certCache == null) return;
         Parameter parameter = new Parameter();
         parameter.add("userID", certCache.userID)
@@ -112,10 +118,14 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
             public void onSuccess(String data) {
                 LoginCertificate.clear();
                 connectionStatus.setValue(false);
+                groupInfoLabel.setValue("👋");
+                isGroupInfoVisible.setValue(false);
             }
             @Override
             public void onError(int code, String error) {
                 connectionStatus.setValue(false);
+                groupInfoLabel.setValue("👋");
+                isGroupInfoVisible.setValue(false);
             }
         });
     }
@@ -127,7 +137,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 .searchUser(parameter.buildJsonBody())
                 .map(OpenIMService.turn(OpenIMUserInfoResp.class))
                 .compose(N.IOMain())
-                .subscribe(new NetObserver<OpenIMUserInfoResp>(getContext()) {
+                .subscribe(new NetObserver<OpenIMUserInfoResp>(BaseApp.inst()) {
                     @Override
                     public void onSuccess(OpenIMUserInfoResp userInfoResp) {
                         handleUserExistence(userInfoResp, email);
@@ -151,7 +161,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                 .register(registerParameter.buildJsonBody())
                 .map(OpenIMService.turn(LoginCertificate.class))
                 .compose(N.IOMain())
-                .subscribe(new NetObserver<LoginCertificate>(getContext()) {
+                .subscribe(new NetObserver<LoginCertificate>(BaseApp.inst()) {
                     @Override
                     public void onSuccess(LoginCertificate loginCertificate) {
                         handleRegisterSuccess(loginCertificate);
@@ -182,8 +192,8 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
         accountID.setValue(loginCertificate.nickname);
         groupInfoLabel.setValue("Registered");
         connectionStatus.setValue(true);
-        loginCertificate.cache(getContext());
-        Toast.makeText(getContext(), "Registration Successful", Toast.LENGTH_SHORT).show();
+        loginCertificate.cache(BaseApp.inst());
+        Toast.makeText(BaseApp.inst(), "Registration Successful", Toast.LENGTH_SHORT).show();
     }
     private void updateUserInfo(String nickname) {
         MainActivity.sp.edit().putString(Constants.getSharedPrefsKeys_NICKNAME(), nickname).apply();

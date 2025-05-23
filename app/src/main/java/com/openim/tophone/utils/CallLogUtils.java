@@ -12,7 +12,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class CallLogUtils {
-    public void getCallLogDetails() {
+    private Cursor cursor;
+
+    public void getLatestCallLogDetails() {
         StringBuilder callLog = new StringBuilder();
         ContentResolver cr = BaseApp.inst().getContentResolver();
 
@@ -34,7 +36,7 @@ public class CallLogUtils {
                 CallLog.Calls.DATE + " DESC" // 按日期降序排列
         );
 
-        if (cursor != null) {
+        if (cursor != null && cursor.moveToFirst()) {
             try {
                 // 获取各字段的索引
                 int idIndex = cursor.getColumnIndex(CallLog.Calls._ID);
@@ -43,31 +45,30 @@ public class CallLogUtils {
                 int dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE);
                 int durationIndex = cursor.getColumnIndex(CallLog.Calls.DURATION);
 
-                // 遍历通话记录
-                while (cursor.moveToNext()) {
-                    long callId = cursor.getLong(idIndex); // 获取通话记录ID
-                    String phoneNumber = cursor.getString(numberIndex);
-                    int callType = cursor.getInt(typeIndex);
-                    long callDate = cursor.getLong(dateIndex);
-                    int callDuration = cursor.getInt(durationIndex);
 
-                    // 格式化日期
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    String dateString = formatter.format(new Date(callDate));
+                long callId = cursor.getLong(idIndex); // 获取通话记录ID
+                String phoneNumber = cursor.getString(numberIndex);
+                int callType = cursor.getInt(typeIndex);
+                long callDate = cursor.getLong(dateIndex);
+                int callDuration = cursor.getInt(durationIndex);
 
-                    // 判断通话类型
-                    String callTypeStr = getCallTypeString(callType);
+                // 格式化日期
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                String dateString = formatter.format(new Date(callDate));
 
-                    // 格式化通话时长
+                // 判断通话类型
+                String callTypeStr = getCallTypeString(callType);
+
+                // 格式化通话时长
 //                    String durationStr = formatDuration(callDuration);
 
-                    // 添加通话记录信息到StringBuilder
-                    callLog.append("ID: ").append(callId).append("\n")
-                            .append("号码: ").append(phoneNumber).append("\n")
-                            .append("类型: ").append(callTypeStr).append("\n")
-                            .append("日期: ").append(dateString).append("\n")
-                            .append("时长: ").append(callDuration).append("\n\n");
-                }
+                // 添加通话记录信息到StringBuilder
+                callLog.append("ID: ").append(callId).append("\n")
+                        .append("号码: ").append(phoneNumber).append("\n")
+                        .append("类型: ").append(callTypeStr).append("\n")
+                        .append("日期: ").append(dateString).append("\n")
+                        .append("时长: ").append(callDuration).append("\n\n");
+
 
                 // 显示通话记录
                 showCallLog(callLog.toString());
