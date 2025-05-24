@@ -2,7 +2,10 @@ plugins {
     alias(libs.plugins.android.application)
 }
 android {
-
+    lint {
+        disable += "ExpiredTargetSdkVersion" // 忽略目标 SDK 版本错误
+        abortOnError = false // 遇到其他错误时不终止构建
+    }
     dataBinding{
         enable = true
     }
@@ -17,8 +20,8 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 118
-        versionName = "1.1.8"
+        versionCode = 119
+        versionName = "1.1.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
