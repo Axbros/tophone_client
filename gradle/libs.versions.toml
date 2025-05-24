@@ -1,38 +1,46 @@
 [versions]
-agp = "8.1.4"  # 使用稳定版本
+agp = "8.9.1"
 coreSdk = "3.8.3"
 junit = "4.13.2"
-androidxJunit = "1.1.5"  # 重命名以避免混淆
+junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 appcompat = "1.6.1"
 material = "1.10.0"
-activity = "1.7.2"  # 降级以兼容 compileSdk 33
+activity = "1.8.0"
 constraintlayout = "2.1.4"
-databinding = "3.2.0-alpha11"  # 重命名以明确用途
+library = "3.2.0-alpha11"
 fastjson2 = "2.0.57.android8"
+buildinfrastructure = "1.0.0-rc.1"
 rxjava = "2.2.21"
 loggingInterceptor = "5.0.0-alpha.14"
 converterGson = "2.11.0"
+fastjson = "2.0.57"
 rxandroid = "2.1.1"
+core = "1.8.0"
+activityVersion = "1.5.0"
 
 [libraries]
 core-sdk = { module = "io.openim:core-sdk", version = "3.8.3" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }  # 已降级
+activity = { group = "androidx.activity", name = "activity", version = "1.5.0" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 android-sdk = { group = "io.openim", name = "android-sdk", version = "3.8.3.2" }
-databinding = { group = "androidx.databinding", name = "library", version.ref = "databinding" }  # 重命名
+library = { group = "androidx.databinding", name = "library", version.ref = "library" }
 fastjson2 = { group = "com.alibaba.fastjson2", name = "fastjson2", version.ref = "fastjson2" }
-# 移除重复的 fastjson 依赖
+buildinfrastructure = { group = "io.reactivex", name = "BuildInfrastructure", version.ref = "buildinfrastructure" }
 rxjava = { group = "io.reactivex.rxjava2", name = "rxjava", version.ref = "rxjava" }
 logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "loggingInterceptor" }
 adapter-rxjava2 = { group = "com.squareup.retrofit2", name = "adapter-rxjava2", version = "2.9.0" }
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converterGson" }
+fastjson = { group = "com.alibaba", name = "fastjson", version.ref = "fastjson" }
 rxandroid = { group = "io.reactivex.rxjava2", name = "rxandroid", version.ref = "rxandroid" }
+core = { group = "androidx.core", name = "core", version.ref = "core" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activityVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+
