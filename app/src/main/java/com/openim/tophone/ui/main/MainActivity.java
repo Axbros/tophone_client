@@ -1,4 +1,5 @@
 package com.openim.tophone.ui.main;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -22,6 +24,7 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
+import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
@@ -34,7 +37,9 @@ import com.openim.tophone.utils.PhoneStateService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
 import io.openim.android.sdk.OpenIMClient;
+
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
     public static String machineCode;
@@ -42,6 +47,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
     public static SharedPreferences sp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,31 +65,35 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }
 
     }
+
     public void initOpenIM() {
         vm.isLoading.setValue(true);
         BaseApp.inst().loginCertificate = certificate;
         vm.login(machineCode);
     }
-    public static String getLoginEmail(){
+
+    public static String getLoginEmail() {
         return machineCode;
     }
+
     public void handleAccountIDClick(View view) {
         vm.isLoading.setValue(true);
-        try{
+        try {
             if (Objects.equals(vm.accountID.getValue(), machineCode)) {
 //                vm.accountID.setValue(certificate.getNickname());
-                String nickname= sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"NULL");
+                String nickname = sp.getString(Constants.getSharedPrefsKeys_NICKNAME(), "NULL");
                 vm.accountID.setValue(nickname);
             } else {
                 TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
                 vm.accountID.setValue(machineCode);
             }
-        }catch (Exception e){
-            L.e(TAG,e.getMessage());
+        } catch (Exception e) {
+            L.e(TAG, e.getMessage());
         }
         vm.isLoading.setValue(false);
     }
-    public void init(Context context) {
+
+    public void init() {
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
 
@@ -93,9 +103,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
     }
-    private void initStorage(){
-        sp = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(),Context.MODE_PRIVATE);
+
+    private void initStorage() {
+        sp = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
     }
+
     // 实现 openLink 方法
     public void openLink(View view) {
         // 这里假设要打开的链接是 www.tophone.cc
@@ -108,25 +120,29 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             startActivity(intent);
         }
     }
+
     public void handleConnect(View v) {
         vm.handleBtnConnect();
     }
-    public void handleUploadLogsBtnClick(View v){
-        OpenIMClient.getInstance().uploadLogs(new IMUtil.IMCallBack<String>(){
+
+    public void handleUploadLogsBtnClick(View v) {
+        OpenIMClient.getInstance().uploadLogs(new IMUtil.IMCallBack<String>() {
             @Override
             public void onSuccess(String data) {
-                Toast.makeText(BaseApp.inst(),"✅Upload successed!",Toast.LENGTH_SHORT).show();
+                Toast.makeText(BaseApp.inst(), "✅Upload successed!", Toast.LENGTH_SHORT).show();
             }
+
             @Override
             public void onError(int code, String error) {
-                Toast.makeText(BaseApp.inst(),"❌Upload failed!"+error,Toast.LENGTH_SHORT).show();
+                Toast.makeText(BaseApp.inst(), "❌Upload failed!" + error, Toast.LENGTH_SHORT).show();
                 L.e("IMCallBack", "uploadLogs onError:(" + code + ")" + error);
                 LoginCertificate.clear();
             }
-        },new ArrayList<>(),500,"",(l, l1) -> {
+        }, new ArrayList<>(), 500, "", (l, l1) -> {
             L.d("testprogress", "current:" + l + "total:" + l1);
         });
     }
+
     private boolean checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
 
@@ -172,6 +188,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         handlePostPermissionLogic();
         return true;
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
@@ -193,6 +210,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             }
         }
     }
+
     private void handlePostPermissionLogic() {
         // 启动 PhoneStateService
         Intent serviceIntent = new Intent(this, PhoneStateService.class);
@@ -213,11 +231,15 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 //        startActivity(notificationIntent);
 
         // 执行初始化逻辑
-        startAppInitialization();
+//        startAppInitialization();
     }
+
     private void startAppInitialization() {
+
+        IM.initSdk(BaseApp.inst());
+
         initStorage();          // 初始化 SharedPreferences
-        init(getApplicationContext());  // 设置 machineCode、calllog、accountID、检查用户存在
+        init();  // 设置 machineCode、calllog、accountID、检查用户存在
 
 //        requestDefaultDialer(); // 申请默认拨号器权限（系统弹窗）
 
@@ -235,7 +257,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         startActivity(intent);
     }
 
-    public void initSMSListener(){
+    public void initSMSListener() {
         // 检查是否已经有读取短信的权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
                 != PackageManager.PERMISSION_GRANTED) {

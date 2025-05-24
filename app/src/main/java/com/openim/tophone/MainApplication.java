@@ -36,7 +36,6 @@ public class MainApplication extends BaseApp{
         initFile();
         initController();
         initNet();
-        initIM();
         initService();
     }
 
@@ -72,9 +71,7 @@ public class MainApplication extends BaseApp{
                 }));
     }
 
-    private void initIM() {
-        IM.initSdk(this);
-    }
+
 
 
     public void offline() {

@@ -2,6 +2,9 @@ package com.openim.tophone.utils;
 
 
 import android.annotation.SuppressLint;
+
+import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.openim.IM;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.MainActivity;
 
@@ -16,7 +19,7 @@ public class OpenIMUtils {
     public final static String TAG = "OpenIMUtils";
     public static void updateGroupInfo(){
         try {
-            Thread.sleep(3000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -49,7 +52,6 @@ public class OpenIMUtils {
                         public void onSuccess(List<PublicUserInfo> data) {
                             // 请求成功，将获取到的用户信息赋值给 result
                             MainActivity.sp.edit().putString(Constants.getGroupOwnerKey(),ownerUserId).apply();
-
                             String groupOwner = data.get(0).getNickname();
                             VMStore.get().groupInfoLabel.setValue(groupName+"("+groupOwner+")");
                             L.d(TAG,"Get Group Info Success！Group Name:"+groupName+" Group Owner:"+groupOwner+" Group Owner Id:"+ownerUserId);
@@ -62,6 +64,7 @@ public class OpenIMUtils {
                 }
                 L.d(TAG,"getJoinedGroupList Success!");
             }
+
         });
     }
 
