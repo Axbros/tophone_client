@@ -37,7 +37,7 @@ import java.util.Objects;
 import io.openim.android.sdk.OpenIMClient;
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
-    private static String machineCode;
+    public static String machineCode;
     private static String TAG = "MainActivity";
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
@@ -68,11 +68,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         return machineCode;
     }
     public void handleAccountIDClick(View view) {
-        System.out.println(view);
+        vm.isLoading.setValue(true);
         try{
             if (Objects.equals(vm.accountID.getValue(), machineCode)) {
 //                vm.accountID.setValue(certificate.getNickname());
-                String nickname= sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"404");
+                String nickname= sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"NULL");
                 vm.accountID.setValue(nickname);
             } else {
                 TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
@@ -81,6 +81,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }catch (Exception e){
             L.e(TAG,e.getMessage());
         }
+        vm.isLoading.setValue(false);
     }
     public void init(Context context) {
 

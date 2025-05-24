@@ -1,87 +1,133 @@
 package com.openim.tophone.utils;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.provider.CallLog;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.net.bage.Base;
+import com.openim.tophone.net.RXRetrofit.N;
+import com.openim.tophone.openim.entity.CallLogBean;
+import com.openim.tophone.repository.CallLogApi;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+
 
 public class CallLogUtils {
-    private Cursor cursor;
 
-    public void getLatestCallLogDetails() {
-        StringBuilder callLog = new StringBuilder();
-        ContentResolver cr = BaseApp.inst().getContentResolver();
+    private static final String TAG = "CallLogUtils";
 
-        // 定义要查询的字段，包括_ID
-        String[] projection = {
-                CallLog.Calls._ID,           // 通话记录的唯一ID
-                CallLog.Calls.NUMBER,        // 电话号码
-                CallLog.Calls.TYPE,          // 通话类型
-                CallLog.Calls.DATE,          // 通话日期
-                CallLog.Calls.DURATION       // 通话时长
-        };
+    /**
+     * 获取最新一条通话记录并上传
+     */
+    public void uploadLatestCallLog() {
+        Cursor cursor = null;
+        try {
+            ContentResolver resolver = BaseApp.inst().getContentResolver();
+            String[] projection = {
+                    CallLog.Calls._ID,
+                    CallLog.Calls.NUMBER,
+                    CallLog.Calls.TYPE,
+                    CallLog.Calls.DATE,
+                    CallLog.Calls.DURATION
+            };
 
-        // 查询通话记录
-        Cursor cursor = cr.query(
-                CallLog.Calls.CONTENT_URI,
-                projection,                  // 指定要返回的字段
-                null,                        // 不使用筛选条件
-                null,                        // 不使用筛选参数
-                CallLog.Calls.DATE + " DESC" // 按日期降序排列
-        );
+            cursor = resolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    projection,
+                    null,
+                    null,
+                    CallLog.Calls.DATE + " DESC"
+            );
 
-        if (cursor != null && cursor.moveToFirst()) {
-            try {
-                // 获取各字段的索引
-                int idIndex = cursor.getColumnIndex(CallLog.Calls._ID);
-                int numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER);
-                int typeIndex = cursor.getColumnIndex(CallLog.Calls.TYPE);
-                int dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE);
-                int durationIndex = cursor.getColumnIndex(CallLog.Calls.DURATION);
+            if (cursor != null && cursor.moveToFirst()) {
+                CallLogBean callLog = parseCallLog(cursor);
+                logCallLog(callLog);
+                uploadCallLog(callLog);
+            } else {
+                Log.w(TAG, "通话记录为空或查询失败");
+            }
 
-
-                long callId = cursor.getLong(idIndex); // 获取通话记录ID
-                String phoneNumber = cursor.getString(numberIndex);
-                int callType = cursor.getInt(typeIndex);
-                long callDate = cursor.getLong(dateIndex);
-                int callDuration = cursor.getInt(durationIndex);
-
-                // 格式化日期
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                String dateString = formatter.format(new Date(callDate));
-
-                // 判断通话类型
-                String callTypeStr = getCallTypeString(callType);
-
-                // 格式化通话时长
-//                    String durationStr = formatDuration(callDuration);
-
-                // 添加通话记录信息到StringBuilder
-                callLog.append("ID: ").append(callId).append("\n")
-                        .append("号码: ").append(phoneNumber).append("\n")
-                        .append("类型: ").append(callTypeStr).append("\n")
-                        .append("日期: ").append(dateString).append("\n")
-                        .append("时长: ").append(callDuration).append("\n\n");
-
-
-                // 显示通话记录
-                showCallLog(callLog.toString());
-
-            } finally {
+        } catch (Exception e) {
+            Log.e(TAG, "读取通话记录异常", e);
+        } finally {
+            if (cursor != null) {
                 cursor.close();
             }
         }
     }
 
-    // 获取通话类型的字符串表示
-    private String getCallTypeString(int callType) {
-        switch (callType) {
+    /**
+     * 解析 Cursor 中的一条通话记录
+     */
+    private CallLogBean parseCallLog(Cursor cursor) {
+        long id = cursor.getLong(cursor.getColumnIndexOrThrow(CallLog.Calls._ID));
+        String number = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER));
+        int type = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE));
+        long dateMillis = cursor.getLong(cursor.getColumnIndexOrThrow(CallLog.Calls.DATE));
+        int duration = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION));
+
+        String formattedDate = formatDate(dateMillis);
+
+        return new CallLogBean(id, number, type, formattedDate, duration);
+    }
+
+    /**
+     * 将时间戳格式化为 ISO 8601 字符串
+     */
+    @SuppressLint("SimpleDateFormat")
+    private String formatDate(long millis) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.CHINA);
+        return formatter.format(new Date(millis));
+    }
+
+    /**
+     * 上传通话记录
+     */
+    @SuppressLint("CheckResult")
+    private void uploadCallLog(CallLogBean callLog) {
+        if (callLog == null) return;
+
+        N.API(CallLogApi.class).uploadCallLog(callLog)
+                .compose(N.IOMain())
+                .subscribe(
+                        resp -> {
+                            Log.i(TAG, "上传成功: " + resp.msg);
+                            Toast.makeText(BaseApp.inst(), "上传成功: " + resp.msg, Toast.LENGTH_SHORT).show();
+                        },
+                        err -> {
+                            Log.e(TAG, "上传失败", err);
+                            Toast.makeText(BaseApp.inst(), "上传失败: " + err.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                );
+    }
+
+    /**
+     * 打印日志信息
+     */
+    private void logCallLog(CallLogBean log) {
+        if (log == null) return;
+        String info = String.format(
+                Locale.getDefault(),
+                "通话记录：\nID: %d\n号码: %s\n类型: %s\n日期: %s\n时长: %d秒\n",
+                log.getCallID(),
+                log.getCallNumber(),
+                getCallTypeString(log.getCallType()),
+                log.getCallStartAt(),
+                log.getCallDuration()
+        );
+        Log.d(TAG, info);
+    }
+
+    /**
+     * 将通话类型转换为字符串
+     */
+    private String getCallTypeString(int type) {
+        switch (type) {
             case CallLog.Calls.INCOMING_TYPE:
                 return "来电";
             case CallLog.Calls.OUTGOING_TYPE:
@@ -90,28 +136,10 @@ public class CallLogUtils {
                 return "未接";
             case CallLog.Calls.REJECTED_TYPE:
                 return "已拒绝";
-            case CallLog.Calls.BLOCKED_TYPE: // API 24+
+            case CallLog.Calls.BLOCKED_TYPE:
                 return "已拦截";
             default:
-                return "未知类型(" + callType + ")";
+                return "未知类型(" + type + ")";
         }
-    }
-
-//    // 格式化通话时长
-//    private String formatDuration(int seconds) {
-//        if (seconds < 60) {
-//            return seconds + "秒";
-//        } else {
-//            int mins = seconds / 60;
-//            int secs = seconds % 60;
-//            return mins + "分" + secs + "秒";
-//        }
-//    }
-
-    // 显示通话记录
-    private void showCallLog(String callLog) {
-        // 这里可以使用TextView或其他UI组件显示通话记录
-        Log.d("CallLog", callLog);
-
     }
 }

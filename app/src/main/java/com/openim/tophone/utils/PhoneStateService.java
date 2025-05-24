@@ -77,7 +77,7 @@ public class PhoneStateService extends Service {
                         Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
                         new Handler(Looper.getMainLooper()).postDelayed(() -> {
                             CallLogUtils callLogUtils = new CallLogUtils();
-                            callLogUtils.getLatestCallLogDetails();  // 在这里处理 call log
+                            callLogUtils.uploadLatestCallLog();  // 在这里处理 call log
                         }, 2000); // 2000 毫秒 = 2 秒
                         break;
 

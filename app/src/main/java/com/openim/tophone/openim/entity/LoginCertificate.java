@@ -66,7 +66,7 @@ public class LoginCertificate {
     }
 
     public static void clear() {
-        MainActivity.sp.edit().clear().apply();
+//        MainActivity.sp.edit().clear().apply();
         SharedPreferencesUtil.remove(BaseApp.inst(),
                 "user.LoginCertificate");
         L.e(TAG,"LoginCertificate 已移除");

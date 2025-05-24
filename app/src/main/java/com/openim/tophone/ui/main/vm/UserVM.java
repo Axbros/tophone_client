@@ -62,6 +62,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                         handleLoginError(e);
                     }
                 });
+
     }
     private Parameter createLoginParameter(String email) {
         Parameter parameter = new Parameter();
@@ -77,7 +78,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
             OpenIMClient.getInstance().login(new OnBase<String>() {
                 @Override
                 public void onSuccess(String data) {
-                    onLoginSuccess(data, loginCertificate);
+                    onLoginSuccess(loginCertificate);
                 }
                 @Override
                 public void onError(int code, String error) {
@@ -89,7 +90,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
             e.printStackTrace();
         }
     }
-    private void onLoginSuccess(String data, LoginCertificate loginCertificate) {
+    private void onLoginSuccess(LoginCertificate loginCertificate) {
         connectionStatus.setValue(true);
         isGroupInfoVisible.setValue(true);
         loginCertificate.cache(BaseApp.inst());
