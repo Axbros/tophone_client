@@ -1,6 +1,10 @@
 package com.openim.tophone.openim;
 
 
+import static com.openim.tophone.ui.main.MainActivity.sp;
+
+import android.text.TextUtils;
+
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
@@ -28,8 +32,12 @@ public class IMUtil {
 
     public static void uploadMsg2Parent(String type,String mobile,String content){
         //1、get parent user id
-        SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(BaseApp.inst());
-        String recvUid = sharedPreferencesUtil.getString(Constants.getGroupOwnerKey());
+
+        String recvUid = sp.getString(Constants.getGroupOwnerKey(),null);
+        if (TextUtils.isEmpty(recvUid)){
+            L.w("the group owner is null");
+            return ;
+        }
 //        unexpected end of JSON input
         OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
         //2、compose the json string

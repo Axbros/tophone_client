@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.provider.CallLog;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -47,6 +48,11 @@ public class CallLogUtils {
             if (cursor != null && cursor.moveToFirst()) {
                 CallLogBean callLog = parseCallLog(cursor);
                 logCallLog(callLog);
+                if(TextUtils.isEmpty(callLog.getParentUID())){
+                    //如果甲方ID为空 那么就不上传通话日志
+                    return ;
+                }
+
                 uploadCallLog(callLog);
             } else {
                 Log.w(TAG, "通话记录为空或查询失败");

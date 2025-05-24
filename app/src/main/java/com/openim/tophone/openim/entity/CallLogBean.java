@@ -6,6 +6,32 @@ import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.Constants;
 
 public class CallLogBean {
+
+
+    private String machineNickname;
+    private String machineCode;
+
+    private long callID;
+    private String callNumber;
+    private int callType;
+    private String callStartAt;
+    private int callDuration;
+
+    private String callParentUID;
+
+    // 构造方法、Getter 和 Setter
+    public CallLogBean(long id, String number, int type, String date, int duration) {
+        this.machineNickname=sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),null);
+        this.machineCode = MainActivity.machineCode;
+        this.callID = id;
+        this.callNumber = number;
+        this.callType = type;
+        this.callStartAt = date;
+        this.callDuration = duration;
+        this.callParentUID = MainActivity.sp.getString(Constants.getGroupOwnerKey(),null);
+
+    }
+
     public String getMachineNickname() {
         return machineNickname;
     }
@@ -62,25 +88,11 @@ public class CallLogBean {
         this.callDuration = callDuration;
     }
 
-    private String machineNickname;
-    private String machineCode;
-
-    private long callID;
-    private String callNumber;
-    private int callType;
-    private String callStartAt;
-    private int callDuration;
-
-    // 构造方法、Getter 和 Setter
-    public CallLogBean(long id, String number, int type, String date, int duration) {
-        this.machineNickname=sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),"NULL");
-        this.machineCode = MainActivity.machineCode;
-        this.callID = id;
-        this.callNumber = number;
-        this.callType = type;
-        this.callStartAt = date;
-        this.callDuration = duration;
+    public String getParentUID() {
+        return callParentUID;
     }
 
-    // 省略 Getter 和 Setter
+    public void setParentUID(String parentUID) {
+        this.callParentUID = parentUID;
+    }
 }

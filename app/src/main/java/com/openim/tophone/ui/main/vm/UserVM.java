@@ -1,4 +1,5 @@
 package com.openim.tophone.ui.main.vm;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.lifecycle.MutableLiveData;
@@ -110,9 +111,10 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     }
     public void logout() {
         LoginCertificate certCache = LoginCertificate.getCache(BaseApp.inst());
-        if (certCache == null) return;
+
+        String userID = certCache!=null ? certCache.userID : accountID.getValue();
         Parameter parameter = new Parameter();
-        parameter.add("userID", certCache.userID)
+        parameter.add("userID", userID)
                 .add("platformID", Platform.ANDROID);
         OpenIMClient.getInstance().logout(new OnBase<String>() {
             @Override
