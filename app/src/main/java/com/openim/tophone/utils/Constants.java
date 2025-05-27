@@ -1,7 +1,5 @@
 package com.openim.tophone.utils;
 
-import android.text.TextUtils;
-import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.openim.IM;
 
 /**

@@ -1,8 +1,10 @@
 package com.openim.tophone.ui.main.vm;
-import android.text.TextUtils;
+
 import android.util.Log;
 import android.widget.Toast;
+
 import androidx.lifecycle.MutableLiveData;
+
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
 import com.openim.tophone.net.RXRetrofit.N;
@@ -15,7 +17,9 @@ import com.openim.tophone.repository.OpenIMService;
 import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.OpenIMUtils;
+
 import java.util.HashMap;
+
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.enums.Platform;
 import io.openim.android.sdk.listener.OnAdvanceMsgListener;

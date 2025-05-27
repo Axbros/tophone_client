@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.bage.GsonHel;
-import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 

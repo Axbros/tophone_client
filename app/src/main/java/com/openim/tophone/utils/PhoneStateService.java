@@ -1,18 +1,14 @@
 package com.openim.tophone.utils;
 
-import static java.security.AccessController.getContext;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.CallLog;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -27,6 +23,7 @@ import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.repository.LocationService;
 
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.disposables.Disposable;
 public class PhoneStateService extends Service {
     private PhoneStateListener phoneStateListener;
