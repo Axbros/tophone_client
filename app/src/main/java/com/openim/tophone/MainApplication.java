@@ -1,23 +1,18 @@
 package com.openim.tophone;
 
-import android.content.Context;
-import android.content.Intent;
-import android.os.Build;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
 import com.openim.tophone.net.RXRetrofit.N;
-import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
+
 import java.io.File;
 
-
 import io.openim.android.sdk.BuildConfig;
-
 import okhttp3.Request;
 
 
@@ -32,7 +27,6 @@ public class MainApplication extends BaseApp{
         initFile();
         initController();
         initNet();
-        initIM();
         initService();
     }
 
@@ -68,9 +62,7 @@ public class MainApplication extends BaseApp{
                 }));
     }
 
-    private void initIM() {
-        IM.initSdk(this);
-    }
+
 
 
     public void offline() {
@@ -83,7 +75,14 @@ public class MainApplication extends BaseApp{
 
 
     public void initService() {
-//    ForegroundService
+//        Context context = BaseApp.inst();
+//        CallLogObserver observer = new CallLogObserver(new Handler(),context);
+//        context.getContentResolver().registerContentObserver(
+//                CallLog.Calls.CONTENT_URI,
+//                true,
+//                observer
+//        );
+
     }
 
 }

@@ -1,12 +1,15 @@
 package com.openim.tophone.utils;
 
+
+import android.annotation.SuppressLint;
+
 import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.openim.IM;
 import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.ui.main.MainActivity;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.listener.OnBase;
 import io.openim.android.sdk.models.GroupInfo;
@@ -16,7 +19,7 @@ public class OpenIMUtils {
     public final static String TAG = "OpenIMUtils";
     public static void updateGroupInfo(){
         try {
-            Thread.sleep(3000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -44,11 +47,11 @@ public class OpenIMUtils {
                             L.d(TAG,"获取用户信息失败，错误码: " + code + ", 错误信息: " + error);
 
                         }
+                        @SuppressLint("CommitPrefEdits")
                         @Override
                         public void onSuccess(List<PublicUserInfo> data) {
                             // 请求成功，将获取到的用户信息赋值给 result
-                            SharedPreferencesUtil sharedPreferencesUtil=new SharedPreferencesUtil(BaseApp.inst());
-                            sharedPreferencesUtil.setCache(Constants.getGroupOwnerKey(),ownerUserId);
+                            MainActivity.sp.edit().putString(Constants.getGroupOwnerKey(),ownerUserId).apply();
                             String groupOwner = data.get(0).getNickname();
                             VMStore.get().groupInfoLabel.setValue(groupName+"("+groupOwner+")");
                             L.d(TAG,"Get Group Info Success！Group Name:"+groupName+" Group Owner:"+groupOwner+" Group Owner Id:"+ownerUserId);
@@ -61,6 +64,7 @@ public class OpenIMUtils {
                 }
                 L.d(TAG,"getJoinedGroupList Success!");
             }
+
         });
     }
 

@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.bage.GsonHel;
-import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
@@ -66,7 +65,7 @@ public class LoginCertificate {
     }
 
     public static void clear() {
-        MainActivity.sp.edit().clear().apply();
+//        MainActivity.sp.edit().clear().apply();
         SharedPreferencesUtil.remove(BaseApp.inst(),
                 "user.LoginCertificate");
         L.e(TAG,"LoginCertificate 已移除");
