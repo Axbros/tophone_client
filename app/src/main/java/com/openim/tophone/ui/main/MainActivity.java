@@ -56,11 +56,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         view.setLifecycleOwner(this);
         VMStore.init(vm);
 
-
-        //初始化UI
-        if (checkAndRequestPermissions()) {
-            startAppInitialization();
-        }
+        startAppInitialization();
 
     }
 
@@ -94,12 +90,19 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void init() {
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
+        System.out.println("machineCode"+machineCode);
 
 //        machineCode=machineCode.substring(machineCode.length()-8);
         vm.accountID.setValue(machineCode);
         //观察者模式 观察 account status
         // 2.查询当前设备是否注册
         vm.checkIfUserExists(machineCode);
+
+
+        // 启动并绑定Service
+        Intent intent = new Intent(this, PhoneStateService.class);
+        startService(intent);        // 启动Service
+
     }
 
     private void initStorage() {

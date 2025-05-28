@@ -70,15 +70,6 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 下面是设置为拨号器应用所需的 intent-filter -->
-            <intent-filter>
-                <action android:name="android.intent.action.DIAL" />
-                <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.intent.action.CALL" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="tel" />
-            </intent-filter>
         </activity>
     </application>
 
