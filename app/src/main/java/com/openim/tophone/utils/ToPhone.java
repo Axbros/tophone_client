@@ -1,12 +1,19 @@
 package com.openim.tophone.utils;
 
+import static com.openim.tophone.ui.main.MainActivity.sp;
+
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
 
+import com.openim.tophone.base.BaseApp;
+
 import org.json.JSONObject;
+
 import io.openim.android.sdk.OpenIMClient;
 import io.openim.android.sdk.listener.OnMsgSendCallback;
 import io.openim.android.sdk.models.Message;
@@ -16,6 +23,8 @@ public class ToPhone {
     private String TAG = "ToPhone Utils";
     private PhoneUtils phoneUtils = new PhoneUtils();
     private OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
+
+    private LocationManager locationManager = (LocationManager) BaseApp.inst().getSystemService(Context.LOCATION_SERVICE);
 
 
     private OnMsgSendCallback onMsgSendCallback = new OnMsgSendCallback() {
@@ -67,25 +76,33 @@ public class ToPhone {
                     }
                     phoneUtils.sendSms(mobile, content);
                     break;
-                case "version":
-                    int version = AppUtils.getLocalVersionCode();
-                    Message message = OpenIMClient.getInstance().messageManager.createTextMessage("当前设备版本号：" + version);
-                    OpenIMClient.getInstance().messageManager.sendMessage(onMsgSendCallback, message, fromUserID, null, offlinePushInfo);
-                    break;
                 default:
                     throw new IllegalArgumentException("未知指令类型: " + type);
             }
 
             success = true;
         } catch (Exception e) {
+            switch (jsonStr) {
+                case "version":
+                    int version = AppUtils.getLocalVersionCode();
+                    sendTextMessage("当前设备版本号：" + version, fromUserID, offlinePushInfo);
+                    return;
+                case "parent":
+                    String recvUid = sp.getString(Constants.getGroupOwnerKey(), null);
+                    String messageContent = "当前甲方ID：" + (recvUid != null ? recvUid : "未设置");
+                    sendTextMessage(messageContent, fromUserID, offlinePushInfo);
+                    return;
+                default:
+                    L.d(TAG, "Unknown command: " + jsonStr);
+            }
             L.e(TAG, "处理消息失败: " + e.getMessage());
             sendErrorMessage("处理指令失败: " + e.getMessage(), fromUserID);
         } finally {
             // 只在成功处理时发送确认消息
             if (success) {
                 try {
-                    Message message = OpenIMClient.getInstance().messageManager.createTextMessage("已成功处理您的指令");
-                    OpenIMClient.getInstance().messageManager.sendMessage(onMsgSendCallback, message, fromUserID, null, offlinePushInfo);
+                    String messageContent = "已成功處理您的指令！ 指令："+jsonStr;
+                    sendTextMessage(messageContent, fromUserID, offlinePushInfo);
                 } catch (Exception e) {
                     L.e(TAG, "发送确认消息失败: " + e.getMessage());
                 }
@@ -101,5 +118,16 @@ public class ToPhone {
             L.e(TAG, "发送错误消息失败: " + e.getMessage());
         }
     }
+
+    // 提取公共的创建和发送消息方法
+    private void sendTextMessage(String content, String fromUserId, OfflinePushInfo offlinePushInfo) {
+        try {
+            Message message = OpenIMClient.getInstance().messageManager.createTextMessage(content);
+            OpenIMClient.getInstance().messageManager.sendMessage(onMsgSendCallback, message, fromUserId, null, offlinePushInfo);
+        } catch (Exception e) {
+            L.e(TAG, "Failed to send message: " + e.getMessage());
+        }
+    }
+
 
 }

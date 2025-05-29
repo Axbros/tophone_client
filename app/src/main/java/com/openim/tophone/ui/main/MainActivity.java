@@ -156,6 +156,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE);
         }
 
+
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.CALL_PHONE);
