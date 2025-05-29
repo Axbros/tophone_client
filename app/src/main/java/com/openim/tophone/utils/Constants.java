@@ -12,14 +12,8 @@ public class Constants {
 
     private static final String SharedPrefsKeys_NICKNAME = "NICKNAME";
     private static final boolean IS_LOCAL_ENV = false;
-    public static final String DB_NAME_USERID="userId";
-    public static final String DB_NAME_NICKNAME="nickName";
-
-    public static final String DB_NAME_EMAIL="email";
 
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
-
-    private static final String LOG_FILE_PATH = FILE_DIR+"tophone.log";
 
     // 默认主机地址
     public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.ndvfp.cn";
