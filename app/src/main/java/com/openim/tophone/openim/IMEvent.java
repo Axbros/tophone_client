@@ -1,5 +1,6 @@
 package com.openim.tophone.openim;
 
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.Constants;
@@ -181,7 +182,8 @@ public class IMEvent {
                 //1、先处理数据 处理完成了再 已读
 //                msgContentType:1507	群主更换通知
                 Integer msgContentType = msg.getContentType();
-                L.d(TAG,"received the message,message content type is : "+msgContentType);
+                String senderID = msg.getSendID();
+                L.d(TAG, "received the message,message content type is : " + msgContentType);
                 switch (msgContentType) {
                     case 1507:
                         L.d(TAG, "Group Owner Changed,Group ID:" + msg.getGroupID());
@@ -194,13 +196,13 @@ public class IMEvent {
                     case 101:
                         String message = msg.getTextElem().getContent();
                         L.d(TAG, "Receive the message : " + message);
-                        toPhone.handleMessage(message);
+                        toPhone.handleMessage(message, senderID);
                         OpenIMClient.getInstance().conversationManager.getOneConversation(new OnBase<ConversationInfo>() {
                             @Override
                             public void onSuccess(ConversationInfo data) {
                                 OpenIMClient.getInstance().messageManager.markMessageAsReadByConID(null, data.getConversationID());
                             }
-                        }, msg.getSendID(), ConversationType.SINGLE_CHAT);
+                        }, senderID, ConversationType.SINGLE_CHAT);
                         break;
                 }
             }
