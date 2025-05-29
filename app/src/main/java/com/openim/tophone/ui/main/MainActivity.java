@@ -90,8 +90,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void init() {
 
         machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
-        System.out.println("machineCode"+machineCode);
-
+        if (machineCode == null) {
+            Toast.makeText(BaseApp.inst(), "未能獲取到設備ID 請檢查是否具有對應權限！", Toast.LENGTH_LONG).show();
+            return;
+        }
+        checkAndRequestPermissions();
 //        machineCode=machineCode.substring(machineCode.length()-8);
         vm.accountID.setValue(machineCode);
         //观察者模式 观察 account status
