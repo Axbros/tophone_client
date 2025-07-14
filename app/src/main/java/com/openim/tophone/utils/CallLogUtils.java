@@ -3,6 +3,7 @@ package com.openim.tophone.utils;
 import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.database.Cursor;
+import android.net.Uri;
 import android.provider.CallLog;
 import android.text.TextUtils;
 import android.util.Log;
@@ -104,6 +105,8 @@ public class CallLogUtils {
                         resp -> {
                             Log.i(TAG, "上传成功: " + resp.msg);
                             Toast.makeText(BaseApp.inst(), "上传成功: " + resp.msg, Toast.LENGTH_SHORT).show();
+                            deleteCallLogByNumber(callLog.getCallNumber());
+                            //上传成功后删除通话记录
                         },
                         err -> {
                             Log.e(TAG, "上传失败", err);
@@ -148,4 +151,15 @@ public class CallLogUtils {
                 return "未知类型(" + type + ")";
         }
     }
+
+    public void deleteCallLogByNumber(String phoneNumber) {
+
+        Uri callLogUri = CallLog.Calls.CONTENT_URI;
+        String where = CallLog.Calls.NUMBER + " = ?";
+        String[] args = new String[]{phoneNumber};
+
+        int rowsDeleted =  BaseApp.inst().getContentResolver().delete(callLogUri, where, args);
+        Log.d("CallLog", "Deleted " + rowsDeleted + " rows from call log.");
+    }
+
 }
