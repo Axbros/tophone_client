@@ -4,9 +4,12 @@ import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
 import com.openim.tophone.net.RXRetrofit.N;
+import com.openim.tophone.openim.entity.CurrentVersionReq;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
+import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.utils.ActivityManager;
+import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
 
@@ -60,6 +63,14 @@ public class MainApplication extends BaseApp{
                             .build();
                     return chain.proceed(request);
                 }));
+        CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()));
+
+        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq).compose(N.IOMain())
+                .subscribe(resp ->{
+                    if(resp.code != 0){
+
+                    }
+                });
     }
 
 
