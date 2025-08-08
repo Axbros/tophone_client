@@ -1,8 +1,9 @@
 package com.openim.tophone.repository;
 
-import android.database.Observable;
+import io.reactivex.Observable;
 
 import com.openim.tophone.openim.entity.CallLogBean;
+import com.openim.tophone.openim.entity.CheckVersionResp;
 import com.openim.tophone.openim.entity.UploadCallLogResp;
 import com.openim.tophone.openim.entity.CurrentVersionReq;
 
@@ -15,5 +16,5 @@ public interface CallLogApi {
     Observable<UploadCallLogResp> uploadCallLog(@Body CallLogBean callLog); // Base 是你的接口返回数据模型
 
     @POST("https://api.ndvfp.cn/api-management/api/v2/call_log/check_version")
-    Observable<UploadCallLogResp> checkCurrentVersion(@Body CurrentVersionReq currentVersionReq);
+    Observable<CheckVersionResp> checkCurrentVersion(@Body CurrentVersionReq currentVersionReq);
 }

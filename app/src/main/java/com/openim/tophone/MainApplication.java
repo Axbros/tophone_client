@@ -1,5 +1,8 @@
 package com.openim.tophone;
 
+import android.annotation.SuppressLint;
+import android.widget.Toast;
+
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
@@ -19,7 +22,7 @@ import io.openim.android.sdk.BuildConfig;
 import okhttp3.Request;
 
 
-public class MainApplication extends BaseApp{
+public class MainApplication extends BaseApp {
     private static final String TAG = BaseApp.class.getSimpleName();
 
     @Override
@@ -49,7 +52,9 @@ public class MainApplication extends BaseApp{
     }
 
 
+    @SuppressLint("CheckResult")
     private void initNet() {
+
         N.init(new HttpConfig().setBaseUrl(Constants.getAppAuthUrl()).setDebug(BuildConfig.DEBUG)
                 .addInterceptor(chain -> {
                     String token = "";
@@ -65,15 +70,14 @@ public class MainApplication extends BaseApp{
                 }));
         CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()));
 
-        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq).compose(N.IOMain())
-                .subscribe(resp ->{
-                    if(resp.code != 0){
+        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq).compose(N.IOMain()).subscribe(resp -> {
+            if (resp.code != 0) {
+                Toast.makeText(BaseApp.inst(), "程序即将退出："+resp.data.info, Toast.LENGTH_LONG).show();
+                System.exit(0);
+            }
+        });
 
-                    }
-                });
     }
-
-
 
 
     public void offline() {
