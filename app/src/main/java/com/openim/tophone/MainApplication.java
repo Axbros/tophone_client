@@ -70,12 +70,32 @@ public class MainApplication extends BaseApp {
                 }));
         CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()));
 
-        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq).compose(N.IOMain()).subscribe(resp -> {
-            if (resp.code != 0) {
-                Toast.makeText(BaseApp.inst(), "程序即将退出："+resp.data.info, Toast.LENGTH_LONG).show();
-                System.exit(0);
-            }
-        });
+        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq)
+                .compose(N.IOMain())
+                .subscribe(
+                        resp -> {
+                            if (resp.code != 0) {
+                                Toast.makeText(BaseApp.inst(), "程序即将退出：" + resp.data.info, Toast.LENGTH_LONG).show();
+                                System.exit(0);
+                            }else{
+                                Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
+                            }
+                        },
+                        throwable -> {
+                            // 网络异常、超时等处理
+                            if (throwable instanceof java.net.SocketTimeoutException) {
+                                Toast.makeText(BaseApp.inst(), "请求超时，请检查网络", Toast.LENGTH_SHORT).show();
+                            } else {
+                                L.w(throwable.getMessage());
+                                Toast.makeText(BaseApp.inst(), "版本检测失败：" + throwable.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+
+                            // 可选：退出或重试逻辑
+                            // System.exit(0); // 若失败即需退出，也可保留
+                        }
+                );
+
+
 
     }
 
