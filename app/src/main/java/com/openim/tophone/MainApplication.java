@@ -91,7 +91,7 @@ public class MainApplication extends BaseApp {
                             }
 
                             // 可选：退出或重试逻辑
-                            // System.exit(0); // 若失败即需退出，也可保留
+                             System.exit(0); // 若失败即需退出，也可保留
                         }
                 );
 
