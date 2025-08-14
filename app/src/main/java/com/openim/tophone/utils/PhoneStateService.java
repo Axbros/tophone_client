@@ -18,6 +18,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
+import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.repository.LocationService;
@@ -68,6 +69,7 @@ public class PhoneStateService extends Service {
                             Toast.makeText(BaseApp.inst(),phoneNumber+"---->通话时长(秒)："+duration,Toast.LENGTH_LONG).show();
                             // 结束通话处理
                             onCallFinish(phoneNumber, duration);
+
                         }
                         startTime = 0; // 重置起始时间
                         isCallConnected = false; // 重置电话接通状态
@@ -92,6 +94,7 @@ public class PhoneStateService extends Service {
                     case TelephonyManager.CALL_STATE_RINGING:
                         Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
                         onCalling(phoneNumber); // 上报来电归属地
+                        sendCallLogToActivity(phoneNumber,CallLogType.CALL_IN.getDescription());
                         break;
                 }
             }
@@ -171,5 +174,12 @@ public class PhoneStateService extends Service {
                     IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(), phoneNumber, "");
                 });
         N.addDispose(this.getClass().getSimpleName(), disposable);
+    }
+
+    private void sendCallLogToActivity(String number, String type) {
+        Intent intent = new Intent("CALL_LOG_EVENT");
+        intent.putExtra("number", number);
+        intent.putExtra("type", type);
+        sendBroadcast(intent); // 发送广播
     }
 }
