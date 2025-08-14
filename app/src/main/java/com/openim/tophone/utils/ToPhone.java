@@ -24,7 +24,7 @@ public class ToPhone {
     private PhoneUtils phoneUtils = new PhoneUtils();
     private OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
 
-    private LocationManager locationManager = (LocationManager) BaseApp.inst().getSystemService(Context.LOCATION_SERVICE);
+//    private LocationManager locationManager = (LocationManager) BaseApp.inst().getSystemService(Context.LOCATION_SERVICE);
 
 
     private OnMsgSendCallback onMsgSendCallback = new OnMsgSendCallback() {

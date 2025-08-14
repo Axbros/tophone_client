@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.provider.CallLog;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
@@ -22,6 +23,8 @@ import java.util.Locale;
 public class CallLogUtils {
 
     private static final String TAG = "CallLogUtils";
+
+
 
     /**
      * 获取最新一条通话记录并上传
