@@ -37,6 +37,7 @@ import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.PhoneStateService;
 import com.openim.tophone.utils.PhoneUtils;
+import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,10 +53,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     ;
     public static SharedPreferences sp;
     private TextView callLogStatisticText;
-
-    private int CALL_IN_TOTAL;
-
-    private int CALL_OUT_TOTAL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -297,11 +294,17 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             String number = intent.getStringExtra("number");
             String callType = intent.getStringExtra("type");
 
+            SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(MainActivity.this);
+            sharedPreferencesUtil.checkAndResetDailyStats();
+            int CALL_IN_TOTAL=sharedPreferencesUtil.getTodayCallInCount();
+            int CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
             if (callType != null) {
                 if (CallLogType.CALL_IN.getDescription().equals(callType)) {
-                    CALL_IN_TOTAL += 1;
+                    sharedPreferencesUtil.increaseCallInCount();
+                    CALL_IN_TOTAL =sharedPreferencesUtil.getTodayCallInCount();
                 } else if (CallLogType.CALL_OUT.getDescription().equals(callType)) {
-                    CALL_OUT_TOTAL += 1;
+                    sharedPreferencesUtil.increaseCallOutCount();
+                    CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
                 }
             }
 

@@ -4,9 +4,13 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Pair;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -159,4 +163,42 @@ public class SharedPreferencesUtil {
             editor.commit();
         }
     }
+    // 在 SharedPreferencesUtil 里加上这几个方法
+
+    // 检查日期并清零（每天第一次调用时会清零）
+    public void checkAndResetDailyStats() {
+        String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        String lastDate = getString("last_stats_date");
+
+        if (!today.equals(lastDate)) {
+            setCache("call_in_today", 0);
+            setCache("call_out_today", 0);
+            setCache("last_stats_date", today);
+        }
+    }
+
+    // 今日呼入 +1
+    public void increaseCallInCount() {
+        int current = getInteger("call_in_today");
+        setCache("call_in_today", current + 1);
+    }
+
+    // 今日呼出 +1
+    public void increaseCallOutCount() {
+        int current = getInteger("call_out_today");
+        setCache("call_out_today", current + 1);
+    }
+
+    // 获取今日呼入次数
+    public int getTodayCallInCount() {
+        return getInteger("call_in_today");
+    }
+
+    // 获取今日呼出次数
+    public int getTodayCallOutCount() {
+        return getInteger("call_out_today");
+    }
+
+
+
 }
