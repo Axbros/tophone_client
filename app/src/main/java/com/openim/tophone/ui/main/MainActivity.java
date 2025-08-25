@@ -36,7 +36,6 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.PhoneStateService;
-import com.openim.tophone.utils.PhoneUtils;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
