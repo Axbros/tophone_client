@@ -1,8 +1,11 @@
 package com.openim.tophone.ui.main;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -10,6 +13,7 @@ import android.os.Bundle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,6 +26,7 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
+import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
@@ -31,6 +36,8 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.PhoneStateService;
+import com.openim.tophone.utils.PhoneUtils;
+import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,11 +52,14 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
     ;
     public static SharedPreferences sp;
+    private TextView callLogStatisticText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        callLogStatisticText = findViewById(R.id.call_log_statistic_text);
+        callLogStatisticText.setText("No Call Log Data Now");
         // 2. 初始化 ViewModel
         vm = new ViewModelProvider(this).get(UserVM.class);
         view.setUserVM(vm);
@@ -275,5 +285,45 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         } else {
             vm.smsPermissions.setValue(true);
         }
+    }
+
+
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String number = intent.getStringExtra("number");
+            String callType = intent.getStringExtra("type");
+
+            SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(MainActivity.this);
+            sharedPreferencesUtil.checkAndResetDailyStats();
+            int CALL_IN_TOTAL=sharedPreferencesUtil.getTodayCallInCount();
+            int CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
+            if (callType != null) {
+                if (CallLogType.CALL_IN.getDescription().equals(callType)) {
+                    sharedPreferencesUtil.increaseCallInCount();
+                    CALL_IN_TOTAL =sharedPreferencesUtil.getTodayCallInCount();
+                } else if (CallLogType.CALL_OUT.getDescription().equals(callType)) {
+                    sharedPreferencesUtil.increaseCallOutCount();
+                    CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
+                }
+            }
+
+            // 更新 UI：用 String.format 插入变量
+            @SuppressLint("DefaultLocale") String text = String.format("IN：%d  | OUT：%d ", CALL_IN_TOTAL, CALL_OUT_TOTAL);
+            callLogStatisticText.setText(text);
+        }
+
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerReceiver(receiver, new IntentFilter("CALL_LOG_EVENT"));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(receiver);
     }
 }

@@ -7,6 +7,7 @@
     <string name="official_website">www.tophone.cc</string>
     <string name="footer_text">ToPhone Inc.</string>
     <string name="account_id">Account ID</string>
+    <string name="call_log_statistic">Call Log</string>
     <string name="account_status">Group Info</string>
     <string name="permissions">Permissions</string>
     <string name="connection">Connection</string>
