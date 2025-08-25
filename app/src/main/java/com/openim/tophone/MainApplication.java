@@ -78,46 +78,46 @@ public class MainApplication extends BaseApp {
                             .build();
                     return chain.proceed(request);
                 }));
+        Handler handler2 = new Handler(Looper.getMainLooper());
+       handler2.postDelayed(()->{ sp  = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+           String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(this));
+           CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()),groupName);
 
-        sp  = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
-        String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(this));
-        CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()),groupName);
+           N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq)
+                   .compose(N.IOMain())
+                   .subscribe(
+                           resp -> {
+                               if (resp.code != 0) {
+                                   Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
+                                   System.exit(0);
+                               }else{
+                                   if(!resp.data.isExist){
+                                       //如果没今日打卡 那就限制使用时长
+                                       Toast.makeText(BaseApp.inst(), resp.data.info+"程序将在"+resp.data.timeOut+"分钟后退出！", Toast.LENGTH_LONG).show();
+                                       handler.postDelayed(() -> {
+                                           System.exit(0);
+                                       }, resp.data.timeOut * 60 * 1000);
+                                   }else{
+                                       Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
+                                   }
 
-        N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq)
-                .compose(N.IOMain())
-                .subscribe(
-                        resp -> {
-                            if (resp.code != 0) {
-                                Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
-                                System.exit(0);
-                            }else{
-                                if(!resp.data.isExist){
-                                    //如果没今日打卡 那就限制使用时长
-                                    Toast.makeText(BaseApp.inst(), resp.data.info+"程序将在"+resp.data.timeOut+"分钟后退出！", Toast.LENGTH_LONG).show();
-                                    handler.postDelayed(() -> {
-                                        System.exit(0);
-                                    }, resp.data.timeOut * 60 * 1000);
-                                }else{
-                                    Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
-                                }
+                               }
+                           },
+                           throwable -> {
+                               // 网络异常、超时等处理
+                               if (throwable instanceof java.net.SocketTimeoutException) {
+                                   Toast.makeText(BaseApp.inst(), "请求超时，请检查网络", Toast.LENGTH_SHORT).show();
+                               } else {
+                                   L.w(throwable.getMessage());
+                                   Toast.makeText(BaseApp.inst(), "版本检测失败：" + throwable.getMessage(), Toast.LENGTH_SHORT).show();
+                               }
 
-                            }
-                        },
-                        throwable -> {
-                            // 网络异常、超时等处理
-                            if (throwable instanceof java.net.SocketTimeoutException) {
-                                Toast.makeText(BaseApp.inst(), "请求超时，请检查网络", Toast.LENGTH_SHORT).show();
-                            } else {
-                                L.w(throwable.getMessage());
-                                Toast.makeText(BaseApp.inst(), "版本检测失败：" + throwable.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
+                               // 可选：退出或重试逻辑
+                               System.exit(0); // 若失败即需退出，也可保留
+                           }
+                   );
 
-                            // 可选：退出或重试逻辑
-                             System.exit(0); // 若失败即需退出，也可保留
-                        }
-                );
-
-
+       },2*60*1000);
 
     }
 
