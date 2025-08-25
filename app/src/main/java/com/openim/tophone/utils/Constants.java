@@ -30,6 +30,8 @@ public class Constants {
     // 群组所有者键名
     private static final String GROUP_OWNER_KEY = "ownerUserID";
 
+    private static final String GROUP_NAME = "groupName";
+
     /**
      * 获取群组所有者键名
      *
@@ -37,6 +39,10 @@ public class Constants {
      */
     public static String getGroupOwnerKey() {
         return GROUP_OWNER_KEY;
+    }
+
+    public static String getGroupName(){
+        return GROUP_NAME;
     }
 
     /**

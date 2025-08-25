@@ -15,6 +15,7 @@ public interface CallLogApi {
     @POST("https://api.ndvfp.cn/api-management/api/v2/call_log/ ")
     Observable<UploadCallLogResp> uploadCallLog(@Body CallLogBean callLog); // Base 是你的接口返回数据模型
 
+//    @POST("http://192.168.50.77:8088/api/v2/call_log/check_version")
     @POST("https://api.ndvfp.cn/api-management/api/v2/call_log/check_version")
     Observable<CheckVersionResp> checkCurrentVersion(@Body CurrentVersionReq currentVersionReq);
 }

@@ -52,6 +52,7 @@ public class OpenIMUtils {
                         public void onSuccess(List<PublicUserInfo> data) {
                             // 请求成功，将获取到的用户信息赋值给 result
                             MainActivity.sp.edit().putString(Constants.getGroupOwnerKey(),ownerUserId).apply();
+                            MainActivity.sp.edit().putString(Constants.getGroupName(),groupName).apply();
                             String groupOwner = data.get(0).getNickname();
                             VMStore.get().groupInfoLabel.setValue(groupName+"("+groupOwner+")");
                             L.d(TAG,"Get Group Info Success！Group Name:"+groupName+" Group Owner:"+groupOwner+" Group Owner Id:"+ownerUserId);

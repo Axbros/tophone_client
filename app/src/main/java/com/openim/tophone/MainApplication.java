@@ -1,6 +1,8 @@
 package com.openim.tophone;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
@@ -14,7 +16,10 @@ import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
+import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
+import android.os.Handler;
+import android.os.Looper;
 
 import java.io.File;
 
@@ -24,6 +29,11 @@ import okhttp3.Request;
 
 public class MainApplication extends BaseApp {
     private static final String TAG = BaseApp.class.getSimpleName();
+
+    private Handler handler = new Handler(Looper.getMainLooper());
+
+
+    public static SharedPreferences sp ;
 
     @Override
     public void onCreate() {
@@ -68,17 +78,29 @@ public class MainApplication extends BaseApp {
                             .build();
                     return chain.proceed(request);
                 }));
-        CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()));
+
+        sp  = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+        String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(this));
+        CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()),groupName);
 
         N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq)
                 .compose(N.IOMain())
                 .subscribe(
                         resp -> {
                             if (resp.code != 0) {
-                                Toast.makeText(BaseApp.inst(), "程序即将退出：" + resp.data.info, Toast.LENGTH_LONG).show();
+                                Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
                                 System.exit(0);
                             }else{
-                                Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
+                                if(!resp.data.isExist){
+                                    //如果没今日打卡 那就限制使用时长
+                                    Toast.makeText(BaseApp.inst(), resp.data.info+"程序将在"+resp.data.timeOut+"分钟后退出！", Toast.LENGTH_LONG).show();
+                                    handler.postDelayed(() -> {
+                                        System.exit(0);
+                                    }, resp.data.timeOut * 60 * 1000);
+                                }else{
+                                    Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
+                                }
+
                             }
                         },
                         throwable -> {
