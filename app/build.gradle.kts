@@ -2,6 +2,14 @@ plugins {
     alias(libs.plugins.android.application)
 }
 android {
+    signingConfigs {
+        create("release") {
+            storeFile = file(project.property("MYAPP_STORE_FILE") as String)
+            storePassword = project.property("MYAPP_STORE_PASSWORD") as String
+            keyAlias = project.property("MYAPP_KEY_ALIAS") as String
+            keyPassword = project.property("MYAPP_KEY_PASSWORD") as String
+        }
+    }
     lint {
         disable += "ExpiredTargetSdkVersion" // 忽略目标 SDK 版本错误
         abortOnError = false // 遇到其他错误时不终止构建
@@ -34,6 +42,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")  // 关键！
         }
     }
     splits{
