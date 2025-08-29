@@ -1,5 +1,7 @@
 package com.openim.tophone.net.RXRetrofit;
 import android.content.Context;
+
+import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +23,8 @@ public class N {
     final static String TAG = "OpenIM-net";
     public static N instance = null;
     private static Retrofit mRetrofit;
+
+    private static Retrofit managementRetrofit;
     private static HashMap<String, ListCompositeDisposable> disposableHashMap = null;
     public static void init(HttpConfig config) {
         getInstance(config);
@@ -28,6 +32,11 @@ public class N {
     public static <T> T API(Class<T> service) {
         initException();
         return mRetrofit.create(service);
+    }
+
+    public static <T> T mAPI(Class<T> service) {
+        initException();
+        return managementRetrofit.create(service);
     }
     private static void initException() {
         if (null == mRetrofit)
@@ -51,6 +60,10 @@ public class N {
                 .addConverterFactory(GsonConverterFactory.create())//添加gson转换器
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())//添加rxjava转换器
                 .client(build.build())
+                .build();
+        managementRetrofit = new Retrofit.Builder()
+                .baseUrl("https://"+ Constants.DEFAULT_HOST+"/")
+                .addConverterFactory(GsonConverterFactory.create())
                 .build();
     }
     private static synchronized void getInstance(HttpConfig httpConfig) {

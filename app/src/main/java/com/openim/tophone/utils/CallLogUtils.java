@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.provider.CallLog;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
@@ -102,7 +101,7 @@ public class CallLogUtils {
     private void uploadCallLog(CallLogBean callLog) {
         if (callLog == null) return;
 
-        N.API(CallLogApi.class).uploadCallLog(callLog)
+        N.mAPI(CallLogApi.class).uploadCallLog(callLog)
                 .compose(N.IOMain())
                 .subscribe(
                         resp -> {

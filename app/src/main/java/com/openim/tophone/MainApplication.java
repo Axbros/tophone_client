@@ -83,7 +83,7 @@ public class MainApplication extends BaseApp {
            String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(this));
            CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()),groupName);
 
-           N.API(CallLogApi.class).checkCurrentVersion(currentVersionReq)
+           N.mAPI(CallLogApi.class).checkCurrentVersion(currentVersionReq)
                    .compose(N.IOMain())
                    .subscribe(
                            resp -> {
