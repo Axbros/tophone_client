@@ -64,6 +64,7 @@ public class N {
         managementRetrofit = new Retrofit.Builder()
                 .baseUrl("https://"+ Constants.DEFAULT_HOST+"/")
                 .addConverterFactory(GsonConverterFactory.create())
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create()) // 关键：添加 RxJava 适配器
                 .build();
     }
     private static synchronized void getInstance(HttpConfig httpConfig) {

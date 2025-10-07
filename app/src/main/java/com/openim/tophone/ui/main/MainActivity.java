@@ -28,7 +28,6 @@ import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.openim.IM;
-import com.openim.tophone.openim.IMUtil;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
@@ -39,10 +38,9 @@ import com.openim.tophone.utils.PhoneStateService;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
-
-import io.openim.android.sdk.OpenIMClient;
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
@@ -59,6 +57,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         callLogStatisticText = findViewById(R.id.call_log_statistic_text);
         callLogStatisticText.setText("No Call Log Data Now");
+
+        // 格式化字符串并设置
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR) ;
+        TextView textView = findViewById(R.id.copyright);
+        textView.setText(getString(R.string.learn_more, currentYear));
         // 2. 初始化 ViewModel
         vm = new ViewModelProvider(this).get(UserVM.class);
         view.setUserVM(vm);
@@ -138,23 +141,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         vm.handleBtnConnect();
     }
 
-    public void handleUploadLogsBtnClick(View v) {
-        OpenIMClient.getInstance().uploadLogs(new IMUtil.IMCallBack<String>() {
-            @Override
-            public void onSuccess(String data) {
-                Toast.makeText(BaseApp.inst(), "✅Upload successed!", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onError(int code, String error) {
-                Toast.makeText(BaseApp.inst(), "❌Upload failed!" + error, Toast.LENGTH_SHORT).show();
-                L.e("IMCallBack", "uploadLogs onError:(" + code + ")" + error);
-                LoginCertificate.clear();
-            }
-        }, new ArrayList<>(), 500, "", (l, l1) -> {
-            L.d("testprogress", "current:" + l + "total:" + l1);
-        });
-    }
 
     private boolean checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();

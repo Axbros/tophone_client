@@ -15,6 +15,7 @@ import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
+import com.openim.tophone.utils.CallBlocker;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -38,7 +39,6 @@ public class MainApplication extends BaseApp {
     @Override
     public void onCreate() {
         L.e(TAG, "-----onCreate------");
-
         super.onCreate();
         initFile();
         initController();
@@ -113,11 +113,12 @@ public class MainApplication extends BaseApp {
                                }
 
                                // 可选：退出或重试逻辑
+                               Toast.makeText(BaseApp.inst(),"网络异常，即将退出！",Toast.LENGTH_SHORT).show();
                                System.exit(0); // 若失败即需退出，也可保留
                            }
                    );
 
-       },2*60*1000);
+       }, 60 * 1000);
 
     }
 

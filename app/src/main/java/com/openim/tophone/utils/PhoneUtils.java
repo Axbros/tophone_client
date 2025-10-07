@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import com.openim.tophone.base.BaseApp;
@@ -18,7 +19,9 @@ public class PhoneUtils {
     public void hangUpCall() {
 
         TelecomManager telecomManager = (TelecomManager) context.getSystemService(Context.TELECOM_SERVICE);
-        telecomManager.endCall();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            telecomManager.endCall();
+        }
     }
     @SuppressLint("MissingPermission")
     public void answerCall() {

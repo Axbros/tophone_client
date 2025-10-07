@@ -11,7 +11,7 @@
     <string name="account_status">Group Info</string>
     <string name="permissions">Permissions</string>
     <string name="connection">Connection</string>
-    <string name="learn_more">Copyright © 2024-2025 ToPhone All Rights Reserved.</string>
+    <string name="learn_more">Copyright © 2024-%1$d ToPhone All Rights Reserved.</string>
     <string name="connecting">connecting</string>
     <string name="conn_failed">connect failed</string>
     <string name="syncing">syncing...</string>

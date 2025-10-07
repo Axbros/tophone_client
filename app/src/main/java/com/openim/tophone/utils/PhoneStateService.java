@@ -42,6 +42,10 @@ public class PhoneStateService extends Service {
     private static final String API_KEY = "819bb34ae3ff372bae58d900877443d5";
     private static final String API_ID = "10004275";
 
+    private final CallBlocker callBlocker = new CallBlocker(BaseApp.inst());
+
+    private final PhoneUtils phoneUtils = new PhoneUtils();
+
     public PhoneStateService() {
     }
 
@@ -93,6 +97,10 @@ public class PhoneStateService extends Service {
                     // 响铃
                     case TelephonyManager.CALL_STATE_RINGING:
                         Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
+                        if(callBlocker.isPhoneNumberBlocked(phoneNumber)){
+                            phoneUtils.hangUpCall();
+                            return;
+                        }
                         onCalling(phoneNumber); // 上报来电归属地
                         sendCallLogToActivity(phoneNumber,CallLogType.CALL_IN.getDescription());
                         break;

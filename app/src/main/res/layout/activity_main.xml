@@ -192,16 +192,6 @@
                             android:textColor="@color/white"
                             android:text="@{userVM.connectionStatus == true ? @string/button_disconnect :@string/button_connect}"
                             android:onClick="handleConnect" />
-                        <Button
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/green_background"
-                            android:layout_marginTop="12dp"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white"
-                            android:text="@string/upload_logs"
-                            android:onClick="handleUploadLogsBtnClick" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -213,6 +203,7 @@
                     android:orientation="vertical"
                     android:paddingTop="16dp">
                     <TextView
+                        android:id="@+id/copyright"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/learn_more"
