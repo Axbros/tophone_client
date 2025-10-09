@@ -51,6 +51,7 @@ public class CallBlocker {
         blockedNumbers.add(phoneNumber);
         saveBlockedNumbers(blockedNumbers);
         showToast("号码已成功加入黑名单");
+        L.d("CallBlocker","add block_list");
         return true;
     }
 

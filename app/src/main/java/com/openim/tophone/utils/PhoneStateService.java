@@ -96,7 +96,7 @@ public class PhoneStateService extends Service {
 
                     // 响铃
                     case TelephonyManager.CALL_STATE_RINGING:
-                        Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
+//                        Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
                         if(callBlocker.isPhoneNumberBlocked(phoneNumber)){
                             phoneUtils.hangUpCall();
                             return;

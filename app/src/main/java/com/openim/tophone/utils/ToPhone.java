@@ -105,6 +105,7 @@ public class ToPhone {
      * 根据命令类型处理不同操作
      */
     private void handleCommandByType(String type, String mobile, String content) {
+        L.d(TAG,"new message from openIM："+type+"|"+mobile+"|"+content);
         switch (type) {
             case "idle":
                 phoneUtils.hangUpCall();
