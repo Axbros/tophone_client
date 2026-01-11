@@ -16,7 +16,7 @@ public class Constants {
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
     // 默认主机地址
-    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.ndvfp.cn";
+    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.uc0.cn";
 
     // APP 认证 URL
     private static final String APP_AUTH = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10008" : "/chat/");

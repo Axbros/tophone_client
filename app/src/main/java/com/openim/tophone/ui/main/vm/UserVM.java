@@ -112,6 +112,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     private void handleLoginError(Throwable e) {
         connectionStatus.setValue(false);
         Log.d("UserVM", "Login failed", e);
+        System.exit(0);
     }
     public void logout() {
         LoginCertificate certCache = LoginCertificate.getCache(BaseApp.inst());
