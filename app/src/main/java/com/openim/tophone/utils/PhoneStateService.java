@@ -6,9 +6,7 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -78,10 +76,10 @@ public class PhoneStateService extends Service {
                         startTime = 0; // 重置起始时间
                         isCallConnected = false; // 重置电话接通状态
                         Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
-                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            CallLogUtils callLogUtils = new CallLogUtils();
-                            callLogUtils.uploadLatestCallLog();  // 在这里处理 call log
-                        }, 2000); // 2000 毫秒 = 2 秒
+//                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+//                            CallLogUtils callLogUtils = new CallLogUtils();
+//                            callLogUtils.uploadLatestCallLog();  // 在这里处理 call log
+//                        }, 2000); // 2000 毫秒 = 2 秒
                         break;
 
                     // 接听

@@ -62,15 +62,22 @@ public class N {
                 .client(build.build())
                 .build();
         managementRetrofit = new Retrofit.Builder()
-                .baseUrl("https://"+ Constants.DEFAULT_HOST+"/")
+                .baseUrl(Constants.getManagementUrl())
                 .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create()) // 关键：添加 RxJava 适配器
                 .build();
     }
+
+    public static boolean isInitialized() {
+        return mRetrofit != null;
+    }
+
     private static synchronized void getInstance(HttpConfig httpConfig) {
-        if (null == instance) {
-            instance = new N(httpConfig);
-        }
+//        if (null == instance) {
+//            instance = new N(httpConfig);
+//        }
+        instance = new N(httpConfig);
+
     }
     public static void clearDispose(Context context) {
         String sign = context.getClass().getSimpleName();

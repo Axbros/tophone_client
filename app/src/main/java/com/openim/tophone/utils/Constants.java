@@ -3,85 +3,66 @@ package com.openim.tophone.utils;
 import com.openim.tophone.openim.IM;
 
 /**
- * 常量类，包含一些常用的 URL 和键名等常量
+ * 支持动态更新域名的 Constants 类
  */
 public class Constants {
-    // 是否为本地环境的标识
 
     private static final String SharedPrefsKeys_FILE_NAME = "SharedPrefsKeys";
-
     private static final String SharedPrefsKeys_NICKNAME = "NICKNAME";
     private static final boolean IS_LOCAL_ENV = false;
 
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
-    // 默认主机地址
-    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.ndvfp.cn";
+    // 默认 host（第一次启动使用）
+    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "apiv2.uc0.cn";
 
-    // APP 认证 URL
-    private static final String APP_AUTH = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10008" : "/chat/");
+    // 当前生效的 host（可被动态更新）
+    private static String CURRENT_HOST = DEFAULT_HOST;
 
-    // IM API URL
-    private static final String IM_API = (IS_LOCAL_ENV ? "http://" : "https://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10002" : "/api/");
+    // ======== ⭐ 动态 URL(实时计算) 而不是写死的 final ⭐ ========//
+    public static String getAppAuthUrl() {
+        return (IS_LOCAL_ENV ? "http://" : "https://") +
+                CURRENT_HOST +
+                (IS_LOCAL_ENV ? ":10008" : "/chat/");
+    }
 
-    // IM WebSocket URL
-    private static final String IM_WS = (IS_LOCAL_ENV ? "ws://" : "wss://") + DEFAULT_HOST + (IS_LOCAL_ENV ? ":10001" : "/msg_gateway");
+    public static String getManagementUrl() {
+        return (IS_LOCAL_ENV ? "http://" : "https://") +
+                CURRENT_HOST +
+                (IS_LOCAL_ENV ? ":8080" : "/api-management/");
+    }
 
-    // 群组所有者键名
+    public static String getImApiUrl() {
+        return (IS_LOCAL_ENV ? "http://" : "https://") +
+                CURRENT_HOST +
+                (IS_LOCAL_ENV ? ":10002" : "/api/");
+    }
+
+    public static String getImWsUrl() {
+        return (IS_LOCAL_ENV ? "ws://" : "wss://") +
+                CURRENT_HOST +
+                (IS_LOCAL_ENV ? ":10001" : "/msg_gateway");
+    }
+
+    // ======== ⭐ 对外暴露的 host 更新方法 ⭐ ======== //
+    public static void updateHost(String host) {
+        CURRENT_HOST = host;
+    }
+
+    // ======== 其它常量保持不变 ======== //
+
     private static final String GROUP_OWNER_KEY = "ownerUserID";
-
     private static final String GROUP_NAME = "groupName";
 
-    /**
-     * 获取群组所有者键名
-     *
-     * @return 群组所有者键名
-     */
-    public static String getGroupOwnerKey() {
-        return GROUP_OWNER_KEY;
-    }
+    public static String getGroupOwnerKey() { return GROUP_OWNER_KEY; }
 
-    public static String getGroupName(){
-        return GROUP_NAME;
-    }
+    public static String getGroupName() { return GROUP_NAME; }
 
-    /**
-     * 获取 IM API 的 URL
-     *
-     * @return IM API 的 URL
-     */
-    public static String getImApiUrl() {
-        return IM_API;
-    }
-
-    /**
-     * 获取 APP 认证的 URL
-     *
-     * @return APP 认证的 URL
-     */
-    public static String getAppAuthUrl() {
-        return APP_AUTH;
-    }
-
-    /**
-     * 获取 IM WebSocket 的 URL
-     *
-     * @return IM WebSocket 的 URL
-     */
-    public static String getImWsUrl() {
-        return IM_WS;
-    }
-
-    // 文件存储目录
-    public static String getFileDir(){
-        return FILE_DIR;
-    }
-
+    public static String getFileDir(){ return FILE_DIR; }
 
     public static String getSharedPrefsKeys_FILE_NAME(){
         return SharedPrefsKeys_FILE_NAME;
     }
-
 
     public static String getSharedPrefsKeys_NICKNAME(){
         return SharedPrefsKeys_NICKNAME;

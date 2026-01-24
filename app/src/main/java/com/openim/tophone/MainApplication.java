@@ -3,6 +3,8 @@ package com.openim.tophone;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
@@ -13,14 +15,12 @@ import com.openim.tophone.openim.entity.CurrentVersionReq;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.CallLogApi;
+import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
-import com.openim.tophone.utils.CallBlocker;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
-import android.os.Handler;
-import android.os.Looper;
 
 import java.io.File;
 
@@ -34,7 +34,7 @@ public class MainApplication extends BaseApp {
     private Handler handler = new Handler(Looper.getMainLooper());
 
 
-    public static SharedPreferences sp ;
+    public static SharedPreferences sp;
 
     @Override
     public void onCreate() {
@@ -63,8 +63,7 @@ public class MainApplication extends BaseApp {
 
 
     @SuppressLint("CheckResult")
-    private void initNet() {
-
+    public void initNet() {
         N.init(new HttpConfig().setBaseUrl(Constants.getAppAuthUrl()).setDebug(BuildConfig.DEBUG)
                 .addInterceptor(chain -> {
                     String token = "";
@@ -79,46 +78,50 @@ public class MainApplication extends BaseApp {
                     return chain.proceed(request);
                 }));
         Handler handler2 = new Handler(Looper.getMainLooper());
-       handler2.postDelayed(()->{ sp  = BaseApp.inst().getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
-           String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(this));
-           CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()),groupName);
+        handler2.postDelayed(() -> {
+            // 确保上下文有效，避免空指针
+            Context context = BaseApp.inst();
+            if (context == null) {
+                context = getApplicationContext(); // 或使用当前Activity的上下文
+            }
+            sp = context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+            String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(context));
+            CurrentVersionReq currentVersionReq = new CurrentVersionReq(AppVersionUtil.getVersionName(BaseApp.inst()), groupName);
 
-           N.mAPI(CallLogApi.class).checkCurrentVersion(currentVersionReq)
-                   .compose(N.IOMain())
-                   .subscribe(
-                           resp -> {
-                               if (resp.code != 0) {
-                                   Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
-                                   System.exit(0);
-                               }else{
-                                   if(!resp.data.isExist){
-                                       //如果没今日打卡 那就限制使用时长
-                                       Toast.makeText(BaseApp.inst(), resp.data.info+"程序将在"+resp.data.timeOut+"分钟后退出！", Toast.LENGTH_LONG).show();
-                                       handler.postDelayed(() -> {
-                                           System.exit(0);
-                                       }, resp.data.timeOut * 60 * 1000);
-                                   }else{
-                                       Toast.makeText(BaseApp.inst(),resp.data.info, Toast.LENGTH_LONG).show();
-                                   }
+            N.mAPI(CallLogApi.class).checkCurrentVersion(currentVersionReq)
+                    .compose(N.IOMain())
+                    .subscribe(
+                            resp -> {
+                                if (resp.code != 0) {
+                                    Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
+                                    MainActivity.seBtnConnectDisable();
+                                } else {
+                                    if (!resp.data.isExist) {
+                                        //如果没今日打卡 那就限制使用时长
+                                        Toast.makeText(BaseApp.inst(), resp.data.info + "程序将在" + resp.data.timeOut + "分钟后退出！", Toast.LENGTH_LONG).show();
+                                        handler.postDelayed(MainActivity::seBtnConnectDisable, resp.data.timeOut * 60 * 1000);
+                                    } else {
+                                        Toast.makeText(BaseApp.inst(), resp.data.info, Toast.LENGTH_LONG).show();
+                                    }
 
-                               }
-                           },
-                           throwable -> {
-                               // 网络异常、超时等处理
-                               if (throwable instanceof java.net.SocketTimeoutException) {
-                                   Toast.makeText(BaseApp.inst(), "请求超时，请检查网络", Toast.LENGTH_SHORT).show();
-                               } else {
-                                   L.w(throwable.getMessage());
-                                   Toast.makeText(BaseApp.inst(), "版本检测失败：" + throwable.getMessage(), Toast.LENGTH_SHORT).show();
-                               }
+                                }
+                            },
+                            throwable -> {
+                                // 网络异常、超时等处理
+                                if (throwable instanceof java.net.SocketTimeoutException) {
+                                    Toast.makeText(BaseApp.inst(), "请求超时，请检查网络", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    L.w(throwable.getMessage());
+                                    Toast.makeText(BaseApp.inst(), "版本检测失败：" + throwable.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
 
-                               // 可选：退出或重试逻辑
-                               Toast.makeText(BaseApp.inst(),"网络异常，即将退出！",Toast.LENGTH_SHORT).show();
-                               System.exit(0); // 若失败即需退出，也可保留
-                           }
-                   );
-
-       }, 60 * 1000);
+                                // 可选：退出或重试逻辑
+                                Toast.makeText(BaseApp.inst(), "网络异常，即将退出！", Toast.LENGTH_SHORT).show();
+                                MainActivity.seBtnConnectDisable();
+                            }
+                    );
+//5分钟判断
+        }, 5*1000*60);
 
     }
 

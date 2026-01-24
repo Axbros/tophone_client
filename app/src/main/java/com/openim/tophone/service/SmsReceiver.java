@@ -40,7 +40,7 @@ public class SmsReceiver extends BroadcastReceiver {
                         String message = sms.getMessageBody();
 
                         Log.d(TAG, "Received SMS from: " + sender + ", Message: " + message);
-                        Toast.makeText(BaseApp.inst(),"收到新短信，即将上报！",Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(BaseApp.inst(),"收到新短信，即将上报！",Toast.LENGTH_SHORT).show();
                         IMUtil.uploadMsg2Parent(ActionEnums.RECEIVED_SMS.getType(), sender, message);
                     }
                 }

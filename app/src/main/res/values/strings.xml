@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ToPhone-V2</string>
+    <string name="app_name">ToPClient</string>
     <string name="server">Server</string>
     <string name="sms">SMS</string>
     <string name="phone">Phone</string>

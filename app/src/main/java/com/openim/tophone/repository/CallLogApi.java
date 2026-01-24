@@ -12,8 +12,8 @@ import retrofit2.http.POST;
 
 public interface CallLogApi {
 //    @POST("http://192.168.31.27:8080/api/v2/call_log/ ")
-    @POST("/api-management/api/v2/call_log/ ")
-    Observable<UploadCallLogResp> uploadCallLog(@Body CallLogBean callLog); // Base 是你的接口返回数据模型
+//    @POST("/api-management/api/v2/call_log/ ")
+//    Observable<UploadCallLogResp> uploadCallLog(@Body CallLogBean callLog); // Base 是你的接口返回数据模型
 
 //    @POST("http://192.168.50.77:8088/api/v2/call_log/check_version")
     @POST("/api-management/api/v2/call_log/check_version")

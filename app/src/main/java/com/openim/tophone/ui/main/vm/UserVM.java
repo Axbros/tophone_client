@@ -5,6 +5,7 @@ import android.widget.Toast;
 
 import androidx.lifecycle.MutableLiveData;
 
+import com.openim.tophone.MainApplication;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.BaseViewModel;
 import com.openim.tophone.net.RXRetrofit.N;
@@ -65,6 +66,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                     @Override
                     public void onError(Throwable e) {
                         handleLoginError(e);
+                        login(machineCode);
                     }
                 });
 

@@ -10,9 +10,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,21 +25,30 @@ import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.openim.tophone.MainApplication;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.enums.CallLogType;
+import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
+import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.PhoneStateService;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -51,13 +63,26 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public static SharedPreferences sp;
     private TextView callLogStatisticText;
 
+    private static Button connectBtn;
+
+
+    public static void seBtnConnectDisable(){
+        connectBtn.setEnabled(false);
+    }
+
+    public  static  void setBtnConnectAble(){
+        connectBtn.setEnabled(true);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         callLogStatisticText = findViewById(R.id.call_log_statistic_text);
+        connectBtn = findViewById(R.id.btn_connect);
         callLogStatisticText.setText("No Call Log Data Now");
-
+        // 第一步：加载域名
+        initDomain();
         // 格式化字符串并设置
         int currentYear = Calendar.getInstance().get(Calendar.YEAR) ;
         TextView textView = findViewById(R.id.copyright);
@@ -70,6 +95,52 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
         startAppInitialization();
 
+    }
+
+    private void initDomain() {
+        String cached = DomainManager.getCachedHost(this);
+        if (cached != null) {
+            Constants.updateHost(cached);
+            MainApplication mainApplication = new MainApplication();
+            mainApplication.initNet();
+//            initNet();
+        } else {
+            // 无缓存先获取域名
+            fetchDomainAndInit();
+
+        }
+    }
+
+    private void fetchDomainAndInit() {
+        new Thread(() -> {
+            try {
+                URL url = new URL("https://api.uc0.cn" +
+                        "/api-management/api/v1/domain/tophone");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.connect();
+
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+
+                JSONObject obj = new JSONObject(sb.toString());
+                String host = obj.getJSONObject("data").getString("value");
+
+                DomainManager.saveHost(this, host);
+                Constants.updateHost(host);
+                MainApplication mainApplication = new MainApplication();
+                mainApplication.initNet();
+
+//                new Handler(Looper.getMainLooper()).post(this::initNet);
+
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+//                new Handler(Looper.getMainLooper()).post(() -> initNet());
+            }
+
+        }).start();
     }
 
     public void initOpenIM() {
