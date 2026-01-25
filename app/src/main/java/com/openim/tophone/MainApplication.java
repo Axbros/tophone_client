@@ -20,6 +20,7 @@ import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
+import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
 
 import java.io.File;
@@ -42,6 +43,11 @@ public class MainApplication extends BaseApp {
         super.onCreate();
         initFile();
         initController();
+        // 1) 启动先用缓存覆盖默认 host
+        String cached = DomainManager.getHost(this);
+        if (cached != null && !cached.isEmpty()) {
+            Constants.updateHost(cached);
+        }
         initNet();
         initService();
     }

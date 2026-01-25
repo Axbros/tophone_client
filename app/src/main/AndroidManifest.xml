@@ -53,12 +53,6 @@
         </receiver>
 
         <service
-            android:name=".service.ForegroundService"
-            android:enabled="true"
-            android:foregroundServiceType="phoneCall" />
-
-
-        <service
             android:name=".utils.PhoneStateService"
             android:enabled="true"
             android:exported="false" />
@@ -72,6 +66,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <activity
+            android:name=".ui.main.DomainConfigActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
