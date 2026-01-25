@@ -66,7 +66,6 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
                     @Override
                     public void onError(Throwable e) {
                         handleLoginError(e);
-                        login(machineCode);
                     }
                 });
 
@@ -114,7 +113,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     private void handleLoginError(Throwable e) {
         connectionStatus.setValue(false);
         Log.d("UserVM", "Login failed", e);
-        System.exit(0);
+        Toast.makeText(BaseApp.inst(),e.getMessage(),Toast.LENGTH_LONG).show();
     }
     public void logout() {
         LoginCertificate certCache = LoginCertificate.getCache(BaseApp.inst());

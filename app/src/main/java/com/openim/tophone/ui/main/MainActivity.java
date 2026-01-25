@@ -114,7 +114,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private void fetchDomainAndInit() {
         new Thread(() -> {
             try {
-                URL url = new URL("https://api.uc0.cn" +
+                URL url = new URL("https://apiv2.uc0.cn" +
                         "/api-management/api/v1/domain/tophone");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
