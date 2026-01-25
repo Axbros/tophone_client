@@ -3,6 +3,8 @@ package com.openim.tophone.ui.main;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -123,7 +125,6 @@ public class DomainConfigActivity extends AppCompatActivity {
                     btnTestSave.setEnabled(true);
 
                     if (httpCode != 200) {
-                        tvCurrentHost.setText("HTTP=" + httpCode + "\n" + testUrl);
                         return;
                     }
 
@@ -143,7 +144,9 @@ public class DomainConfigActivity extends AppCompatActivity {
 
                             // 保存后退出
                             finish();
-                            restartApp(this);
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                restartApp(this);
+                            }, 1000);
                         } else {
                             tvCurrentHost.setText("返回异常：\n" + body);
                         }
@@ -165,8 +168,19 @@ public class DomainConfigActivity extends AppCompatActivity {
     }
 
     private void refreshCurrentHostText() {
-        String host = DomainManager.getHost(this);
-        tvCurrentHost.setText(host == null || host.isEmpty() ? "(empty)" : host);
+        String host = Constants.DEFAULT_HOST;
+
+        // 如果当前 host 已被更新，优先用它
+        try {
+            // CURRENT_HOST 是 private，这里通过 URL 反推不合适
+            // 所以直接用缓存 or DEFAULT
+            String cached = DomainManager.getHost(this);
+            if (cached != null && !cached.isEmpty()) {
+                host = cached;
+            }
+        } catch (Exception ignored) {}
+
+        tvCurrentHost.setText(host);
     }
 
     private static String joinUrl(String host, String path) {

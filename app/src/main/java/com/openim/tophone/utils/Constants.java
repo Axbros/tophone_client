@@ -35,7 +35,7 @@ public class Constants {
     public static String getImApiUrl() {
         return (IS_LOCAL_ENV ? "http://" : "https://") +
                 CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":10002" : "/api/");
+                (IS_LOCAL_ENV ? ":10002" : "/api");
     }
 
     public static String getImWsUrl() {
