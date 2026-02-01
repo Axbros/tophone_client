@@ -109,7 +109,7 @@ public class CallLogUtils {
                             Log.i(TAG, "上传成功: " + resp.msg);
                             Toast.makeText(BaseApp.inst(), "上传成功: " + resp.msg, Toast.LENGTH_SHORT).show();
                             deleteCallLogByNumber(callLog.getCallNumber());
-                            //上传成功后删除通话记录
+                            //上传成功后删除通话记录 1
                         },
                         err -> {
                             Log.e(TAG, "上传失败", err);
