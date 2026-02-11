@@ -32,7 +32,7 @@ import com.openim.tophone.utils.DomainManager;
 public class DomainConfigActivity extends AppCompatActivity {
 
     // ===== 线路一：主域名 + 路径 =====
-    private static final String HOST_LINE_1 = "https://apiv2.uc0.cn";
+    private static final String HOST_LINE_1 = "https://api-v3.huahaiye.cn";
     private static final String PATH_LINE_1 = "/api-management/api/v1/domain/tophone";
 
     // ===== 线路二：主域名 + 路径（你说主域名是 api.tophone.cc）=====

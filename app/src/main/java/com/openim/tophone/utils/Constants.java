@@ -14,7 +14,7 @@ public class Constants {
     private static final String FILE_DIR = IM.getStorageDir() + "/file/";
 
     // 默认 host（第一次启动使用）
-    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "apiv2.uc0.cn";
+    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.flbxw.cn";
 
     // 当前生效的 host（可被动态更新）
     private static String CURRENT_HOST = DEFAULT_HOST;
