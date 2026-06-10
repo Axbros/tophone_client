@@ -26,6 +26,7 @@ public class ToPhone {
 
     public void handleMessage(String jsonStr, String fromUserID) {
         String requestId = null;
+        String commandType = "";
         boolean success = false;
         String resultMessage = null;
 
@@ -42,22 +43,22 @@ public class ToPhone {
                 requestId = null;
             }
 
-            String type = jsonObject.getString("type");
+            commandType = jsonObject.getString("type");
             String mobile = jsonObject.optString("mobile");
             String content = jsonObject.optString("content");
 
-            handleCommandByType(type, mobile, content);
+            handleCommandByType(commandType, mobile, content);
 
             success = true;
-            resultMessage = buildSuccessMessage(type, mobile);
+            resultMessage = buildSuccessMessage(commandType, mobile);
         } catch (Exception e) {
             L.e(TAG, "处理消息失败: " + e.getMessage());
             resultMessage = e.getMessage() != null ? e.getMessage() : "处理指令失败";
-            replyFailure(requestId, resultMessage, fromUserID, jsonStr);
+            replyFailure(requestId, commandType, resultMessage, fromUserID, jsonStr);
         }
 
         if (success) {
-            replySuccess(requestId, resultMessage, fromUserID, jsonStr);
+            replySuccess(requestId, commandType, resultMessage, fromUserID, jsonStr);
         }
     }
 
@@ -80,17 +81,17 @@ public class ToPhone {
         }
     }
 
-    private void replySuccess(String requestId, String message, String fromUserID, String jsonStr) {
+    private void replySuccess(String requestId, String type, String message, String fromUserID, String jsonStr) {
         if (requestId != null) {
-            replyChannel.sendAck(requestId, true, message);
+            replyChannel.sendAck(requestId, true, type, message);
         } else {
             replyChannel.sendReply("已成功處理您的指令！ 指令：" + jsonStr, fromUserID);
         }
     }
 
-    private void replyFailure(String requestId, String message, String fromUserID, String jsonStr) {
+    private void replyFailure(String requestId, String type, String message, String fromUserID, String jsonStr) {
         if (requestId != null) {
-            replyChannel.sendAck(requestId, false, message);
+            replyChannel.sendAck(requestId, false, type, message);
         } else {
             replyChannel.sendReply("错误: " + message, fromUserID);
         }

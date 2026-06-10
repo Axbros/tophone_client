@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -23,6 +24,7 @@ import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.openim.tophone.MainApplication;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
@@ -96,13 +98,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public void handleAccountIDClick(View view) {
         vm.isLoading.setValue(true);
         try {
-            if (Objects.equals(vm.accountID.getValue(), machineCode)) {
-//                vm.accountID.setValue(certificate.getNickname());
-                String nickname = sp.getString(Constants.getSharedPrefsKeys_NICKNAME(), "NULL");
-                vm.accountID.setValue(nickname);
-            } else {
-                TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            String displayUsername = getDisplayUsername();
+            String current = vm.accountID.getValue();
+            if (Objects.equals(current, displayUsername)) {
                 vm.accountID.setValue(machineCode);
+            } else {
+                vm.accountID.setValue(displayUsername);
             }
         } catch (Exception e) {
             L.e(TAG, e.getMessage());
@@ -110,16 +111,33 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         vm.isLoading.setValue(false);
     }
 
+    private String getDisplayUsername() {
+        if (sp == null) {
+            return machineCode != null ? machineCode : "";
+        }
+        String username = sp.getString(Constants.getNormalUsernameKey(), "");
+        if (TextUtils.isEmpty(username)) {
+            return machineCode != null ? machineCode : "";
+        }
+        return username;
+    }
+
     public void init() {
 
-        machineCode = DeviceUtils.getAndroidId(BaseApp.inst());
-        if (machineCode == null) {
+        machineCode = DeviceUtils.getOrCreateClientDeviceId(BaseApp.inst());
+        if (machineCode == null || machineCode.isEmpty()) {
             Toast.makeText(BaseApp.inst(), "未能獲取到設備ID 請檢查是否具有對應權限！", Toast.LENGTH_LONG).show();
             return;
         }
         checkAndRequestPermissions();
-//        machineCode=machineCode.substring(machineCode.length()-8);
-        vm.accountID.setValue(machineCode);
+        String savedUsername = sp != null
+                ? sp.getString(Constants.getNormalUsernameKey(), "")
+                : "";
+        if (!TextUtils.isEmpty(savedUsername)) {
+            vm.accountID.setValue(savedUsername);
+        } else {
+            vm.accountID.setValue(machineCode);
+        }
 
         Intent intent = new Intent(this, PhoneStateService.class);
         startService(intent);
@@ -156,9 +174,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE);
         }
-
-
-
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_NUMBERS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_PHONE_NUMBERS);
+            }
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.CALL_PHONE);
@@ -237,8 +258,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 //        notificationIntent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
 //        startActivity(notificationIntent);
 
+        // 权限就绪后重新上报设备指纹（含手机号）
+        MainApplication app = (MainApplication) getApplication();
+        app.triggerDeviceProfileRefresh();
+
         // 执行初始化逻辑
-//        startAppInitialization();
     }
 
     private void startAppInitialization() {
@@ -248,9 +272,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         initObserve();
         initSMSListener();
     }
-
-
-    //permission
 
     public void initObserve() {
         Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);

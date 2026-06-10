@@ -2,9 +2,14 @@ package com.openim.tophone.mqtt;
 
 import android.content.Context;
 
+import com.openim.tophone.net.RXRetrofit.N;
+import com.openim.tophone.openim.entity.DevicePresenceReq;
 import com.openim.tophone.stroage.VMStore;
+import com.openim.tophone.repository.MqttApi;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.ToPhone;
+
+import io.reactivex.schedulers.Schedulers;
 
 import info.mqtt.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -18,7 +23,7 @@ import org.json.JSONObject;
 /**
  * 设备端 MQTT：订阅 cmd (QoS1)，发布 ack/status + LWT (QoS0)。
  */
-public class MqttCommandClient implements MqttCallback, CommandReplyChannel {
+public class MqttCommandClient implements MqttCallback {
 
     private static final String TAG = "MqttCommandClient";
     private static final int QOS_CMD = 1;
@@ -27,12 +32,15 @@ public class MqttCommandClient implements MqttCallback, CommandReplyChannel {
     private final Context appContext;
     private final String deviceId;
     private final ToPhone toPhone;
+    private final RequestIdDedup dedup = new RequestIdDedup();
     private MqttAndroidClient client;
+    private MqttReplyChannel replyChannel;
 
     public MqttCommandClient(Context context, String deviceId) {
         this.appContext = context.getApplicationContext();
         this.deviceId = deviceId;
-        this.toPhone = new ToPhone(this);
+        this.replyChannel = new MqttReplyChannel(deviceId, this::publishInternal);
+        this.toPhone = new ToPhone(replyChannel);
     }
 
     public void connect(String brokerUri, String username, String mqttToken) {
@@ -102,29 +110,34 @@ public class MqttCommandClient implements MqttCallback, CommandReplyChannel {
             status.put("online", online);
             status.put("deviceId", deviceId);
             status.put("ts", System.currentTimeMillis());
-            publish("tophone/status/" + deviceId, status.toString(), QOS_ACK);
+            publishInternal("tophone/status/" + deviceId, status.toString(), QOS_ACK);
+            reportPresenceToServer(online);
         } catch (Exception e) {
             L.e(TAG, "publishStatus failed: " + e.getMessage());
         }
     }
 
-    @Override
-    public void sendAck(String requestId, boolean ok, String message) {
+    private void reportPresenceToServer(boolean online) {
+        if (!N.isInitialized()) {
+            return;
+        }
         try {
-            JSONObject ack = new JSONObject();
-            if (requestId != null && !requestId.isEmpty()) {
-                ack.put("requestId", requestId);
-            }
-            ack.put("ok", ok);
-            ack.put("deviceId", deviceId);
-            ack.put("message", message);
-            publish("tophone/ack/" + deviceId, ack.toString(), QOS_ACK);
+            N.mAPI(MqttApi.class)
+                    .reportPresence(new DevicePresenceReq(deviceId, online))
+                    .subscribeOn(Schedulers.io())
+                    .subscribe(
+                            resp -> L.d(TAG, "presence reported online=" + online),
+                            err -> L.w(TAG, "presence report failed: " + err.getMessage())
+                    );
         } catch (Exception e) {
-            L.e(TAG, "sendAck failed: " + e.getMessage());
+            L.w(TAG, "presence report skipped: " + e.getMessage());
         }
     }
 
-    private void publish(String topic, String payload, int qos) throws Exception {
+    private void publishInternal(String topic, String payload, int qos) throws Exception {
+        if (client == null || !client.isConnected()) {
+            throw new IllegalStateException("MQTT not connected");
+        }
         MqttMessage message = new MqttMessage(payload.getBytes());
         message.setQos(qos);
         message.setRetained(false);
@@ -143,7 +156,7 @@ public class MqttCommandClient implements MqttCallback, CommandReplyChannel {
             event.put("content", content != null ? content : "");
             event.put("deviceId", deviceId);
             event.put("ts", System.currentTimeMillis());
-            publish("tophone/event/" + deviceId, event.toString(), QOS_ACK);
+            publishInternal("tophone/event/" + deviceId, event.toString(), QOS_ACK);
         } catch (Exception e) {
             L.e(TAG, "publishEvent failed: " + e.getMessage());
         }
@@ -159,6 +172,18 @@ public class MqttCommandClient implements MqttCallback, CommandReplyChannel {
     public void messageArrived(String topic, MqttMessage message) {
         String body = new String(message.getPayload());
         L.d(TAG, "cmd: " + body);
+        try {
+            JSONObject json = new JSONObject(body);
+            String requestId = json.optString("requestId", null);
+            String type = json.optString("type", "");
+            if (requestId != null && !requestId.isEmpty() && dedup.isDuplicate(requestId)) {
+                L.w(TAG, "duplicate requestId, skip: " + requestId);
+                replyChannel.sendAck(requestId, true, type, "duplicate ignored");
+                return;
+            }
+        } catch (Exception ignored) {
+            // 非 JSON 指令（version/parent）继续走 ToPhone
+        }
         toPhone.handleMessage(body, "controller");
     }
 

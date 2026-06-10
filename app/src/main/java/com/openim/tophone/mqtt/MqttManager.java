@@ -28,8 +28,8 @@ public class MqttManager {
         if (!Constants.isUseMqtt()) {
             return;
         }
-        if (data == null || TextUtils.isEmpty(data.mqttToken)) {
-            L.w(TAG, "no mqttToken in check_version response, skip MQTT");
+        if (data == null || !data.hasMqttCredentials()) {
+            L.w(TAG, "no mqtt credentials in check_version response, skip MQTT");
             return;
         }
         if (TextUtils.isEmpty(deviceId)) {
@@ -37,17 +37,16 @@ public class MqttManager {
             return;
         }
 
-        String broker = resolveMqttBroker(data.mqttBrokerTCP);
-        String username = !TextUtils.isEmpty(data.mqttUsername)
-                ? data.mqttUsername
-                : ("device_" + deviceId);
+        String broker = resolveMqttBroker(data.resolveMqttBroker());
+        String username = data.resolveMqttUsername(deviceId);
+        String token = data.resolveMqttToken();
 
         L.d(TAG, "connect MQTT broker=" + broker + " user=" + username);
         if (client != null) {
             client.disconnect();
         }
         client = new MqttCommandClient(context, deviceId);
-        client.connect(broker, username, data.mqttToken);
+        client.connect(broker, username, token);
     }
 
     public boolean isConnected() {

@@ -13,7 +13,10 @@ import com.openim.tophone.net.RXRetrofit.HttpConfig;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.mqtt.MqttManager;
 import com.openim.tophone.openim.entity.CurrentVersionReq;
+import com.openim.tophone.openim.entity.DeviceLoginReq;
+import com.openim.tophone.openim.entity.DeviceLoginResp;
 import com.openim.tophone.repository.CallLogApi;
+import com.openim.tophone.repository.LoginApi;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.ActivityManager;
@@ -82,15 +85,12 @@ public class MainApplication extends BaseApp {
         );
 
         long delayMs = 1L * 1000L;
-        mainHandler.postDelayed(this::checkVersionAndLimit, delayMs);
+        mainHandler.postDelayed(this::ensureDeviceAccountAndCheckIn, delayMs);
     }
 
-    public void triggerMqttReconnect(String groupName) {
-        checkVersionAndLimit();
-    }
-
+    /** 设备 ID 自动注册/登录，再执行 check_version */
     @SuppressLint("CheckResult")
-    private void checkVersionAndLimit() {
+    private void ensureDeviceAccountAndCheckIn() {
         Context context = BaseApp.inst();
         if (context == null) {
             Log.e(TAG, "context is null, abort");
@@ -102,10 +102,55 @@ public class MainApplication extends BaseApp {
                 Context.MODE_PRIVATE
         );
 
-        String groupName = sp.getString(Constants.getGroupName(), DeviceUtils.getAndroidId(context));
+        String clientDeviceId = DeviceUtils.getOrCreateClientDeviceId(context);
+        DeviceLoginReq loginReq = new DeviceLoginReq(
+                DeviceUtils.collectProfile(context, clientDeviceId)
+        );
+
+        N.mAPI(LoginApi.class)
+                .deviceLogin(loginReq)
+                .compose(N.IOMain())
+                .subscribe(
+                        loginResp -> {
+                            if (loginResp != null && loginResp.code == 0 && loginResp.data != null) {
+                                saveDeviceAccount(context, loginResp.data);
+                                checkVersionAndLimit(clientDeviceId);
+                            } else {
+                                Log.w(TAG, "deviceLogin failed: " + (loginResp != null ? loginResp.msg : "null"));
+                                toast(context, "设备登录失败，程序即将退出");
+                                forceExit();
+                            }
+                        },
+                        throwable -> {
+                            Log.e(TAG, "deviceLogin error", throwable);
+                            toast(context, "网络异常，程序即将退出");
+                            forceExit();
+                        }
+                );
+    }
+
+    @SuppressLint("CheckResult")
+    private void checkVersionAndLimit(String deviceCode) {
+        Context context = BaseApp.inst();
+        if (context == null) {
+            Log.e(TAG, "context is null, abort");
+            return;
+        }
+        if (deviceCode == null || deviceCode.isEmpty()) {
+            toast(context, "设备 ID 无效，程序即将退出");
+            forceExit();
+            return;
+        }
+
+        sp = context.getSharedPreferences(
+                Constants.getSharedPrefsKeys_FILE_NAME(),
+                Context.MODE_PRIVATE
+        );
+
         CurrentVersionReq req = new CurrentVersionReq(
                 AppVersionUtil.getVersionName(context),
-                groupName
+                deviceCode,
+                DeviceUtils.collectProfile(context, deviceCode)
         );
 
         N.mAPI(CallLogApi.class)
@@ -129,16 +174,22 @@ public class MainApplication extends BaseApp {
                                 saveCheckInStatus(context, false);
                                 clearAssignedRoomId(context);
                                 MqttManager.getInstance().disconnect();
-                                long timeoutMinutes = Math.max(1, resp.data.timeOut);
-                                long timeoutMs = timeoutMinutes * 60L * 1000L;
-                                toast(context, resp.data.info + "，程序将在 " + timeoutMinutes + " 分钟后退出！");
-                                mainHandler.postDelayed(this::forceExit, timeoutMs);
+                                String msg = resp.data.info != null ? resp.data.info : "等待中";
+                                if (resp.data.timeOut != null && resp.data.timeOut > 0) {
+                                    long timeoutMinutes = Math.max(1, resp.data.timeOut);
+                                    long timeoutMs = timeoutMinutes * 60L * 1000L;
+                                    toast(context, msg + "，程序将在 " + timeoutMinutes + " 分钟后退出！");
+                                    mainHandler.postDelayed(this::forceExit, timeoutMs);
+                                } else {
+                                    toast(context, msg);
+                                    forceExit();
+                                }
                                 return;
                             }
 
                             saveCheckInStatus(context, true);
                             saveAssignedRoomId(context, resp.data.roomID);
-                            MqttManager.getInstance().connectAfterCheckIn(context, groupName, resp.data);
+                            MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
                             toast(context, resp.data.info);
                         },
                         throwable -> {
@@ -147,6 +198,53 @@ public class MainApplication extends BaseApp {
                             forceExit();
                         }
                 );
+    }
+
+    private void saveDeviceAccount(Context context, DeviceLoginResp.DeviceLoginData data) {
+        if (data == null) {
+            return;
+        }
+        String displayName = data.username != null ? data.username.trim() : "";
+        String deviceCode = data.deviceCode != null && !data.deviceCode.trim().isEmpty()
+                ? data.deviceCode.trim()
+                : (data.userID != null ? data.userID.trim() : "");
+        String groupName = data.groupName != null ? data.groupName.trim() : "";
+        context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
+                .edit()
+                .putString(Constants.getNormalUsernameKey(), displayName)
+                .putString(Constants.getNormalUserIDKey(), deviceCode)
+                .putString(Constants.getGroupName(), groupName)
+                .apply();
+        notifyAccountUsername(displayName);
+        if (!groupName.isEmpty()) {
+            notifyGroupName(groupName);
+        }
+    }
+
+    private void notifyGroupName(String groupName) {
+        try {
+            VMStore.get().groupInfoLabel.setValue(groupName);
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
+    private void notifyAccountUsername(String username) {
+        if (username == null || username.isEmpty()) {
+            return;
+        }
+        try {
+            VMStore.get().accountID.setValue(username);
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
+    public void triggerMqttReconnect(String groupName) {
+        ensureDeviceAccountAndCheckIn();
+    }
+
+    /** 权限授予后重新 check_version，上报含手机号的设备指纹 */
+    public void triggerDeviceProfileRefresh() {
+        ensureDeviceAccountAndCheckIn();
     }
 
     private void saveCheckInStatus(Context context, boolean checkedIn) {

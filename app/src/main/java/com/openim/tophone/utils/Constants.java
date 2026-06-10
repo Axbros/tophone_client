@@ -7,6 +7,9 @@ public class Constants {
 
     private static final String SharedPrefsKeys_FILE_NAME = "SharedPrefsKeys";
     private static final String SharedPrefsKeys_NICKNAME = "NICKNAME";
+    private static final String NORMAL_USERNAME_KEY = "normalUsername";
+    private static final String NORMAL_USER_ID_KEY = "normalUserID";
+    private static final String PERSISTED_CLIENT_DEVICE_ID_KEY = "persistedClientDeviceId";
 
     /**
      * 电脑局域网 IP：Mac 执行 ifconfig | grep "inet " 查看（当前网段示例 192.168.100.x）。
@@ -102,5 +105,17 @@ public class Constants {
 
     public static String getSharedPrefsKeys_NICKNAME(){
         return SharedPrefsKeys_NICKNAME;
+    }
+
+    public static String getNormalUsernameKey() {
+        return NORMAL_USERNAME_KEY;
+    }
+
+    public static String getNormalUserIDKey() {
+        return NORMAL_USER_ID_KEY;
+    }
+
+    public static String getPersistedClientDeviceIdKey() {
+        return PERSISTED_CLIENT_DEVICE_ID_KEY;
     }
 }
