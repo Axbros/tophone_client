@@ -36,7 +36,8 @@ public class DomainConfigActivity extends AppCompatActivity {
     private static final String PATH_LINE_1 = "/api-management/api/v1/domain/tophone";
 
     // ===== 线路二：主域名 + 路径（你说主域名是 api.tophone.cc）=====
-    private static final String HOST_LINE_2 = "https://api.tophone.cc";
+//    private static final String HOST_LINE_2 = "https://api.tophone.cc";
+    private static final String HOST_LINE_2 = "http://10.0.2.2:8080";
     private static final String PATH_LINE_2 = "/api/v1/domain/tophone"; // 如果你们线路二真实路径不同，就改这里
 
     private TextView tvCurrentHost;

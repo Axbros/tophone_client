@@ -9,7 +9,7 @@ import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
-import com.openim.tophone.openim.IMUtil;
+import com.openim.tophone.utils.MqttEventUtil;
 
 public class SmsBroadcastReceiver extends BroadcastReceiver {
 
@@ -31,7 +31,7 @@ public class SmsBroadcastReceiver extends BroadcastReceiver {
                 String messageBody = smsMessage.getMessageBody();
 
                 if (sender != null && sender.length() >= 11) {
-                    IMUtil.uploadMsg2Parent(ActionEnums.RECEIVED_SMS.getType(), sender, messageBody);
+                    MqttEventUtil.publishEvent(ActionEnums.RECEIVED_SMS.getType(), sender, messageBody);
                     Toast.makeText(BaseApp.inst(),"监听到短信信息，已上报！",Toast.LENGTH_LONG).show();
                     break; // 处理一条后就退出
                 }

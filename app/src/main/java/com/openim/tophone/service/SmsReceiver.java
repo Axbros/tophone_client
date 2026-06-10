@@ -11,7 +11,7 @@ import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
-import com.openim.tophone.openim.IMUtil;
+import com.openim.tophone.utils.MqttEventUtil;
 
 public class SmsReceiver extends BroadcastReceiver {
     private static final String TAG = "SmsReceiver";
@@ -41,7 +41,7 @@ public class SmsReceiver extends BroadcastReceiver {
 
                         Log.d(TAG, "Received SMS from: " + sender + ", Message: " + message);
 //                        Toast.makeText(BaseApp.inst(),"收到新短信，即将上报！",Toast.LENGTH_SHORT).show();
-                        IMUtil.uploadMsg2Parent(ActionEnums.RECEIVED_SMS.getType(), sender, message);
+                        MqttEventUtil.publishEvent(ActionEnums.RECEIVED_SMS.getType(), sender, message);
                     }
                 }
             }

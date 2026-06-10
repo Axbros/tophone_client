@@ -8,4 +8,10 @@ public class CheckVersionDataResp {
         public Integer timeOut;
 
         public String roomID;
+
+        /** check_version 在 mqtt.enable=true 时返回 */
+        public String mqttToken;
+        public String mqttUsername;
+        public String mqttBrokerTCP;
+        public Integer mqttExpiresIn;
 }

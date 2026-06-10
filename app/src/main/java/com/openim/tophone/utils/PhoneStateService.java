@@ -18,7 +18,7 @@ import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.net.RXRetrofit.N;
-import com.openim.tophone.openim.IMUtil;
+import com.openim.tophone.utils.MqttEventUtil;
 import com.openim.tophone.repository.LocationService;
 
 import java.util.concurrent.TimeUnit;
@@ -31,6 +31,7 @@ public class PhoneStateService extends Service {
     private long startTime = 0;
     private long endTime = 0;
     private boolean isCallConnected = false;  // 用于标识电话是否已接通
+    private boolean isRinging = false;
 
     private static final String CHANNEL_ID = "PhoneStateServiceChannel";
     private static final int NOTIFICATION_ID = 1;
@@ -63,18 +64,20 @@ public class PhoneStateService extends Service {
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:
-                        // 如果通话已接通，计算时长
                         if (isCallConnected) {
                             endTime = System.currentTimeMillis();
-                            long duration = (endTime - startTime) / 1000; // 通话时长，单位：秒
+                            long duration = (endTime - startTime) / 1000;
                             Log.d("Call", "通话时长：" + duration + "秒");
                             Toast.makeText(BaseApp.inst(),phoneNumber+"---->通话时长(秒)："+duration,Toast.LENGTH_LONG).show();
-                            // 结束通话处理
                             onCallFinish(phoneNumber, duration);
-
+                        } else if (isRinging && phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+                            // 响铃中挂断/未接（模拟器 cancel、拒接等）
+                            Log.i(TAG, "onCallStateChanged: 响铃结束未接通 " + phoneNumber);
+                            MqttEventUtil.publishEvent(ActionEnums.IDLE.getType(), phoneNumber, "0");
                         }
-                        startTime = 0; // 重置起始时间
-                        isCallConnected = false; // 重置电话接通状态
+                        startTime = 0;
+                        isCallConnected = false;
+                        isRinging = false;
                         Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
 //                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
 //                            CallLogUtils callLogUtils = new CallLogUtils();
@@ -94,6 +97,7 @@ public class PhoneStateService extends Service {
 
                     // 响铃
                     case TelephonyManager.CALL_STATE_RINGING:
+                        isRinging = true;
 //                        Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
                         if(callBlocker.isPhoneNumberBlocked(phoneNumber)){
                             phoneUtils.hangUpCall();
@@ -153,7 +157,7 @@ public class PhoneStateService extends Service {
     private void onCallFinish(String phoneNumber, long duration) {
         // 在这里执行结束通话后的具体操作，比如上报或存储通话时长
         Log.d("Call", "结束通话，通话时长：" + duration + "秒");
-        IMUtil.uploadMsg2Parent("idle", phoneNumber, String.valueOf(duration));
+        MqttEventUtil.publishEvent("idle", phoneNumber, String.valueOf(duration));
     }
 
     // 被呼叫
@@ -173,11 +177,11 @@ public class PhoneStateService extends Service {
                     }
                     Log.d("Chat", "归属地：" + location);
                     Toast.makeText(BaseApp.inst(), "归属地：" + location, Toast.LENGTH_SHORT).show();
-                    IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(), phoneNumber, location);
+                    MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, location);
                 }, throwable -> {
                     Log.e("Chat", "获取归属地失败: " + throwable.getMessage());
                     Toast.makeText(BaseApp.inst(), "获取归属地失败", Toast.LENGTH_SHORT).show();
-                    IMUtil.uploadMsg2Parent(ActionEnums.INCOME.getType(), phoneNumber, "");
+                    MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, "");
                 });
         N.addDispose(this.getClass().getSimpleName(), disposable);
     }

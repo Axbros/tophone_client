@@ -28,8 +28,6 @@ import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.enums.CallLogType;
-import com.openim.tophone.openim.IM;
-import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.rtc.RawAudioDataActivity;
@@ -48,8 +46,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
     public static String machineCode;
     private static String TAG = "MainActivity";
-    private static LoginCertificate certificate = LoginCertificate.getCache(BaseApp.inst());
-    ;
     public static SharedPreferences sp;
     private TextView callLogStatisticText;
 
@@ -93,12 +89,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     }
 
-    public void initOpenIM() {
-        vm.isLoading.setValue(true);
-        BaseApp.inst().loginCertificate = certificate;
-        vm.login(machineCode);
-    }
-
     public static String getLoginEmail() {
         return machineCode;
     }
@@ -130,14 +120,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         checkAndRequestPermissions();
 //        machineCode=machineCode.substring(machineCode.length()-8);
         vm.accountID.setValue(machineCode);
-        //观察者模式 观察 account status
-        // 2.查询当前设备是否注册
-        vm.checkIfUserExists(machineCode);
 
-
-        // 启动并绑定Service
         Intent intent = new Intent(this, PhoneStateService.class);
-        startService(intent);        // 启动Service
+        startService(intent);
 
     }
 
@@ -257,17 +242,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     }
 
     private void startAppInitialization() {
-
-        IM.initSdk(BaseApp.inst());
-
-        initStorage();          // 初始化 SharedPreferences
-        init();  // 设置 machineCode、calllog、accountID、检查用户存在
-
-//        requestDefaultDialer(); // 申请默认拨号器权限（系统弹窗）
-
-        initOpenIM();           // OpenIM 登录
-        initObserve();          // 设置观察者（如拨号器观察）
-        initSMSListener();      // 短信权限状态设置
+        initStorage();
+        init();
+        vm.syncCheckInStatus(this);
+        initObserve();
+        initSMSListener();
     }
 
 

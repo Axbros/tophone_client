@@ -1,7 +1,5 @@
 package com.openim.tophone.utils;
 
-import com.openim.tophone.openim.IM;
-
 /**
  * 支持动态更新域名的 Constants 类
  */
@@ -9,48 +7,48 @@ public class Constants {
 
     private static final String SharedPrefsKeys_FILE_NAME = "SharedPrefsKeys";
     private static final String SharedPrefsKeys_NICKNAME = "NICKNAME";
-    private static final boolean IS_LOCAL_ENV = false;
 
-    private static final String FILE_DIR = IM.getStorageDir() + "/file/";
+    /**
+     * 电脑局域网 IP：Mac 执行 ifconfig | grep "inet " 查看（当前网段示例 192.168.100.x）。
+     * Android 模拟器访问本机服务请改为 "10.0.2.2"（模拟器专用，指向宿主机 localhost）。
+     * 真机与电脑同一 WiFi 时用电脑的局域网 IP，不要用 127.0.0.1。
+     */
+    public static final String LOCAL_LAN_HOST = "10.0.2.2";
 
-    // 默认 host（第一次启动使用）
-    public static final String DEFAULT_HOST = IS_LOCAL_ENV ? "192.168.50.91" : "api.flbxw.cn";
+    /** true：check_version / 打卡 / MQTT 凭证 → http://LOCAL_LAN_HOST:8081 */
+    public static final boolean USE_LOCAL_LAN = true;
 
-    // 当前生效的 host（可被动态更新）
+    private static final String REMOTE_HOST = "api.flbxw.cn";
+
+    private static String fileDir;
+
+    public static final String DEFAULT_HOST = USE_LOCAL_LAN ? LOCAL_LAN_HOST : REMOTE_HOST;
+
     private static String CURRENT_HOST = DEFAULT_HOST;
 
-    // ======== ⭐ 动态 URL(实时计算) 而不是写死的 final ⭐ ========//
-    public static String getAppAuthUrl() {
-        return (IS_LOCAL_ENV ? "http://" : "https://") +
-                CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":10008" : "/chat/");
+    private static String apiHost() {
+        return USE_LOCAL_LAN ? LOCAL_LAN_HOST : CURRENT_HOST;
     }
 
+    public static void initFileDir(String appFilesPath) {
+        fileDir = appFilesPath + "/file/";
+    }
+
+    /** Retrofit baseUrl，末尾必须有 / */
     public static String getManagementUrl() {
-        return (IS_LOCAL_ENV ? "http://" : "https://") +
-                CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":8080" : "/api-management/");
+        if (USE_LOCAL_LAN) {
+            return "http://" + LOCAL_LAN_HOST + ":8081/";
+        }
+        return "https://" + CURRENT_HOST + "/api-management/";
     }
 
-    public static String getImApiUrl() {
-        return (IS_LOCAL_ENV ? "http://" : "https://") +
-                CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":10002" : "/api");
-    }
-
-    public static String getImWsUrl() {
-        return (IS_LOCAL_ENV ? "ws://" : "wss://") +
-                CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":10001" : "/msg_gateway");
-    }
-
-    /** VolcEngine RTC App ID，启动控制端时从服务端拉取并缓存 */
     public static String RTC_APP_ID = "";
 
     public static String getRtcManagementBase() {
-        return (IS_LOCAL_ENV ? "http://" : "https://") +
-                CURRENT_HOST +
-                (IS_LOCAL_ENV ? ":8080" : "/api-management");
+        if (USE_LOCAL_LAN) {
+            return "http://" + LOCAL_LAN_HOST + ":8081";
+        }
+        return "https://" + CURRENT_HOST + "/api-management";
     }
 
     public static String getVerifyRoomURL() {
@@ -62,20 +60,29 @@ public class Constants {
     }
 
     public static String getNotifyRoomManagerURL() {
-        return getRtcManagementBase() + "/api/v1/record/notify_room_manager";
+        return getRtcManagementBase() + "/api/v1/record/notifyRoomManager";
     }
 
-    // ======== ⭐ 对外暴露的 host 更新方法 ⭐ ======== //
     public static void updateHost(String host) {
         CURRENT_HOST = host;
     }
-
-    // ======== 其它常量保持不变 ======== //
 
     private static final String GROUP_OWNER_KEY = "ownerUserID";
     private static final String GROUP_NAME = "groupName";
     private static final String ASSIGNED_ROOM_ID_KEY = "assignedRoomID";
     private static final String CHECKED_IN_KEY = "checkedIn";
+
+    private static final boolean USE_MQTT = true;
+
+    public static String getMqttBrokerTcp() {
+        return USE_LOCAL_LAN
+                ? ("tcp://" + LOCAL_LAN_HOST + ":1883")
+                : "ssl://api.flbxw.cn:8883";
+    }
+
+    public static boolean isUseMqtt() {
+        return USE_MQTT;
+    }
 
     public static String getGroupOwnerKey() { return GROUP_OWNER_KEY; }
 
@@ -85,7 +92,9 @@ public class Constants {
 
     public static String getCheckedInKey() { return CHECKED_IN_KEY; }
 
-    public static String getFileDir(){ return FILE_DIR; }
+    public static String getFileDir() {
+        return fileDir != null ? fileDir : "";
+    }
 
     public static String getSharedPrefsKeys_FILE_NAME(){
         return SharedPrefsKeys_FILE_NAME;

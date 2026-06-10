@@ -1,11 +1,12 @@
-package com.openim.tophone.openim.vm;
-
+package com.openim.tophone.base;
 
 import androidx.lifecycle.MutableLiveData;
 
 public class State<T> extends MutableLiveData<T> {
 
-    public State() {super();}
+    public State() {
+        super();
+    }
 
     public State(T value) {
         super(value);

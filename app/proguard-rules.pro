@@ -25,3 +25,25 @@
 -keep class com.bytedance.** { *; }
 -keep class com.bytertc.** { *; }
 -keep class com.pandora.** { *; }
+
+# MQTT (Paho)
+-keep class open_im_sdk.** { *; }
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# Retrofit / RxJava
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn javax.annotation.**
+-dontwarn io.reactivex.**
+
+# Eclipse Paho MQTT
+-keep class org.eclipse.paho.** { *; }
+-dontwarn org.eclipse.paho.**
+-keep class info.mqtt.android.service.** { *; }
+-dontwarn info.mqtt.android.service.**

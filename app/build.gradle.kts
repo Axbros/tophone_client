@@ -28,29 +28,51 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 135
-        versionName = "1.4.1"
+        versionCode = 133
+        versionName = "1.4.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")  // 关键！
+            signingConfig = signingConfigs.getByName("release")
         }
     }
-    splits{
-        abi{
+    splits {
+        abi {
             isEnable = true
             reset()
             include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk= true
+            // 不要打 universal 包（会把两套 so 都打进去，体积可达 200MB+）
+            isUniversalApk = false
+        }
+    }
+    packaging {
+        jniLibs {
+            // 语聊房仅音频，剔除 RTC 视频/特效/文件播放等可选插件（见火山文档按需集成）
+            val rtcOptionalPlugins = listOf(
+                "libbytertc_vp8codec_extension.so",
+                "libbytertc_videosr_extension.so",
+                "libbytertc_videodenoise_extension.so",
+                "libbytertc_videosharpen_extension.so",
+                "libh265enc.so",
+                "libbytertc_ffmpeg_audio_extension.so",
+                "libbdaudioeffect.so",
+                "libbmf_hydra.so",
+                "libbmf_mods.so",
+                "libbytenn.so",
+            )
+            val abis = listOf("arm64-v8a", "armeabi-v7a")
+            excludes += abis.flatMap { abi ->
+                rtcOptionalPlugins.map { plugin -> "lib/$abi/$plugin" }
+            }
         }
     }
     compileOptions {
@@ -62,11 +84,10 @@ configurations.all {
     resolutionStrategy {
         force("androidx.activity:activity:1.7.2")
     }
+    exclude(group = "com.bytedanceapi", module = "ttsdk-ttbmf")
 }
 
 dependencies {
-    implementation(libs.android.sdk)
-    implementation(libs.core.sdk)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.appcompat)
     implementation(libs.material)
@@ -82,4 +103,8 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation(libs.volcengine.rtc)
+    implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
+    // 官方 1.1.1 在 Android 12+ PendingIntent 会崩溃，用维护分支
+    implementation("com.github.hannesa2:paho.mqtt.android:3.6.4")
+    implementation("androidx.legacy:legacy-support-v4:1.0.0")
 }

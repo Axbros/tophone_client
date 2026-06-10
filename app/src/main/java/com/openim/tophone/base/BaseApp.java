@@ -5,23 +5,19 @@ import android.app.Application;
 import android.os.Bundle;
 
 import com.openim.tophone.base.vm.injection.Easy;
-import com.openim.tophone.openim.entity.LoginCertificate;
-import com.openim.tophone.openim.vm.State;
 
 public class BaseApp extends Application {
     public State<Boolean> isAppBackground = new State<>(true);
     private static BaseApp instance;
     private int mActivityCount;
 
-    public LoginCertificate loginCertificate;
-
     public static BaseApp inst() {
         return instance;
     }
+
     public <T extends BaseViewModel> void putVM(T vm) {
         Easy.put(vm);
     }
-
 
     public void removeCacheVM(Class<? extends BaseViewModel> cl) {
         try {
@@ -31,7 +27,6 @@ public class BaseApp extends Application {
         Easy.delete(cl);
     }
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -40,7 +35,6 @@ public class BaseApp extends Application {
     }
 
     private void activityLifecycleCallback() {
-
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override
             public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
@@ -78,5 +72,4 @@ public class BaseApp extends Application {
             }
         });
     }
-
 }

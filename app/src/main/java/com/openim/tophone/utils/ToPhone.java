@@ -3,97 +3,109 @@ package com.openim.tophone.utils;
 import static com.openim.tophone.ui.main.MainActivity.sp;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.widget.Toast;
 
 import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.mqtt.CommandReplyChannel;
 
 import org.json.JSONObject;
 
-import io.openim.android.sdk.OpenIMClient;
-import io.openim.android.sdk.listener.OnMsgSendCallback;
-import io.openim.android.sdk.models.Message;
-import io.openim.android.sdk.models.OfflinePushInfo;
-
 public class ToPhone {
-    // 使用static final定义TAG，符合最佳实践
     private static final String TAG = "ToPhone Utils";
-    // 成员变量添加final修饰，确保不可变
+
     private final PhoneUtils phoneUtils;
-    private final OfflinePushInfo offlinePushInfo;
-    // 持有应用上下文，避免内存泄漏风险
+    private final CommandReplyChannel replyChannel;
     private final Context context;
 
-    // 初始化成员变量的构造方法
-    public ToPhone() {
+    public ToPhone(CommandReplyChannel replyChannel) {
         this.context = BaseApp.inst();
         this.phoneUtils = new PhoneUtils();
-        this.offlinePushInfo = new OfflinePushInfo();
+        this.replyChannel = replyChannel;
     }
 
-    // 复用的消息发送回调
-    private final OnMsgSendCallback onMsgSendCallback = new OnMsgSendCallback() {
-        @Override
-        public void onError(int code, String error) {
-            L.e(TAG, "消息发送失败: " + code + ", " + error);
-            showToast("消息发送失败: " + error);
-        }
-
-        @Override
-        public void onProgress(long progress) {
-            // 可以添加进度显示逻辑
-        }
-
-        @Override
-        public void onSuccess(Message message) {
-            L.d(TAG, "消息发送成功: " + message.getTextElem().getContent());
-        }
-    };
-
     public void handleMessage(String jsonStr, String fromUserID) {
+        String requestId = null;
         boolean success = false;
+        String resultMessage = null;
 
         try {
-            // 优先处理非JSON格式的特殊命令
             if (handleSpecialCommands(jsonStr, fromUserID)) {
                 return;
             }
 
-            // 解析JSON格式消息
             JSONObject jsonObject = new JSONObject(jsonStr);
             L.d(TAG, "message in json: " + jsonObject);
+
+            requestId = jsonObject.optString("requestId", null);
+            if (TextUtils.isEmpty(requestId)) {
+                requestId = null;
+            }
 
             String type = jsonObject.getString("type");
             String mobile = jsonObject.optString("mobile");
             String content = jsonObject.optString("content");
 
-            // 根据类型处理不同指令
             handleCommandByType(type, mobile, content);
 
             success = true;
+            resultMessage = buildSuccessMessage(type, mobile);
         } catch (Exception e) {
             L.e(TAG, "处理消息失败: " + e.getMessage());
-            sendErrorMessage("处理指令失败: " + e.getMessage(), fromUserID);
-        } finally {
-            // 成功处理后发送确认消息
-            if (success) {
-                sendConfirmationMessage(jsonStr, fromUserID);
-            }
+            resultMessage = e.getMessage() != null ? e.getMessage() : "处理指令失败";
+            replyFailure(requestId, resultMessage, fromUserID, jsonStr);
+        }
+
+        if (success) {
+            replySuccess(requestId, resultMessage, fromUserID, jsonStr);
         }
     }
 
-    /**
-     * 处理特殊命令（非JSON格式）
-     */
+    private String buildSuccessMessage(String type, String mobile) {
+        switch (type) {
+            case "call":
+                return "拨号已发起";
+            case "send_message":
+                return "短信已发送";
+            case "idle":
+                return "已挂机";
+            case "answer":
+                return "已接听";
+            case "block_phone":
+                return "已拉黑";
+            case "unblock_phone":
+                return "已取消拉黑";
+            default:
+                return "指令已执行";
+        }
+    }
+
+    private void replySuccess(String requestId, String message, String fromUserID, String jsonStr) {
+        if (requestId != null) {
+            replyChannel.sendAck(requestId, true, message);
+        } else {
+            replyChannel.sendReply("已成功處理您的指令！ 指令：" + jsonStr, fromUserID);
+        }
+    }
+
+    private void replyFailure(String requestId, String message, String fromUserID, String jsonStr) {
+        if (requestId != null) {
+            replyChannel.sendAck(requestId, false, message);
+        } else {
+            replyChannel.sendReply("错误: " + message, fromUserID);
+        }
+    }
+
     private boolean handleSpecialCommands(String command, String fromUserID) {
         switch (command) {
             case "version":
                 int version = AppUtils.getLocalVersionCode();
-                sendTextMessage("当前设备版本号：" + version, fromUserID);
+                replyChannel.sendReply("当前设备版本号：" + version, fromUserID);
                 return true;
             case "parent":
                 String recvUid = sp.getString(Constants.getGroupOwnerKey(), null);
                 String messageContent = "当前甲方ID：" + (recvUid != null ? recvUid : "未设置");
-                sendTextMessage(messageContent, fromUserID);
+                replyChannel.sendReply(messageContent, fromUserID);
                 return true;
             default:
                 L.d(TAG, "Unknown command: " + command);
@@ -101,11 +113,8 @@ public class ToPhone {
         }
     }
 
-    /**
-     * 根据命令类型处理不同操作
-     */
     private void handleCommandByType(String type, String mobile, String content) {
-        L.d(TAG,"new message from openIM："+type+"|"+mobile+"|"+content);
+        L.d(TAG, "new message：" + type + "|" + mobile + "|" + content);
         switch (type) {
             case "idle":
                 phoneUtils.hangUpCall();
@@ -134,18 +143,12 @@ public class ToPhone {
         }
     }
 
-    /**
-     * 验证手机号不为空
-     */
     private void validateMobile(String mobile) {
         if (mobile == null || mobile.trim().isEmpty()) {
             throw new IllegalArgumentException("缺少电话号码");
         }
     }
 
-    /**
-     * 验证手机号和内容不为空
-     */
     private void validateMobileAndContent(String mobile, String content) {
         validateMobile(mobile);
         if (content == null || content.trim().isEmpty()) {
@@ -153,46 +156,6 @@ public class ToPhone {
         }
     }
 
-    /**
-     * 发送确认消息
-     */
-    private void sendConfirmationMessage(String jsonStr, String fromUserID) {
-        try {
-            String messageContent = "已成功處理您的指令！ 指令：" + jsonStr;
-            sendTextMessage(messageContent, fromUserID);
-        } catch (Exception e) {
-            L.e(TAG, "发送确认消息失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 发送错误消息
-     */
-    private void sendErrorMessage(String error, String fromUserID) {
-        sendTextMessage("错误: " + error, fromUserID);
-    }
-
-    /**
-     * 发送文本消息（简化参数，复用offlinePushInfo）
-     */
-    private void sendTextMessage(String content, String fromUserId) {
-        try {
-            Message message = OpenIMClient.getInstance().messageManager.createTextMessage(content);
-            OpenIMClient.getInstance().messageManager.sendMessage(
-                    onMsgSendCallback,
-                    message,
-                    fromUserId,
-                    null,
-                    offlinePushInfo
-            );
-        } catch (Exception e) {
-            L.e(TAG, "发送消息失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 显示Toast消息
-     */
     private void showToast(String message) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
     }
