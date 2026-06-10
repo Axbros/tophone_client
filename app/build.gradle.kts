@@ -28,8 +28,8 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 133
-        versionName = "1.3.3"
+        versionCode = 135
+        versionName = "1.4.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -81,4 +81,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.volcengine.rtc)
 }

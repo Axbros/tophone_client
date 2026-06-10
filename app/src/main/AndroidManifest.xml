@@ -31,10 +31,14 @@
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
     <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE"
         tools:ignore="ProtectedPermissions"/> <!-- 只有系统应用才能生效 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
 
     <application
         android:name=".MainApplication"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -44,6 +48,7 @@
         android:roundIcon="@drawable/channel"
         android:supportsRtl="true"
         android:theme="@style/Theme.Tophone"
+        tools:replace="android:appComponentFactory"
         tools:targetApi="31">
         <!-- 静态注册 BroadcastReceiver -->
         <receiver android:name=".utils.SmsBroadcastReceiver" android:exported="true">
@@ -71,6 +76,16 @@
         <activity
             android:name=".ui.main.DomainConfigActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".rtc.RawAudioDataActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <service
+            android:name=".rtc.RoomKeepLifeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 
 </manifest>

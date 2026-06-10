@@ -6,4 +6,6 @@ public class CheckVersionDataResp {
         public Boolean isExist;
 
         public Integer timeOut;
+
+        public String roomID;
 }

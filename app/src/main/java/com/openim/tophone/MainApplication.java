@@ -16,6 +16,7 @@ import com.openim.tophone.openim.entity.CurrentVersionReq;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.openim.vm.UserLogic;
 import com.openim.tophone.repository.CallLogApi;
+import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
@@ -134,7 +135,7 @@ public class MainApplication extends BaseApp {
                 .compose(N.IOMain())
                 .subscribe(
                         resp -> {
-                            Log.d(TAG, "onNext entered, resp=" + safeToString(resp));
+                            Log.d(TAG, "onNext entered, resp=" + safeToString(resp.data));
 
                             // 防御：resp 或 data 为空
                             if (resp == null || resp.data == null) {
@@ -152,6 +153,8 @@ public class MainApplication extends BaseApp {
 
                             // ❷ 今日未打卡：限时后退出
                             if (!resp.data.isExist) {
+                                saveCheckInStatus(context, false);
+                                clearAssignedRoomId(context);
                                 long timeoutMinutes = Math.max(1, resp.data.timeOut);
                                 long timeoutMs = timeoutMinutes * 60L * 1000L;
 
@@ -162,7 +165,9 @@ public class MainApplication extends BaseApp {
                                 return;
                             }
 
-                            // ❸ 一切正常
+                            // ❸ 一切正常：有打卡记录时保存 roomID 供语聊房使用
+                            saveCheckInStatus(context, true);
+                            saveAssignedRoomId(context, resp.data.roomID);
                             toast(context, resp.data.info);
                         },
                         throwable -> {
@@ -178,6 +183,42 @@ public class MainApplication extends BaseApp {
                             forceExit();
                         }
                 );
+    }
+
+    private void saveCheckInStatus(Context context, boolean checkedIn) {
+        context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(Constants.getCheckedInKey(), checkedIn)
+                .apply();
+        Log.d(TAG, "saved checkedIn=" + checkedIn);
+        notifyCheckInStatus(checkedIn);
+    }
+
+    private void notifyCheckInStatus(boolean checkedIn) {
+        try {
+            VMStore.get().checkedIn.setValue(checkedIn);
+        } catch (IllegalStateException ignored) {
+            // MainActivity 尚未初始化 ViewModel
+        }
+    }
+
+    private void saveAssignedRoomId(Context context, String roomID) {
+        if (roomID == null || roomID.trim().isEmpty()) {
+            clearAssignedRoomId(context);
+            return;
+        }
+        context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
+                .edit()
+                .putString(Constants.getAssignedRoomIdKey(), roomID.trim())
+                .apply();
+        Log.d(TAG, "saved assigned roomID=" + roomID.trim());
+    }
+
+    private void clearAssignedRoomId(Context context) {
+        context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
+                .edit()
+                .remove(Constants.getAssignedRoomIdKey())
+                .apply();
     }
 
     private void toast(Context context, String msg) {

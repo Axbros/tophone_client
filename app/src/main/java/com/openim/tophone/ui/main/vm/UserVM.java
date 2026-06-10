@@ -1,5 +1,7 @@
 package com.openim.tophone.ui.main.vm;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -33,6 +35,7 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     public MutableLiveData<Boolean> smsPermissions = new MutableLiveData<>(false);
     public MutableLiveData<Boolean> connectionStatus = new MutableLiveData<>(false);
     public MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    public MutableLiveData<Boolean> checkedIn = new MutableLiveData<>();
 
     public MutableLiveData<Boolean> isGroupInfoVisible = new MutableLiveData<>(true);
 
@@ -41,6 +44,15 @@ public class UserVM extends BaseViewModel implements OnAdvanceMsgListener, OnFri
     private static final String EMAIL_SUFFIX = "@tsinghua.edu.cn";
     private static final String VERIFY_CODE = "666666";
     private final String TAG = "UserVM";
+
+    public void syncCheckInStatus(Context context) {
+        SharedPreferences sp = context.getApplicationContext()
+                .getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
+        if (sp.contains(Constants.getCheckedInKey())) {
+            checkedIn.setValue(sp.getBoolean(Constants.getCheckedInKey(), false));
+        }
+    }
+
     public void handleBtnConnect() {
         isLoading.setValue(true);
         boolean status = Boolean.TRUE.equals(connectionStatus.getValue());

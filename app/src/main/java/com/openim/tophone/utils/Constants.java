@@ -44,6 +44,27 @@ public class Constants {
                 (IS_LOCAL_ENV ? ":10001" : "/msg_gateway");
     }
 
+    /** VolcEngine RTC App ID，启动控制端时从服务端拉取并缓存 */
+    public static String RTC_APP_ID = "";
+
+    public static String getRtcManagementBase() {
+        return (IS_LOCAL_ENV ? "http://" : "https://") +
+                CURRENT_HOST +
+                (IS_LOCAL_ENV ? ":8080" : "/api-management");
+    }
+
+    public static String getVerifyRoomURL() {
+        return getRtcManagementBase() + "/api/v1/record/verifyRoom";
+    }
+
+    public static String getRtcConfigURL() {
+        return getRtcManagementBase() + "/api/v1/config/tophone_world";
+    }
+
+    public static String getNotifyRoomManagerURL() {
+        return getRtcManagementBase() + "/api/v1/record/notify_room_manager";
+    }
+
     // ======== ⭐ 对外暴露的 host 更新方法 ⭐ ======== //
     public static void updateHost(String host) {
         CURRENT_HOST = host;
@@ -53,10 +74,16 @@ public class Constants {
 
     private static final String GROUP_OWNER_KEY = "ownerUserID";
     private static final String GROUP_NAME = "groupName";
+    private static final String ASSIGNED_ROOM_ID_KEY = "assignedRoomID";
+    private static final String CHECKED_IN_KEY = "checkedIn";
 
     public static String getGroupOwnerKey() { return GROUP_OWNER_KEY; }
 
     public static String getGroupName() { return GROUP_NAME; }
+
+    public static String getAssignedRoomIdKey() { return ASSIGNED_ROOM_ID_KEY; }
+
+    public static String getCheckedInKey() { return CHECKED_IN_KEY; }
 
     public static String getFileDir(){ return FILE_DIR; }
 

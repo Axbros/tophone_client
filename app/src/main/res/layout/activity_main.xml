@@ -174,7 +174,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:visibility="@{userVM.isLoading ? View.GONE : View.VISIBLE}"
-                                android:src="@{userVM.connectionStatus ? @drawable/success :@drawable/wrong}" />
+                                android:src="@{(userVM.checkedIn != null &amp;&amp; !userVM.checkedIn) ? @drawable/icon_warning : (userVM.connectionStatus ? @drawable/success : @drawable/wrong)}" />
                             <ProgressBar
                                 android:id="@+id/progress_bar"
                                 android:layout_width="match_parent"

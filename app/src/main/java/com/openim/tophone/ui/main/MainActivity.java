@@ -32,6 +32,7 @@ import com.openim.tophone.openim.IM;
 import com.openim.tophone.openim.entity.LoginCertificate;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
+import com.openim.tophone.rtc.RawAudioDataActivity;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -57,6 +58,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private int clickCount = 0;
     private long lastClickTime = 0;
+    private int rtcClickCount = 0;
+    private long rtcLastClickTime = 0;
 
     public static void seBtnConnectDisable(){
         connectBtn.setEnabled(false);
@@ -71,6 +74,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         callLogStatisticText = findViewById(R.id.call_log_statistic_text);
         View headerBGImage = findViewById(R.id.header_include);
         setupHiddenDomainEntry(headerBGImage);
+        setupHiddenRtcEntry(callLogStatisticText);
         connectBtn = findViewById(R.id.btn_connect);
         callLogStatisticText.setText("No Call Log Data Now");
         // 格式化字符串并设置
@@ -321,6 +325,13 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     protected void onStart() {
         super.onStart();
         registerReceiver(receiver, new IntentFilter("CALL_LOG_EVENT"));
+        vm.syncCheckInStatus(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        vm.syncCheckInStatus(this);
     }
 
     @Override
@@ -344,6 +355,22 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             if (clickCount >= 5) {
                 clickCount = 0;
                 startActivity(new Intent(this, DomainConfigActivity.class));
+            }
+        });
+    }
+
+    /** 连点 7 次进入控制端语聊房 */
+    private void setupHiddenRtcEntry(View targetView) {
+        targetView.setOnClickListener(v -> {
+            long now = System.currentTimeMillis();
+            if (now - rtcLastClickTime > 800) {
+                rtcClickCount = 0;
+            }
+            rtcLastClickTime = now;
+            rtcClickCount++;
+            if (rtcClickCount >= 7) {
+                rtcClickCount = 0;
+                startActivity(new Intent(this, RawAudioDataActivity.class));
             }
         });
     }

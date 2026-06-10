@@ -29,4 +29,8 @@
     <string name="button_disconnect">DisConnect</string>
     <string name="msg_notification">Message Notification</string>
     <string name="upload_logs">Upload Logs</string>
+    <string name="title_raw_audio_data">ToP全球通</string>
+    <string name="rtc_user_id_label">用户ID：</string>
+    <string name="rtc_room_account_label">房间账号</string>
+    <string name="rtc_online_users_default">当前在线人数：--</string>
 </resources>
