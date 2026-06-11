@@ -1,5 +1,6 @@
 package com.openim.tophone.utils;
 
+import android.content.Context;
 import android.os.Build;
 
 import com.openim.tophone.BuildConfig;
@@ -125,6 +126,32 @@ public class Constants {
         if (!normalized.isEmpty()) {
             CURRENT_HOST = normalized;
         }
+    }
+
+    /**
+     * Apply cached custom host from {@link DomainManager}, or fall back to built-in REMOTE_API_HOST.
+     * In release / production mode, stale LAN IPs from debug are ignored and cleared.
+     */
+    public static void resolveHostFromStorage(Context context) {
+        String cached = DomainManager.getHost(context);
+        if (cached == null || cached.isEmpty()) {
+            resetToBuiltInHost();
+            return;
+        }
+        String normalized = ServerEndpointHelper.normalizeHost(cached);
+        if (USE_LOCAL_LAN) {
+            if (!normalized.isEmpty()) {
+                updateHost(normalized);
+            }
+            return;
+        }
+        if (ServerEndpointHelper.isPrivateOrLocalHost(normalized)
+                || !ServerEndpointHelper.isValidHost(normalized)) {
+            DomainManager.clear(context);
+            resetToBuiltInHost();
+            return;
+        }
+        updateHost(normalized);
     }
 
     private static final String GROUP_OWNER_KEY = "ownerUserID";

@@ -50,6 +50,27 @@ public final class ServerEndpointHelper {
                 || normalized.matches("^\\d{1,3}(\\.\\d{1,3}){3}$");
     }
 
+    /** LAN / loopback / emulator — not valid production API hosts over HTTPS. */
+    public static boolean isPrivateOrLocalHost(String host) {
+        String normalized = normalizeHost(host);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        if ("localhost".equalsIgnoreCase(normalized) || "127.0.0.1".equals(normalized)) {
+            return true;
+        }
+        if ("10.0.2.2".equals(normalized)) {
+            return true;
+        }
+        if (normalized.matches("^10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) {
+            return true;
+        }
+        if (normalized.matches("^192\\.168\\.\\d{1,3}\\.\\d{1,3}$")) {
+            return true;
+        }
+        return normalized.matches("^172\\.(1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}$");
+    }
+
     public static String pingUrlForHost(String host) {
         return "https://" + normalizeHost(host) + "/ping";
     }

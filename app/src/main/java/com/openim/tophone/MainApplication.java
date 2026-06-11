@@ -54,10 +54,9 @@ public class MainApplication extends BaseApp {
         initFile();
         initController();
 
-        String cached = DomainManager.getHost(this);
-        if (cached != null && !cached.isEmpty()) {
-            Constants.updateHost(cached);
-        }
+        Constants.resolveHostFromStorage(this);
+        Log.i(TAG, "API host=" + Constants.getCurrentHost()
+                + " baseUrl=" + Constants.getManagementUrl());
 
         initNet();
         initService();

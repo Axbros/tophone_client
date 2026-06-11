@@ -32,6 +32,10 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
+# Gson models (public fields must keep names for JSON mapping in release)
+-keep class com.openim.tophone.openim.entity.** { *; }
+-keep interface com.openim.tophone.repository.** { *; }
+
 # Retrofit / RxJava
 -keepattributes Signature, InnerClasses, EnclosingMethod
 -keepclassmembers,allowshrinking,allowobfuscation interface * {
