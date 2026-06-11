@@ -64,7 +64,8 @@ public class N {
         managementRetrofit = new Retrofit.Builder()
                 .baseUrl(Constants.getManagementUrl())
                 .addConverterFactory(GsonConverterFactory.create())
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create()) // 关键：添加 RxJava 适配器
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .client(build.build())
                 .build();
     }
 

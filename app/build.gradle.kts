@@ -20,6 +20,9 @@ android {
     viewBinding{
         enable = true
     }
+    buildFeatures {
+        buildConfig = true
+    }
     namespace = "com.openim.tophone"
 
 
@@ -31,6 +34,15 @@ android {
         versionCode = 133
         versionName = "1.4.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val devUseLocal = (project.findProperty("DEV_USE_LOCAL") as String?) ?: "true"
+        val devLanHost = (project.findProperty("DEV_LAN_HOST") as String?) ?: "192.168.100.126"
+        val devHttpPort = (project.findProperty("DEV_HTTP_PORT") as String?) ?: "8081"
+        val devMqttPort = (project.findProperty("DEV_MQTT_PORT") as String?) ?: "1883"
+        buildConfigField("boolean", "DEV_USE_LOCAL", devUseLocal)
+        buildConfigField("String", "DEV_LAN_HOST", "\"$devLanHost\"")
+        buildConfigField("int", "DEV_HTTP_PORT", devHttpPort)
+        buildConfigField("int", "DEV_MQTT_PORT", devMqttPort)
     }
 
     buildTypes {
@@ -89,6 +101,7 @@ configurations.all {
 
 dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.zxing:core:3.5.3")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

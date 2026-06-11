@@ -17,4 +17,8 @@ public class VMStore {
         }
         return userVM;
     }
+
+    public static boolean isInitialized() {
+        return userVM != null;
+    }
 }

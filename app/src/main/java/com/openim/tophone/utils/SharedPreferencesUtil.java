@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Pair;
 
+import com.openim.tophone.enums.CallLogType;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
@@ -163,40 +165,52 @@ public class SharedPreferencesUtil {
             editor.commit();
         }
     }
-    // 在 SharedPreferencesUtil 里加上这几个方法
+    private static final String KEY_LAST_STATS_DATE = "last_stats_date";
+    private static final String KEY_CALL_IN_TODAY = "call_in_today";
+    private static final String KEY_CALL_OUT_TODAY = "call_out_today";
 
-    // 检查日期并清零（每天第一次调用时会清零）
+    /** 本地日历日 yyyyMMdd，跨天后统计归零。 */
+    private static String todayKey() {
+        return new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+    }
+
+    /** 日期变化时清空当日呼入/呼出计数。 */
     public void checkAndResetDailyStats() {
-        String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
-        String lastDate = getString("last_stats_date");
-
+        String today = todayKey();
+        String lastDate = getString(KEY_LAST_STATS_DATE);
         if (!today.equals(lastDate)) {
-            setCache("call_in_today", 0);
-            setCache("call_out_today", 0);
-            setCache("last_stats_date", today);
+            setCache(KEY_CALL_IN_TODAY, 0);
+            setCache(KEY_CALL_OUT_TODAY, 0);
+            setCache(KEY_LAST_STATS_DATE, today);
         }
     }
 
-    // 今日呼入 +1
-    public void increaseCallInCount() {
-        int current = getInteger("call_in_today");
-        setCache("call_in_today", current + 1);
+    public void recordCallEvent(String callType) {
+        checkAndResetDailyStats();
+        if (CallLogType.CALL_IN.getDescription().equals(callType)) {
+            setCache(KEY_CALL_IN_TODAY, getTodayCallInCount() + 1);
+        } else if (CallLogType.CALL_OUT.getDescription().equals(callType)) {
+            setCache(KEY_CALL_OUT_TODAY, getTodayCallOutCount() + 1);
+        }
     }
 
-    // 今日呼出 +1
-    public void increaseCallOutCount() {
-        int current = getInteger("call_out_today");
-        setCache("call_out_today", current + 1);
-    }
-
-    // 获取今日呼入次数
     public int getTodayCallInCount() {
-        return getInteger("call_in_today");
+        checkAndResetDailyStats();
+        return getInteger(KEY_CALL_IN_TODAY);
     }
 
-    // 获取今日呼出次数
     public int getTodayCallOutCount() {
-        return getInteger("call_out_today");
+        checkAndResetDailyStats();
+        return getInteger(KEY_CALL_OUT_TODAY);
+    }
+
+    public String formatTodayCallStats() {
+        return String.format(
+                Locale.getDefault(),
+                "Today IN: %d | OUT: %d",
+                getTodayCallInCount(),
+                getTodayCallOutCount()
+        );
     }
 
 

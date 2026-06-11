@@ -6,6 +6,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.mqtt.CommandReplyChannel;
 
@@ -53,7 +54,7 @@ public class ToPhone {
             resultMessage = buildSuccessMessage(commandType, mobile);
         } catch (Exception e) {
             L.e(TAG, "处理消息失败: " + e.getMessage());
-            resultMessage = e.getMessage() != null ? e.getMessage() : "处理指令失败";
+            resultMessage = e.getMessage() != null ? e.getMessage() : context.getString(R.string.cmd_process_failed);
             replyFailure(requestId, commandType, resultMessage, fromUserID, jsonStr);
         }
 
@@ -65,19 +66,19 @@ public class ToPhone {
     private String buildSuccessMessage(String type, String mobile) {
         switch (type) {
             case "call":
-                return "拨号已发起";
+                return context.getString(R.string.cmd_call_started);
             case "send_message":
-                return "短信已发送";
+                return context.getString(R.string.cmd_sms_sent);
             case "idle":
-                return "已挂机";
+                return context.getString(R.string.cmd_hangup);
             case "answer":
-                return "已接听";
+                return context.getString(R.string.cmd_answered);
             case "block_phone":
-                return "已拉黑";
+                return context.getString(R.string.cmd_blocked);
             case "unblock_phone":
-                return "已取消拉黑";
+                return context.getString(R.string.cmd_unblocked);
             default:
-                return "指令已执行";
+                return context.getString(R.string.cmd_executed);
         }
     }
 
@@ -85,7 +86,7 @@ public class ToPhone {
         if (requestId != null) {
             replyChannel.sendAck(requestId, true, type, message);
         } else {
-            replyChannel.sendReply("已成功處理您的指令！ 指令：" + jsonStr, fromUserID);
+            replyChannel.sendReply(context.getString(R.string.cmd_reply_success, jsonStr), fromUserID);
         }
     }
 
@@ -93,7 +94,7 @@ public class ToPhone {
         if (requestId != null) {
             replyChannel.sendAck(requestId, false, type, message);
         } else {
-            replyChannel.sendReply("错误: " + message, fromUserID);
+            replyChannel.sendReply(context.getString(R.string.cmd_reply_error, message), fromUserID);
         }
     }
 
@@ -101,12 +102,12 @@ public class ToPhone {
         switch (command) {
             case "version":
                 int version = AppUtils.getLocalVersionCode();
-                replyChannel.sendReply("当前设备版本号：" + version, fromUserID);
+                replyChannel.sendReply(context.getString(R.string.cmd_device_version, version), fromUserID);
                 return true;
             case "parent":
                 String recvUid = sp.getString(Constants.getGroupOwnerKey(), null);
-                String messageContent = "当前甲方ID：" + (recvUid != null ? recvUid : "未设置");
-                replyChannel.sendReply(messageContent, fromUserID);
+                String owner = recvUid != null ? recvUid : context.getString(R.string.cmd_owner_not_set);
+                replyChannel.sendReply(context.getString(R.string.cmd_owner_id, owner), fromUserID);
                 return true;
             default:
                 L.d(TAG, "Unknown command: " + command);
@@ -140,20 +141,20 @@ public class ToPhone {
                 new CallBlocker(context).unblockPhoneNumber(mobile);
                 break;
             default:
-                throw new IllegalArgumentException("未知指令类型: " + type);
+                throw new IllegalArgumentException(context.getString(R.string.cmd_unknown_type, type));
         }
     }
 
     private void validateMobile(String mobile) {
         if (mobile == null || mobile.trim().isEmpty()) {
-            throw new IllegalArgumentException("缺少电话号码");
+            throw new IllegalArgumentException(context.getString(R.string.cmd_missing_phone));
         }
     }
 
     private void validateMobileAndContent(String mobile, String content) {
         validateMobile(mobile);
         if (content == null || content.trim().isEmpty()) {
-            throw new IllegalArgumentException("缺少短信内容");
+            throw new IllegalArgumentException(context.getString(R.string.cmd_missing_sms_body));
         }
     }
 

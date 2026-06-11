@@ -9,6 +9,7 @@ import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.utils.MqttEventUtil;
@@ -21,7 +22,7 @@ public class SmsReceiver extends BroadcastReceiver {
         if (intent.getAction() != null &&
                 (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") ||
                         intent.getAction().equals("android.provider.Telephony.SMS_DELIVER"))) {
-            Toast.makeText(BaseApp.inst(),"收到新短信，准备处理中！",Toast.LENGTH_SHORT).show();
+            Toast.makeText(BaseApp.inst(), R.string.toast_sms_received, Toast.LENGTH_SHORT).show();
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
                 Object[] pdus = (Object[]) bundle.get("pdus");

@@ -116,7 +116,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_raw_audio);
         initUI();
-        showLoading("正在加载配置...");
+        showLoading(getString(R.string.rtc_loading_config));
         cacheUtil = new RtcCacheUtil(this);
         checkAndLoadConfig();
         access();
@@ -164,7 +164,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     private void initRTCVideo() {
         if (TextUtils.isEmpty(Constants.RTC_APP_ID)) {
-            RtcToastUtil.showLongToast(this, "APP_ID未配置，初始化失败");
+            RtcToastUtil.showLongToast(this, getString(R.string.rtc_app_id_missing));
             return;
         }
 
@@ -188,7 +188,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         String cachedAppId = cacheUtil.getKeyAppId();
         if (!TextUtils.isEmpty(cachedAppId)) {
             Constants.RTC_APP_ID = cachedAppId;
-            RtcToastUtil.showLongToast(RawAudioDataActivity.this, "使用缓存的配置信息");
+            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_using_cached_config));
         } else {
             Log.d(TAG, "缓存不存在，从服务器获取配置");
             fetchConfigFromServer();
@@ -225,11 +225,11 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                                 saveConfigToCache(appID);
                                 mHandler.post(() -> {
                                     Constants.RTC_APP_ID = appID;
-                                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, "配置获取成功");
+                                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_config_loaded));
                                 });
                             } else {
                                 Log.e(TAG, "解密失败，appID为空");
-                                RtcToastUtil.showLongToast(RawAudioDataActivity.this, "解密失败，appID为空");
+                                RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_decrypt_failed));
                             }
                         } else {
                             String msg = jsonObject.getString("msg");
@@ -237,11 +237,11 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "解析数据失败: " + e.getMessage());
-                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, "解析数据失败: " + e.getMessage());
+                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_parse_failed, e.getMessage()));
                     }
                 } else {
                     Log.e(TAG, "服务器返回错误: " + response.code());
-                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, "服务器返回错误: " + response.code());
+                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_server_error, response.code()));
                 }
             }
         });
@@ -275,11 +275,11 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         textureView = new TextureView(this);
         floatWindowManager = new FloatWindowManager(this, textureView);
         floatWindowManager.getCloseButton().setOnClickListener(v -> closeFloatingWindow());
-        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_EARPIECE, "听筒");
-        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE, "扬声器");
-        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET_BLUETOOTH, "蓝牙耳机");
-        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET_USB, "USB 设备");
-        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET, "有线耳机");
+        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_EARPIECE, getString(R.string.rtc_audio_earpiece));
+        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE, getString(R.string.rtc_audio_speaker));
+        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET_BLUETOOTH, getString(R.string.rtc_audio_bluetooth));
+        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET_USB, getString(R.string.rtc_audio_usb));
+        audioTypeMap.put(AudioRoute.AUDIO_ROUTE_HEADSET, getString(R.string.rtc_audio_wired));
         btnOpenFloatWindow.setOnClickListener(v -> requestFloatingWindowPermission());
         btnJoinRoom.setOnClickListener(v -> {
             String roomId = roomIdInput.getText().toString().trim();
@@ -290,7 +290,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                 return;
             }
             if (TextUtils.isEmpty(roomId)) {
-                RtcToastUtil.showAlert(RawAudioDataActivity.this, "暂无房间账号，请完成打卡后重试");
+                RtcToastUtil.showAlert(RawAudioDataActivity.this, getString(R.string.rtc_no_room_account));
                 return;
             }
             showJoinLoading();
@@ -301,7 +301,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         hideJoinLoading();
                         if (!isExist) {
                             RtcToastUtil.showAlert(RawAudioDataActivity.this,
-                                    "房间 " + roomId + " 不存在或已过期，请联系管理员核实!");
+                                    getString(R.string.rtc_room_not_found, roomId));
                             return;
                         }
 
@@ -313,7 +313,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         isJoined = true;
                         isLoopJoinRoom = true;
                         audioFrameCallbackSwitch.setEnabled(true);
-                        btnJoinRoom.setText("退出房间");
+                        btnJoinRoom.setText(getString(R.string.rtc_leave_room));
                         btnJoinRoom.setBackgroundColor(Color.parseColor("#E91E63"));
                     });
                 }
@@ -322,7 +322,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                 public void onError(Exception e) {
                     runOnUiThread(() -> {
                         hideJoinLoading();
-                        RtcToastUtil.showAlert(RawAudioDataActivity.this, "验证房间失败：" + e.getMessage());
+                        RtcToastUtil.showAlert(RawAudioDataActivity.this, getString(R.string.rtc_verify_room_failed, e.getMessage()));
                     });
                 }
 
@@ -338,8 +338,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
         btnClearCache.setOnClickListener(v -> {
             cacheUtil.clearAllCache();
-            RtcToastUtil.showLongToast(RawAudioDataActivity.this,
-                    "缓存清除成功！请关闭软件重新打开以加载最新配置");
+            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_cache_cleared));
         });
         audioFrameCallbackSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> enableAudioFrameCallback(isChecked));
 
@@ -361,7 +360,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
         audioRouteSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (rtcVideo == null) {
-                RtcToastUtil.showLongToast(this, "请进入房间后再切换扬声器");
+                RtcToastUtil.showLongToast(this, getString(R.string.rtc_join_room_first_speaker));
                 audioRouteSwitch.setChecked(!isChecked);
                 return;
             }
@@ -391,7 +390,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             btnSend.setOnClickListener(view -> {
                 String msg = input.getText().toString().trim();
                 if (!msg.isEmpty()) {
-                    RtcToastUtil.showShortToast(RawAudioDataActivity.this, "正在通知话务...");
+                    RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_notifying_dispatch));
                     sendMessageToRoom(roomIdInput.getText().toString(), msg);
                     dialog.dismiss();
                 }
@@ -480,7 +479,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         public void onNetworkTypeChanged(int type) {
             super.onNetworkTypeChanged(type);
             if (type == 0) {
-                RtcToastUtil.showAlert(RawAudioDataActivity.this, "网络连接已断开！即将重连");
+                RtcToastUtil.showAlert(RawAudioDataActivity.this, getString(R.string.rtc_network_disconnected));
                 isJoined = false;
                 applyJoinResultIcon(R.drawable.icon_failed);
                 joinRoom(roomIdInput.getText().toString());
@@ -494,27 +493,25 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         public void onConnectionStateChanged(int state, int reason) {
             super.onConnectionStateChanged(state, reason);
             if (state == ConnectionState.CONNECTION_STATE_DISCONNECTED.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, "连接断开超过 12s，此时 SDK 会尝试自动重连。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_disconnected_12s));
             }
             if (state == ConnectionState.CONNECTION_STATE_CONNECTING.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, "首次请求建立连接，正在连接中。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_connecting));
             }
             if (state == ConnectionState.CONNECTION_STATE_CONNECTED.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, "首次连接成功。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_connected));
             }
             if (state == ConnectionState.CONNECTION_STATE_RECONNECTING.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, "连首次连接时，10 秒内未连接成功; 尝试自动重连。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_reconnecting));
             }
             if (state == ConnectionState.CONNECTION_STATE_RECONNECTED.getValue()) {
-                RtcToastUtil.showAlert(RawAudioDataActivity.this, "连接断开后，重连成功。");
+                RtcToastUtil.showAlert(RawAudioDataActivity.this, getString(R.string.rtc_conn_reconnected));
             }
             if (state == ConnectionState.CONNECTION_STATE_LOST.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this,
-                        "处于 CONNECTION_STATE_DISCONNECTED 状态超过 10 秒，且期间重连未成功。SDK 仍将继续尝试重连。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_lost));
             }
             if (state == ConnectionState.CONNECTION_STATE_FAILED.getValue()) {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this,
-                        "连接失败，服务端状态异常。SDK 不会自动重连，请重新进房，或联系技术支持。");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_conn_failed));
             }
         }
     };
@@ -570,7 +567,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             stopRoomKeepLifeService();
         }
         isJoined = false;
-        btnJoinRoom.setText("加入房间");
+        btnJoinRoom.setText(getString(R.string.rtc_join_room));
         networkQuality.setVisibility(View.GONE);
         networkQuality.setText("");
         lockRoomInput();
@@ -584,7 +581,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         @Override
         public void onAudioRouteChanged(AudioRoute route) {
             super.onAudioRouteChanged(route);
-            RtcToastUtil.showLongToast(RawAudioDataActivity.this, "模式已转至：" + audioTypeMap.get(route));
+            RtcToastUtil.showLongToast(RawAudioDataActivity.this,
+                    getString(R.string.rtc_audio_route_changed, audioTypeMap.get(route)));
         }
     };
 
@@ -593,8 +591,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         public void onNetworkQuality(NetworkQualityStats localQuality, NetworkQualityStats[] remoteQualities) {
             super.onNetworkQuality(localQuality, remoteQualities);
             networkQuality.setVisibility(View.VISIBLE);
-            networkQuality.setText("上行网络质量：" + NetworkQualityText.of(localQuality.txQuality)
-                    + " 下行网络质量：" + NetworkQualityText.of(localQuality.rxQuality));
+            networkQuality.setText(getString(R.string.rtc_network_quality,
+                    NetworkQualityText.of(localQuality.txQuality),
+                    NetworkQualityText.of(localQuality.rxQuality)));
         }
 
         @Override
@@ -603,14 +602,14 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             if (state != 0) {
                 if (isLoopJoinRoom) {
                     RtcToastUtil.showLongToast(RawAudioDataActivity.this,
-                            "异常退出房间，正在重新进入房间... 状态码" + state);
+                            getString(R.string.rtc_room_rejoining, state));
                     return;
                 }
                 RtcToastUtil.showAlert(RawAudioDataActivity.this,
-                        "房间加入失败，请联系管理员处理 " + extraInfo);
+                        getString(R.string.rtc_room_join_failed, extraInfo));
                 leaveRoom();
             } else {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, "已加入房间,祝您聊的开心！");
+                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_room_joined));
                 applyJoinResultIcon(R.drawable.icon_success);
                 lockRoomInput();
             }
@@ -629,7 +628,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             onlineUsers = stats.users;
             @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
             String formattedDate = sdf.format(new Date());
-            onlineUsersCountTextView.setText("当前在线人数：" + onlineUsers + "----" + formattedDate);
+            onlineUsersCountTextView.setText(getString(R.string.rtc_online_users, onlineUsers, formattedDate));
         }
     };
 
@@ -711,17 +710,17 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             try (Response response = okHttpClient.newCall(request).execute()) {
                 if (response.isSuccessful()) {
                     runOnUiThread(() ->
-                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, "消息发送成功")
+                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_message_sent))
                     );
                 } else {
                     runOnUiThread(() ->
-                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, "发送失败: " + response.code())
+                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_message_send_failed, response.code()))
                     );
                 }
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() ->
-                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, "网络异常: " + e.getMessage())
+                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_network_error, e.getMessage()))
                 );
             }
         }).start();
@@ -755,7 +754,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     }
 
     private void showJoinLoading() {
-        showLoading("正在验证房间...");
+        showLoading(getString(R.string.rtc_verifying_room));
         btnJoinRoom.setEnabled(false);
         btnClearCache.setEnabled(false);
         lockRoomInput();

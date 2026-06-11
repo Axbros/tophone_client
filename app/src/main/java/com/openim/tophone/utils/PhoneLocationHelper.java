@@ -24,7 +24,7 @@ public class PhoneLocationHelper {
                         String location = response.shengfen + "·" + response.chengshi + "·" + response.fuwushang;
                         callback.onResult(location);
                     } else {
-                        callback.onResult("中國·大陸");
+                        callback.onResult("China Mainland");
                     }
                 }, throwable -> {
                     callback.onError(throwable);

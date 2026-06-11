@@ -11,7 +11,7 @@ public class PhoneLocationResponse {
         if (code == 200) {
             return shengfen + "·" + chengshi + "·" + fuwushang;
         } else {
-            return "中國·大陸";
+            return "China Mainland";
         }
     }
 }

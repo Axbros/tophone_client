@@ -7,6 +7,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.openim.tophone.R;
+
 public class RtcToastUtil {
 
     private static final Handler UI_HANDLER = new Handler(Looper.getMainLooper());
@@ -18,7 +20,7 @@ public class RtcToastUtil {
             if (dialog != null && dialog.isShowing()) {
                 return;
             }
-            dialog = new AlertDialog.Builder(context).setTitle("错误").setMessage(message)
+            dialog = new AlertDialog.Builder(context).setTitle(R.string.rtc_error_title).setMessage(message)
                     .setPositiveButton("OK", (d, which) -> d.dismiss())
                     .show();
         });

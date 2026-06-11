@@ -1,11 +1,13 @@
 package com.openim.tophone.utils;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
@@ -13,7 +15,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
+import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.enums.CallLogType;
@@ -57,7 +61,7 @@ public class PhoneStateService extends Service {
                 super.onCallStateChanged(state, phoneNumber);
                 if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
                     Log.e(TAG, "phoneNumber is null or empty");
-                    Toast.makeText(BaseApp.inst(), "监听到通话信息，但是由于没有权限无法获取电话号码，上报取消，请检查权限问题！", Toast.LENGTH_LONG).show();
+                    Toast.makeText(BaseApp.inst(), R.string.toast_call_no_permission, Toast.LENGTH_LONG).show();
                     return;
                 }
 
@@ -68,7 +72,9 @@ public class PhoneStateService extends Service {
                             endTime = System.currentTimeMillis();
                             long duration = (endTime - startTime) / 1000;
                             Log.d("Call", "通话时长：" + duration + "秒");
-                            Toast.makeText(BaseApp.inst(),phoneNumber+"---->通话时长(秒)："+duration,Toast.LENGTH_LONG).show();
+                            Toast.makeText(BaseApp.inst(),
+                                    BaseApp.inst().getString(R.string.toast_call_duration_with_number, phoneNumber, duration),
+                                    Toast.LENGTH_LONG).show();
                             onCallFinish(phoneNumber, duration);
                         } else if (isRinging && phoneNumber != null && !phoneNumber.trim().isEmpty()) {
                             // 响铃中挂断/未接（模拟器 cancel、拒接等）
@@ -110,7 +116,23 @@ public class PhoneStateService extends Service {
             }
         };
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+        registerPhoneStateListenerIfAllowed();
+    }
+
+    private void registerPhoneStateListenerIfAllowed() {
+        if (telephonyManager == null || phoneStateListener == null) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "READ_PHONE_STATE not granted, skip phone state listener");
+            return;
+        }
+        try {
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+        } catch (SecurityException e) {
+            Log.e(TAG, "listen call state denied: " + e.getMessage());
+        }
     }
 
     @Override
@@ -132,15 +154,22 @@ public class PhoneStateService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        createNotificationChannel();
+        try {
+            createNotificationChannel();
 
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("正在运行")
-                .setContentText("监控通话状态")
-                .setSmallIcon(android.R.drawable.sym_action_call)
-                .build();
+            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                    .setContentTitle("Running")
+                    .setContentText("Monitoring call state")
+                    .setSmallIcon(android.R.drawable.sym_action_call)
+                    .build();
 
-        startForeground(NOTIFICATION_ID, notification);
+            startForeground(NOTIFICATION_ID, notification);
+        } catch (Exception e) {
+            Log.e(TAG, "startForeground failed: " + e.getMessage());
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        registerPhoneStateListenerIfAllowed();
         return START_STICKY;
     }
 
@@ -173,14 +202,16 @@ public class PhoneStateService extends Service {
                     if (response.code == 200) {
                         location = response.shengfen + "·" + response.chengshi + "·" + response.fuwushang;
                     } else {
-                        location = "中國·大陸";
+                        location = "China Mainland";
                     }
-                    Log.d("Chat", "归属地：" + location);
-                    Toast.makeText(BaseApp.inst(), "归属地：" + location, Toast.LENGTH_SHORT).show();
+                    Log.d("Chat", "Caller location: " + location);
+                    Toast.makeText(BaseApp.inst(),
+                            BaseApp.inst().getString(R.string.toast_incoming_location, location),
+                            Toast.LENGTH_SHORT).show();
                     MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, location);
                 }, throwable -> {
                     Log.e("Chat", "获取归属地失败: " + throwable.getMessage());
-                    Toast.makeText(BaseApp.inst(), "获取归属地失败", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(BaseApp.inst(), R.string.toast_location_failed, Toast.LENGTH_SHORT).show();
                     MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, "");
                 });
         N.addDispose(this.getClass().getSimpleName(), disposable);

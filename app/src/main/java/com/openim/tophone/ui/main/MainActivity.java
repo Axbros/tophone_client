@@ -9,12 +9,15 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.graphics.Bitmap;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,7 +32,6 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
-import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.rtc.RawAudioDataActivity;
@@ -37,6 +39,7 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.PhoneStateService;
+import com.openim.tophone.utils.QrCodeHelper;
 import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
@@ -50,6 +53,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static String TAG = "MainActivity";
     public static SharedPreferences sp;
     private TextView callLogStatisticText;
+    private ImageView pairingQrImage;
 
     private static Button connectBtn;
 
@@ -60,7 +64,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private long rtcLastClickTime = 0;
 
     public static void seBtnConnectDisable(){
-        connectBtn.setEnabled(false);
+        if (connectBtn != null) {
+            connectBtn.setEnabled(false);
+        }
     }
 
 
@@ -70,11 +76,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         super.onCreate(savedInstanceState);
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         callLogStatisticText = findViewById(R.id.call_log_statistic_text);
+        pairingQrImage = findViewById(R.id.pairing_qr_image);
         View headerBGImage = findViewById(R.id.header_include);
         setupHiddenDomainEntry(headerBGImage);
         setupHiddenRtcEntry(callLogStatisticText);
         connectBtn = findViewById(R.id.btn_connect);
-        callLogStatisticText.setText("No Call Log Data Now");
         // 格式化字符串并设置
         int currentYear = Calendar.getInstance().get(Calendar.YEAR) ;
         TextView textView = findViewById(R.id.copyright);
@@ -84,9 +90,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
         VMStore.init(vm);
+        vm.showPairingQr.observe(this, this::refreshPairingQr);
+        vm.showBoundFeatures.observe(this, this::onBoundFeaturesChanged);
 
-
-
+        ((MainApplication) getApplication()).startBootstrap();
         startAppInitialization();
 
     }
@@ -126,7 +133,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
         machineCode = DeviceUtils.getOrCreateClientDeviceId(BaseApp.inst());
         if (machineCode == null || machineCode.isEmpty()) {
-            Toast.makeText(BaseApp.inst(), "未能獲取到設備ID 請檢查是否具有對應權限！", Toast.LENGTH_LONG).show();
+            Toast.makeText(BaseApp.inst(), R.string.toast_device_id_missing, Toast.LENGTH_LONG).show();
             return;
         }
         checkAndRequestPermissions();
@@ -138,10 +145,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         } else {
             vm.accountID.setValue(machineCode);
         }
-
-        Intent intent = new Intent(this, PhoneStateService.class);
-        startService(intent);
-
     }
 
     private void initStorage() {
@@ -199,12 +202,22 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.READ_SMS);
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.READ_CALL_LOG);
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
 
-        // ✅ 如果还有权限没获取，发起请求
+        // 如果还有权限没获取，发起请求
         if (!permissionsToRequest.isEmpty()) {
             ActivityCompat.requestPermissions(this,
                     permissionsToRequest.toArray(new String[0]),
@@ -212,9 +225,17 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             return false;
         }
 
-        // ✅ 权限都已授予，执行后续初始化逻辑
-        handlePostPermissionLogic();
+        // 权限都已授予，执行后续初始化逻辑
+        onPermissionsReady(true);
         return true;
+    }
+
+    private void onPermissionsReady(boolean allGranted) {
+        if (allGranted) {
+            handlePostPermissionLogic();
+        } else {
+            Toast.makeText(this, R.string.toast_permissions_denied, Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override
@@ -231,113 +252,174 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             }
 
             if (allGranted) {
-                Toast.makeText(this, "所有权限已授予", Toast.LENGTH_SHORT).show();
-                handlePostPermissionLogic();
+                Toast.makeText(this, R.string.toast_permissions_granted, Toast.LENGTH_SHORT).show();
+                onPermissionsReady(true);
             } else {
-                Toast.makeText(this, "部分权限未授予，应用可能无法正常运行", Toast.LENGTH_LONG).show();
+                onPermissionsReady(false);
             }
         }
     }
 
     private void handlePostPermissionLogic() {
-        // 启动 PhoneStateService
-        Intent serviceIntent = new Intent(this, PhoneStateService.class);
-        startForegroundService(serviceIntent);
-
-        // 更新权限状态
-        vm.phonePermissions.setValue(true);
-        vm.smsPermissions.setValue(true);
-
-        // 忽略电池优化（跳转设置）
-//        Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-//        batteryIntent.setData(Uri.parse("package:" + getPackageName()));
-//        startActivity(batteryIntent);
-
-        // 打开通知设置页面（可选）
-//        Intent notificationIntent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-//        notificationIntent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-//        startActivity(notificationIntent);
-
-        // 权限就绪后重新上报设备指纹（含手机号）
+        if (Boolean.TRUE.equals(vm.showBoundFeatures.getValue())) {
+            startPhoneStateServiceSafely();
+        }
+        promptDefaultDialerIfNeeded();
         MainApplication app = (MainApplication) getApplication();
         app.triggerDeviceProfileRefresh();
+    }
 
-        // 执行初始化逻辑
+    private boolean hasPhonePermissions() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasSmsPermissions() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void startPhoneStateServiceSafely() {
+        if (!hasPhonePermissions()) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        try {
+            Intent serviceIntent = new Intent(this, PhoneStateService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception e) {
+            L.e(TAG, "start PhoneStateService failed: " + e.getMessage());
+            Toast.makeText(this, R.string.toast_phone_service_failed, Toast.LENGTH_LONG).show();
+        }
     }
 
     private void startAppInitialization() {
         initStorage();
         init();
         vm.syncCheckInStatus(this);
-        initObserve();
         initSMSListener();
+        // 默认拨号器设置延后到权限就绪后，避免首次打开立即跳转系统页
     }
 
-    public void initObserve() {
-        Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
-        intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
-        startActivity(intent);
+    private void promptDefaultDialerIfNeeded() {
+        try {
+            Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+            intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
+            startActivity(intent);
+        } catch (Exception e) {
+            L.w(TAG, "prompt default dialer skipped: " + e.getMessage());
+        }
     }
 
     public void initSMSListener() {
-        // 检查是否已经有读取短信的权限
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            // 如果没有权限，请求权限
-            vm.smsPermissions.setValue(false);
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_SMS},
-                    PERMISSION_REQUEST_CODE);
-        } else {
-            vm.smsPermissions.setValue(true);
-        }
+        // SMS 系统权限与后台策略状态无关，仅用于本地监听
     }
 
 
-    private BroadcastReceiver receiver = new BroadcastReceiver() {
+    private void refreshPairingQr(Boolean show) {
+        if (pairingQrImage == null || !Boolean.TRUE.equals(show)) {
+            return;
+        }
+        String deviceCode = machineCode;
+        if (deviceCode == null || deviceCode.isEmpty()) {
+            deviceCode = DeviceUtils.getOrCreateClientDeviceId(this);
+        }
+        if (deviceCode == null || deviceCode.isEmpty()) {
+            return;
+        }
+        String payload = QrCodeHelper.buildDevicePairingPayload(deviceCode);
+        Bitmap bitmap = QrCodeHelper.encode(payload, 512);
+        if (bitmap != null) {
+            pairingQrImage.setImageBitmap(bitmap);
+        }
+    }
+
+    private void refreshCallLogStatistic() {
+        if (callLogStatisticText == null) {
+            return;
+        }
+        SharedPreferencesUtil prefs = SharedPreferencesUtil.get(this);
+        callLogStatisticText.setText(prefs.formatTodayCallStats());
+    }
+
+    private boolean callLogReceiverRegistered = false;
+
+    private void onBoundFeaturesChanged(Boolean bound) {
+        if (Boolean.TRUE.equals(bound)) {
+            refreshCallLogStatistic();
+            if (hasPhonePermissions()) {
+                startPhoneStateServiceSafely();
+            }
+            registerCallLogReceiverIfNeeded();
+        } else {
+            unregisterCallLogReceiverIfNeeded();
+        }
+    }
+
+    private void registerCallLogReceiverIfNeeded() {
+        if (callLogReceiverRegistered) {
+            return;
+        }
+        registerReceiver(receiver, new IntentFilter("CALL_LOG_EVENT"));
+        callLogReceiverRegistered = true;
+    }
+
+    private void unregisterCallLogReceiverIfNeeded() {
+        if (!callLogReceiverRegistered) {
+            return;
+        }
+        try {
+            unregisterReceiver(receiver);
+        } catch (IllegalArgumentException ignored) {
+        }
+        callLogReceiverRegistered = false;
+    }
+
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String number = intent.getStringExtra("number");
             String callType = intent.getStringExtra("type");
-
-            SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(MainActivity.this);
-            sharedPreferencesUtil.checkAndResetDailyStats();
-            int CALL_IN_TOTAL=sharedPreferencesUtil.getTodayCallInCount();
-            int CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
             if (callType != null) {
-                if (CallLogType.CALL_IN.getDescription().equals(callType)) {
-                    sharedPreferencesUtil.increaseCallInCount();
-                    CALL_IN_TOTAL =sharedPreferencesUtil.getTodayCallInCount();
-                } else if (CallLogType.CALL_OUT.getDescription().equals(callType)) {
-                    sharedPreferencesUtil.increaseCallOutCount();
-                    CALL_OUT_TOTAL = sharedPreferencesUtil.getTodayCallOutCount();
-                }
+                SharedPreferencesUtil.get(MainActivity.this).recordCallEvent(callType);
             }
-
-            // 更新 UI：用 String.format 插入变量
-            @SuppressLint("DefaultLocale") String text = String.format("IN：%d  | OUT：%d ", CALL_IN_TOTAL, CALL_OUT_TOTAL);
-            callLogStatisticText.setText(text);
+            refreshCallLogStatistic();
         }
-
     };
 
     @Override
     protected void onStart() {
         super.onStart();
-        registerReceiver(receiver, new IntentFilter("CALL_LOG_EVENT"));
         vm.syncCheckInStatus(this);
+        if (Boolean.TRUE.equals(vm.showBoundFeatures.getValue())) {
+            registerCallLogReceiverIfNeeded();
+            refreshCallLogStatistic();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         vm.syncCheckInStatus(this);
+        if (Boolean.TRUE.equals(vm.showBoundFeatures.getValue())) {
+            refreshCallLogStatistic();
+        }
+        ((MainApplication) getApplication()).triggerDeviceProfileRefresh();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        unregisterReceiver(receiver);
+        unregisterCallLogReceiverIfNeeded();
     }
 
     private void setupHiddenDomainEntry(View targetView) {

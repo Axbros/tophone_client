@@ -8,17 +8,18 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.RXRetrofit.HttpConfig;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.mqtt.MqttManager;
+import com.openim.tophone.openim.entity.CheckVersionResp;
 import com.openim.tophone.openim.entity.CurrentVersionReq;
 import com.openim.tophone.openim.entity.DeviceLoginReq;
 import com.openim.tophone.openim.entity.DeviceLoginResp;
 import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.repository.LoginApi;
 import com.openim.tophone.stroage.VMStore;
-import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
@@ -27,13 +28,20 @@ import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import okhttp3.Request;
 
 public class MainApplication extends BaseApp {
     private static final String TAG = "VersionCheck";
+    private static final long CHECK_VERSION_RETRY_MS = 30_000L;
+    private static final long POLICY_SYNC_MS = 30_000L;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private String pendingCheckDeviceCode;
+    private String activeCheckedInDeviceCode;
+    private final AtomicBoolean bootstrapInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean policySyncInFlight = new AtomicBoolean(false);
 
     public static SharedPreferences sp;
 
@@ -83,17 +91,24 @@ public class MainApplication extends BaseApp {
                     return chain.proceed(request);
                 })
         );
+    }
 
-        long delayMs = 1L * 1000L;
-        mainHandler.postDelayed(this::ensureDeviceAccountAndCheckIn, delayMs);
+    /** 由 MainActivity 在界面就绪后触发（无需电话/SMS 权限即可登录） */
+    public void startBootstrap() {
+        mainHandler.postDelayed(this::ensureDeviceAccountAndCheckIn, 500L);
     }
 
     /** 设备 ID 自动注册/登录，再执行 check_version */
     @SuppressLint("CheckResult")
     private void ensureDeviceAccountAndCheckIn() {
+        if (!bootstrapInFlight.compareAndSet(false, true)) {
+            Log.d(TAG, "bootstrap already in flight, skip duplicate login");
+            return;
+        }
         Context context = BaseApp.inst();
         if (context == null) {
             Log.e(TAG, "context is null, abort");
+            bootstrapInFlight.set(false);
             return;
         }
 
@@ -112,36 +127,44 @@ public class MainApplication extends BaseApp {
                 .compose(N.IOMain())
                 .subscribe(
                         loginResp -> {
+                            bootstrapInFlight.set(false);
                             if (loginResp != null && loginResp.code == 0 && loginResp.data != null) {
                                 saveDeviceAccount(context, loginResp.data);
                                 checkVersionAndLimit(clientDeviceId);
                             } else {
                                 Log.w(TAG, "deviceLogin failed: " + (loginResp != null ? loginResp.msg : "null"));
-                                toast(context, "设备登录失败，程序即将退出");
-                                forceExit();
+                                toastRes(context, R.string.toast_login_failed);
+                                scheduleBootstrapRetry();
                             }
                         },
                         throwable -> {
+                            bootstrapInFlight.set(false);
                             Log.e(TAG, "deviceLogin error", throwable);
-                            toast(context, "网络异常，程序即将退出");
-                            forceExit();
+                            toastRes(context, R.string.toast_network_error);
+                            scheduleBootstrapRetry();
                         }
                 );
     }
 
     @SuppressLint("CheckResult")
     private void checkVersionAndLimit(String deviceCode) {
+        checkVersionAndLimit(deviceCode, true);
+    }
+
+    @SuppressLint("CheckResult")
+    private void checkVersionAndLimit(String deviceCode, boolean reconnectMqtt) {
         Context context = BaseApp.inst();
         if (context == null) {
             Log.e(TAG, "context is null, abort");
             return;
         }
         if (deviceCode == null || deviceCode.isEmpty()) {
-            toast(context, "设备 ID 无效，程序即将退出");
-            forceExit();
+            toastRes(context, R.string.toast_invalid_device_id);
+            scheduleBootstrapRetry();
             return;
         }
 
+        pendingCheckDeviceCode = deviceCode;
         sp = context.getSharedPreferences(
                 Constants.getSharedPrefsKeys_FILE_NAME(),
                 Context.MODE_PRIVATE
@@ -157,45 +180,148 @@ public class MainApplication extends BaseApp {
                 .checkCurrentVersion(req)
                 .compose(N.IOMain())
                 .subscribe(
-                        resp -> {
-                            if (resp == null || resp.data == null) {
-                                toast(context, "版本检测返回异常，程序即将退出！");
-                                forceExit();
-                                return;
-                            }
-
-                            if (resp.code != 0) {
-                                toast(context, resp.data.info);
-                                forceExit();
-                                return;
-                            }
-
-                            if (!resp.data.isExist) {
-                                saveCheckInStatus(context, false);
-                                clearAssignedRoomId(context);
-                                MqttManager.getInstance().disconnect();
-                                String msg = resp.data.info != null ? resp.data.info : "等待中";
-                                if (resp.data.timeOut != null && resp.data.timeOut > 0) {
-                                    long timeoutMinutes = Math.max(1, resp.data.timeOut);
-                                    long timeoutMs = timeoutMinutes * 60L * 1000L;
-                                    toast(context, msg + "，程序将在 " + timeoutMinutes + " 分钟后退出！");
-                                    mainHandler.postDelayed(this::forceExit, timeoutMs);
-                                } else {
-                                    toast(context, msg);
-                                    forceExit();
-                                }
-                                return;
-                            }
-
-                            saveCheckInStatus(context, true);
-                            saveAssignedRoomId(context, resp.data.roomID);
-                            MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
-                            toast(context, resp.data.info);
-                        },
+                        resp -> handleCheckVersionResponse(context, deviceCode, resp, reconnectMqtt),
                         throwable -> {
                             Log.e(TAG, "checkVersion failed", throwable);
-                            toast(context, "网络异常，程序即将退出！");
-                            forceExit();
+                            toastRes(context, R.string.toast_network_error);
+                            scheduleCheckVersionRetry(deviceCode, CHECK_VERSION_RETRY_MS);
+                        }
+                );
+    }
+
+    private void handleCheckVersionResponse(
+            Context context,
+            String deviceCode,
+            CheckVersionResp resp,
+            boolean reconnectMqtt
+    ) {
+        if (resp == null || resp.data == null) {
+            toastRes(context, R.string.toast_version_check_invalid);
+            scheduleCheckVersionRetry(deviceCode, CHECK_VERSION_RETRY_MS);
+            return;
+        }
+
+        if (resp.code != 0) {
+            String msg = resp.data.info != null ? resp.data.info : context.getString(R.string.toast_version_check_error);
+            toast(context, msg);
+            scheduleCheckVersionRetry(deviceCode, CHECK_VERSION_RETRY_MS);
+            return;
+        }
+
+        applyPolicyFromCheckVersion(resp.data, reconnectMqtt);
+        applyBindStateFromCheckVersion(context, resp.data);
+
+        if (Boolean.TRUE.equals(resp.data.isExist)) {
+            mainHandler.removeCallbacks(checkVersionRetryRunnable);
+            pendingCheckDeviceCode = null;
+            activeCheckedInDeviceCode = deviceCode;
+            saveCheckInStatus(context, true);
+            saveAssignedRoomId(context, resp.data.roomID);
+            if (reconnectMqtt || !MqttManager.getInstance().isConnected()) {
+                if (reconnectMqtt) {
+                    MqttManager.getInstance().forceReconnect(context, deviceCode, resp.data);
+                } else {
+                    MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
+                }
+            }
+            schedulePolicySync();
+            if (reconnectMqtt && resp.data.info != null && !resp.data.info.isEmpty()) {
+                toast(context, resp.data.info);
+            }
+            return;
+        }
+
+        saveCheckInStatus(context, false);
+        clearAssignedRoomId(context);
+        activeCheckedInDeviceCode = null;
+        stopPolicySync();
+        MqttManager.getInstance().disconnect();
+        String msg = resp.data.info != null ? resp.data.info : context.getString(R.string.toast_waiting);
+        toast(context, msg);
+
+        scheduleCheckVersionRetry(deviceCode, CHECK_VERSION_RETRY_MS);
+    }
+
+    private void scheduleBootstrapRetry() {
+        mainHandler.removeCallbacks(bootstrapRetryRunnable);
+        mainHandler.postDelayed(bootstrapRetryRunnable, CHECK_VERSION_RETRY_MS);
+    }
+
+    private final Runnable bootstrapRetryRunnable = this::ensureDeviceAccountAndCheckIn;
+
+    private void scheduleCheckVersionRetry(String deviceCode, long delayMs) {
+        if (deviceCode == null || deviceCode.isEmpty()) {
+            return;
+        }
+        pendingCheckDeviceCode = deviceCode;
+        mainHandler.removeCallbacks(checkVersionRetryRunnable);
+        mainHandler.postDelayed(checkVersionRetryRunnable, delayMs);
+    }
+
+    private final Runnable checkVersionRetryRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (pendingCheckDeviceCode != null && !pendingCheckDeviceCode.isEmpty()) {
+                checkVersionAndLimit(pendingCheckDeviceCode, true);
+            }
+        }
+    };
+
+    private final Runnable policySyncRunnable = new Runnable() {
+        @Override
+        public void run() {
+            syncPolicyFromServer();
+            schedulePolicySync();
+        }
+    };
+
+    private void schedulePolicySync() {
+        if (activeCheckedInDeviceCode == null || activeCheckedInDeviceCode.isEmpty()) {
+            return;
+        }
+        mainHandler.removeCallbacks(policySyncRunnable);
+        mainHandler.postDelayed(policySyncRunnable, POLICY_SYNC_MS);
+    }
+
+    private void stopPolicySync() {
+        mainHandler.removeCallbacks(policySyncRunnable);
+    }
+
+    @SuppressLint("CheckResult")
+    private void syncPolicyFromServer() {
+        if (activeCheckedInDeviceCode == null || activeCheckedInDeviceCode.isEmpty()) {
+            return;
+        }
+        if (!policySyncInFlight.compareAndSet(false, true)) {
+            return;
+        }
+        Context context = BaseApp.inst();
+        if (context == null) {
+            policySyncInFlight.set(false);
+            return;
+        }
+        String deviceCode = activeCheckedInDeviceCode;
+        CurrentVersionReq req = new CurrentVersionReq(
+                AppVersionUtil.getVersionName(context),
+                deviceCode,
+                DeviceUtils.collectProfile(context, deviceCode)
+        );
+        N.mAPI(CallLogApi.class)
+                .checkCurrentVersion(req)
+                .compose(N.IOMain())
+                .subscribe(
+                        resp -> {
+                            policySyncInFlight.set(false);
+                            if (resp != null && resp.code == 0 && resp.data != null) {
+                                applyPolicyFromCheckVersion(resp.data, true);
+                                if (!MqttManager.getInstance().isConnected()) {
+                                    MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
+                                }
+                            }
+                        },
+                        throwable -> {
+                            policySyncInFlight.set(false);
+                            Log.w(TAG, "policy sync failed", throwable);
                         }
                 );
     }
@@ -239,12 +365,32 @@ public class MainApplication extends BaseApp {
     }
 
     public void triggerMqttReconnect(String groupName) {
-        ensureDeviceAccountAndCheckIn();
+        refreshCheckVersionOnly(true);
     }
 
     /** 权限授予后重新 check_version，上报含手机号的设备指纹 */
     public void triggerDeviceProfileRefresh() {
-        ensureDeviceAccountAndCheckIn();
+        if (activeCheckedInDeviceCode != null && !activeCheckedInDeviceCode.isEmpty()) {
+            syncPolicyFromServer();
+            return;
+        }
+        refreshCheckVersionOnly();
+    }
+
+    private void refreshCheckVersionOnly() {
+        refreshCheckVersionOnly(false);
+    }
+
+    private void refreshCheckVersionOnly(boolean reconnectMqtt) {
+        Context context = BaseApp.inst();
+        if (context == null) {
+            return;
+        }
+        String clientDeviceId = DeviceUtils.getOrCreateClientDeviceId(context);
+        if (clientDeviceId == null || clientDeviceId.isEmpty()) {
+            return;
+        }
+        checkVersionAndLimit(clientDeviceId, reconnectMqtt);
     }
 
     private void saveCheckInStatus(Context context, boolean checkedIn) {
@@ -258,6 +404,60 @@ public class MainApplication extends BaseApp {
     private void notifyCheckInStatus(boolean checkedIn) {
         try {
             VMStore.get().checkedIn.setValue(checkedIn);
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
+    private void applyBindStateFromCheckVersion(Context context, com.openim.tophone.openim.entity.CheckVersionDataResp data) {
+        if (data == null) {
+            return;
+        }
+        try {
+            if (!VMStore.isInitialized()) {
+                return;
+            }
+            if (Boolean.TRUE.equals(data.isExist)) {
+                String groupName = data.groupName != null ? data.groupName.trim() : "";
+                persistGroupName(context, groupName);
+                VMStore.get().updateBindState(false, groupName);
+                return;
+            }
+            if (Boolean.TRUE.equals(data.waitAssign)) {
+                persistGroupName(context, "");
+                VMStore.get().updateBindState(true, "");
+                return;
+            }
+            if (Boolean.TRUE.equals(data.waitCheckIn)) {
+                String groupName = data.groupName != null ? data.groupName.trim() : "";
+                persistGroupName(context, groupName);
+                VMStore.get().updateBindState(false, groupName);
+            }
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
+    private void persistGroupName(Context context, String groupName) {
+        context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
+                .edit()
+                .putString(Constants.getGroupName(), groupName != null ? groupName : "")
+                .apply();
+        if (groupName != null && !groupName.isEmpty()) {
+            notifyGroupName(groupName);
+        }
+    }
+
+    private void applyPolicyFromCheckVersion(
+            com.openim.tophone.openim.entity.CheckVersionDataResp data,
+            boolean notify
+    ) {
+        if (data == null || (data.voiceDisabled == null && data.smsDisabled == null && data.status == null)) {
+            return;
+        }
+        boolean voiceDisabled = Boolean.TRUE.equals(data.voiceDisabled);
+        boolean smsDisabled = Boolean.TRUE.equals(data.smsDisabled);
+        int status = data.status != null ? data.status : 1;
+        try {
+            VMStore.get().applyDevicePolicy(voiceDisabled, smsDisabled, status, notify);
         } catch (IllegalStateException ignored) {
         }
     }
@@ -285,9 +485,9 @@ public class MainApplication extends BaseApp {
         Toast.makeText(context, msg != null ? msg : "", Toast.LENGTH_LONG).show();
     }
 
-    private void forceExit() {
-        MainActivity.seBtnConnectDisable();
-        System.exit(0);
+    private void toastRes(Context context, int resId) {
+        if (context == null) return;
+        Toast.makeText(context, resId, Toast.LENGTH_LONG).show();
     }
 
     public void offline() {

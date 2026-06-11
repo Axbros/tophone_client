@@ -2,6 +2,7 @@ package com.openim.tophone.mqtt;
 
 import android.content.Context;
 
+import com.openim.tophone.MainApplication;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.entity.DevicePresenceReq;
 import com.openim.tophone.stroage.VMStore;
@@ -15,15 +16,16 @@ import info.mqtt.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
 
 /**
  * 设备端 MQTT：订阅 cmd (QoS1)，发布 ack/status + LWT (QoS0)。
  */
-public class MqttCommandClient implements MqttCallback {
+public class MqttCommandClient implements MqttCallbackExtended {
 
     private static final String TAG = "MqttCommandClient";
     private static final int QOS_CMD = 1;
@@ -35,6 +37,7 @@ public class MqttCommandClient implements MqttCallback {
     private final RequestIdDedup dedup = new RequestIdDedup();
     private MqttAndroidClient client;
     private MqttReplyChannel replyChannel;
+    private volatile boolean connecting;
 
     public MqttCommandClient(Context context, String deviceId) {
         this.appContext = context.getApplicationContext();
@@ -44,17 +47,40 @@ public class MqttCommandClient implements MqttCallback {
     }
 
     public void connect(String brokerUri, String username, String mqttToken) {
+        connect(brokerUri, username, mqttToken, null);
+    }
+
+    public void connect(String brokerUri, String username, String mqttToken, Runnable onAuthFailure) {
+        if (connecting) {
+            L.d(TAG, "connect skipped: already in flight");
+            return;
+        }
+        if (client != null && client.isConnected()) {
+            L.d(TAG, "connect skipped: already connected");
+            return;
+        }
         disconnectQuietly();
+
+        String user = username != null ? username.trim() : "";
+        String pwd = mqttToken != null ? mqttToken.trim() : "";
+        if (user.isEmpty() || pwd.isEmpty()) {
+            L.e(TAG, "MQTT connect skipped: empty username or password");
+            if (onAuthFailure != null) {
+                onAuthFailure.run();
+            }
+            return;
+        }
 
         String clientId = "device_" + deviceId;
         client = new MqttAndroidClient(appContext, brokerUri, clientId);
         client.setCallback(this);
 
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setAutomaticReconnect(true);
+        options.setAutomaticReconnect(false);
         options.setCleanSession(true);
-        options.setUserName(username);
-        options.setPassword(mqttToken.toCharArray());
+        options.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1_1);
+        options.setUserName(user);
+        options.setPassword(pwd.toCharArray());
         options.setConnectionTimeout(15);
         options.setKeepAliveInterval(30);
 
@@ -63,32 +89,125 @@ public class MqttCommandClient implements MqttCallback {
         String willPayload = "{\"online\":false,\"deviceId\":\"" + deviceId + "\",\"ts\":" + ts + "}";
         options.setWill(willTopic, willPayload.getBytes(), QOS_ACK, false);
 
-        VMStore.get().isLoading.setValue(true);
-        VMStore.get().connectionStatus.setValue(false);
+        setVmLoading(true);
+        setVmConnectionStatus(false);
+        connecting = true;
 
         try {
             client.connect(options, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+                    connecting = false;
                     L.d(TAG, "MQTT connected, deviceId=" + deviceId);
                     subscribeCmd();
+                    subscribeMeta();
                     publishStatus(true);
-                    VMStore.get().isLoading.setValue(false);
-                    VMStore.get().connectionStatus.setValue(true);
+                    setVmLoading(false);
+                    setVmConnectionStatus(true);
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    connecting = false;
+                    int reasonCode = exception instanceof MqttException
+                            ? ((MqttException) exception).getReasonCode()
+                            : -1;
                     L.e(TAG, "MQTT connect failed: " + exception.getMessage()
-                            + " broker=" + brokerUri + " user=" + username);
-                    VMStore.get().isLoading.setValue(false);
-                    VMStore.get().connectionStatus.setValue(false);
+                            + " reasonCode=" + reasonCode
+                            + " broker=" + brokerUri + " user=" + user + " jwtLen=" + pwd.length());
+                    setVmLoading(false);
+                    setVmConnectionStatus(false);
+                    if (onAuthFailure != null && isAuthFailure(exception)) {
+                        onAuthFailure.run();
+                    }
                 }
             });
         } catch (Exception e) {
+            connecting = false;
             L.e(TAG, "connect exception: " + e.getMessage());
-            VMStore.get().isLoading.setValue(false);
-            VMStore.get().connectionStatus.setValue(false);
+            setVmLoading(false);
+            setVmConnectionStatus(false);
+        }
+    }
+
+    private static boolean isAuthFailure(Throwable exception) {
+        if (exception == null) {
+            return false;
+        }
+        if (exception instanceof MqttException) {
+            int rc = ((MqttException) exception).getReasonCode();
+            if (rc == MqttException.REASON_CODE_NOT_AUTHORIZED) {
+                return true;
+            }
+        }
+        String msg = exception.getMessage();
+        if (msg == null) {
+            return false;
+        }
+        String lower = msg.toLowerCase();
+        return lower.contains("not authorized")
+                || lower.contains("not authorised")
+                || lower.contains("bad user name or password")
+                || lower.contains("invalid credentials");
+    }
+
+    public boolean isConnecting() {
+        return connecting;
+    }
+
+    private static void setVmLoading(boolean loading) {
+        if (!VMStore.isInitialized()) {
+            return;
+        }
+        VMStore.get().isLoading.postValue(loading);
+    }
+
+    private static void setVmConnectionStatus(boolean connected) {
+        if (!VMStore.isInitialized()) {
+            return;
+        }
+        VMStore.get().connectionStatus.postValue(connected);
+    }
+
+    @Override
+    public void connectComplete(boolean reconnect, String serverURI) {
+        L.d(TAG, "connectComplete reconnect=" + reconnect + " uri=" + serverURI);
+        if (reconnect) {
+            subscribeCmd();
+            subscribeMeta();
+            try {
+                publishStatus(true);
+            } catch (Exception e) {
+                L.w(TAG, "publishStatus after reconnect failed: " + e.getMessage());
+            }
+            setVmConnectionStatus(true);
+        }
+    }
+
+    private void handleMetaMessage(String body) {
+        try {
+            JSONObject json = new JSONObject(body);
+            String type = json.optString("type", "");
+            if ("assigned".equals(type) || "unassigned".equals(type)) {
+                L.i(TAG, "group meta type=" + type);
+                MainApplication app = (MainApplication) appContext;
+                app.triggerDeviceProfileRefresh();
+                return;
+            }
+            if (!"policy".equals(type)) {
+                return;
+            }
+            boolean voiceDisabled = json.optBoolean("voiceDisabled", false);
+            boolean smsDisabled = json.optBoolean("smsDisabled", false);
+            int status = json.optInt("status", 1);
+            L.i(TAG, "policy meta voiceDisabled=" + voiceDisabled
+                    + " smsDisabled=" + smsDisabled + " status=" + status);
+            if (!VMStore.isInitialized()) {
+                return;
+            }
+            VMStore.get().applyDevicePolicy(voiceDisabled, smsDisabled, status);
+        } catch (Exception e) {
+            L.e(TAG, "handleMetaMessage failed: " + e.getMessage());
         }
     }
 
@@ -97,10 +216,33 @@ public class MqttCommandClient implements MqttCallback {
     }
 
     private void subscribeCmd() {
+        subscribeTopic("tophone/cmd/" + deviceId, QOS_CMD);
+    }
+
+    private void subscribeMeta() {
+        subscribeTopic("tophone/meta/" + deviceId, QOS_ACK);
+    }
+
+    private void subscribeTopic(String topic, int qos) {
+        if (client == null) {
+            L.w(TAG, "subscribe skipped, client null: " + topic);
+            return;
+        }
         try {
-            client.subscribe("tophone/cmd/" + deviceId, QOS_CMD);
+            client.subscribe(topic, qos, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    L.i(TAG, "subscribed " + topic);
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    L.e(TAG, "subscribe failed " + topic + ": "
+                            + (exception != null ? exception.getMessage() : "unknown"));
+                }
+            });
         } catch (Exception e) {
-            L.e(TAG, "subscribe failed: " + e.getMessage());
+            L.e(TAG, "subscribe exception " + topic + ": " + e.getMessage());
         }
     }
 
@@ -165,12 +307,16 @@ public class MqttCommandClient implements MqttCallback {
     @Override
     public void connectionLost(Throwable cause) {
         L.w(TAG, "connection lost: " + (cause != null ? cause.getMessage() : ""));
-        VMStore.get().connectionStatus.setValue(false);
+        setVmConnectionStatus(false);
     }
 
     @Override
     public void messageArrived(String topic, MqttMessage message) {
         String body = new String(message.getPayload());
+        if (topic != null && topic.startsWith("tophone/meta/")) {
+            handleMetaMessage(body);
+            return;
+        }
         L.d(TAG, "cmd: " + body);
         try {
             JSONObject json = new JSONObject(body);
@@ -192,22 +338,34 @@ public class MqttCommandClient implements MqttCallback {
     }
 
     public void disconnect() {
-        if (client != null && client.isConnected()) {
+        MqttAndroidClient c = client;
+        client = null;
+        connecting = false;
+        if (c != null) {
             try {
-                publishStatus(false);
+                c.setCallback(null);
+                if (c.isConnected()) {
+                    try {
+                        JSONObject status = new JSONObject();
+                        status.put("online", false);
+                        status.put("deviceId", deviceId);
+                        status.put("ts", System.currentTimeMillis());
+                        MqttMessage message = new MqttMessage(status.toString().getBytes());
+                        message.setQos(QOS_ACK);
+                        message.setRetained(false);
+                        c.publish("tophone/status/" + deviceId, message);
+                    } catch (Exception ignored) {
+                    }
+                    c.disconnect();
+                }
+                c.close();
             } catch (Exception ignored) {
             }
-            disconnectQuietly();
         }
-        VMStore.get().connectionStatus.setValue(false);
+        setVmConnectionStatus(false);
     }
 
     private void disconnectQuietly() {
-        if (client == null) return;
-        try {
-            client.disconnect();
-        } catch (Exception ignored) {
-        }
-        client = null;
+        disconnect();
     }
 }

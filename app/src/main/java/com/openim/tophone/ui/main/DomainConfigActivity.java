@@ -31,14 +31,8 @@ import com.openim.tophone.utils.DomainManager;
 
 public class DomainConfigActivity extends AppCompatActivity {
 
-    // ===== 线路一：主域名 + 路径 =====
-    private static final String HOST_LINE_1 = "https://api-v3.huahaiye.cn";
-    private static final String PATH_LINE_1 = "/api-management/api/v1/domain/tophone";
-
-    // ===== 线路二：主域名 + 路径（你说主域名是 api.tophone.cc）=====
-//    private static final String HOST_LINE_2 = "https://api.tophone.cc";
-    private static final String HOST_LINE_2 = "http://10.0.2.2:8080";
-    private static final String PATH_LINE_2 = "/api/v1/domain/tophone"; // 如果你们线路二真实路径不同，就改这里
+    // 线路探测路径；host 统一从 Constants 读取，与 HTTP/MQTT 一致
+    private static final String PATH_LINE = "/api/v1/domain/tophone";
 
     private TextView tvCurrentHost;
     private Spinner spinner;
@@ -65,8 +59,9 @@ public class DomainConfigActivity extends AppCompatActivity {
 
     private void initLines() {
         lines.clear();
-        lines.add(new LineItem("线路一", HOST_LINE_1, PATH_LINE_1));
-        lines.add(new LineItem("线路二", HOST_LINE_2, PATH_LINE_2));
+        lines.add(new LineItem(getString(R.string.domain_line_auto), Constants.getLocalManagementBase(), PATH_LINE));
+        lines.add(new LineItem(getString(R.string.domain_line_lan), Constants.getLanDeviceManagementBase(), PATH_LINE));
+        lines.add(new LineItem(getString(R.string.domain_line_emulator), Constants.getEmulatorManagementBase(), PATH_LINE));
     }
 
     private void initSpinner() {
@@ -149,18 +144,18 @@ public class DomainConfigActivity extends AppCompatActivity {
                                 restartApp(this);
                             }, 1000);
                         } else {
-                            tvCurrentHost.setText("返回异常：\n" + body);
+                            tvCurrentHost.setText(getString(R.string.domain_response_error, body));
                         }
 
                     } catch (Exception e) {
-                        tvCurrentHost.setText("解析失败：" + e.getMessage());
+                        tvCurrentHost.setText(getString(R.string.domain_parse_failed, e.getMessage()));
                     }
                 });
 
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnTestSave.setEnabled(true);
-                    tvCurrentHost.setText("请求失败：" + e.getMessage());
+                    tvCurrentHost.setText(getString(R.string.domain_request_failed, e.getMessage()));
                 });
             } finally {
                 if (conn != null) conn.disconnect();
@@ -169,19 +164,17 @@ public class DomainConfigActivity extends AppCompatActivity {
     }
 
     private void refreshCurrentHostText() {
-        String host = Constants.DEFAULT_HOST;
-
-        // 如果当前 host 已被更新，优先用它
-        try {
-            // CURRENT_HOST 是 private，这里通过 URL 反推不合适
-            // 所以直接用缓存 or DEFAULT
+        String host = Constants.getLocalManagementBase();
+        if (!Constants.USE_LOCAL_LAN) {
             String cached = DomainManager.getHost(this);
             if (cached != null && !cached.isEmpty()) {
                 host = cached;
             }
-        } catch (Exception ignored) {}
-
-        tvCurrentHost.setText(host);
+        }
+        String env = Constants.isEmulator()
+                ? getString(R.string.domain_env_emulator)
+                : getString(R.string.domain_env_device);
+        tvCurrentHost.setText(host + " (" + env + ")");
     }
 
     private static String joinUrl(String host, String path) {

@@ -63,7 +63,8 @@
         <service
             android:name=".utils.PhoneStateService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="phoneCall" />
 
         <activity
             android:name=".ui.main.MainActivity"

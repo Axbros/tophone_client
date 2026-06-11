@@ -5,9 +5,20 @@ public class CheckVersionDataResp {
 
         public Boolean isExist;
 
+        public Boolean waitAssign;
+        public Boolean waitCheckIn;
+
+        public String groupName;
+        public Long groupId;
+        public String deviceCode;
+
         public Integer timeOut;
 
         public String roomID;
+
+        public Boolean voiceDisabled;
+        public Boolean smsDisabled;
+        public Integer status;
 
         /** check_version 在 mqtt.enable=true 时返回（扁平字段，兼容旧版） */
         public String mqttToken;
@@ -35,18 +46,18 @@ public class CheckVersionDataResp {
         }
 
         public String resolveMqttToken() {
-                if (mqtt != null && mqtt.password != null && !mqtt.password.isEmpty()) {
-                        return mqtt.password;
+                if (mqtt != null && mqtt.password != null && !mqtt.password.trim().isEmpty()) {
+                        return mqtt.password.trim();
                 }
-                return mqttToken;
+                return mqttToken != null ? mqttToken.trim() : null;
         }
 
         public String resolveMqttUsername(String deviceId) {
-                if (mqtt != null && mqtt.username != null && !mqtt.username.isEmpty()) {
-                        return mqtt.username;
+                if (mqtt != null && mqtt.username != null && !mqtt.username.trim().isEmpty()) {
+                        return mqtt.username.trim();
                 }
-                if (mqttUsername != null && !mqttUsername.isEmpty()) {
-                        return mqttUsername;
+                if (mqttUsername != null && !mqttUsername.trim().isEmpty()) {
+                        return mqttUsername.trim();
                 }
                 return "device_" + deviceId;
         }

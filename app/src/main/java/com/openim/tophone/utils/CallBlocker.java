@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.widget.Toast;
 
+import com.openim.tophone.R;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -36,7 +38,7 @@ public class CallBlocker {
      */
     public boolean blockPhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-            showToast("号码不能为空");
+            showToast(mContext.getString(R.string.blocker_number_empty));
             return false;
         }
 
@@ -44,13 +46,13 @@ public class CallBlocker {
         Set<String> blockedNumbers = getBlockedNumbers();
 
         if (blockedNumbers.contains(phoneNumber)) {
-            showToast("该号码已在黑名单中");
+            showToast(mContext.getString(R.string.blocker_already_blocked));
             return true;
         }
 
         blockedNumbers.add(phoneNumber);
         saveBlockedNumbers(blockedNumbers);
-        showToast("号码已成功加入黑名单");
+        showToast(mContext.getString(R.string.blocker_added));
         L.d("CallBlocker","add block_list");
         return true;
     }
@@ -60,7 +62,7 @@ public class CallBlocker {
      */
     public boolean unblockPhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-            showToast("号码不能为空");
+            showToast(mContext.getString(R.string.blocker_number_empty));
             return false;
         }
 
@@ -68,13 +70,13 @@ public class CallBlocker {
         Set<String> blockedNumbers = getBlockedNumbers();
 
         if (!blockedNumbers.contains(phoneNumber)) {
-            showToast("该号码不在黑名单中");
+            showToast(mContext.getString(R.string.blocker_not_blocked));
             return true;
         }
 
         blockedNumbers.remove(phoneNumber);
         saveBlockedNumbers(blockedNumbers);
-        showToast("号码已从黑名单移除");
+        showToast(mContext.getString(R.string.blocker_removed));
         return true;
     }
 

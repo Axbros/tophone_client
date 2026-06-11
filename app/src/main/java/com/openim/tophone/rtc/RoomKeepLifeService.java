@@ -13,6 +13,8 @@ import android.os.IBinder;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.openim.tophone.R;
+
 public class RoomKeepLifeService extends Service {
     public static final String CHANNEL_ID = "RoomKeepLifeServiceChannel";
     private static final String COMMAND = "command";
@@ -59,7 +61,7 @@ public class RoomKeepLifeService extends Service {
                     0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
             Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("房间正在进行中...")
+                    .setContentTitle(getString(R.string.rtc_room_in_progress))
                     .setContentIntent(pendingIntent)
                     .setShowWhen(false)
                     .build();

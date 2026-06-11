@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="线路配置"
+        android:text="@string/domain_config_title"
         android:textStyle="bold"
         android:textSize="18sp"
         android:layout_marginBottom="12dp" />
@@ -16,7 +16,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="当前生效 Host（只读）"
+        android:text="@string/domain_current_host"
         android:textStyle="bold"
         android:textSize="13sp"
         android:layout_marginBottom="6dp" />
@@ -40,7 +40,7 @@
         android:id="@+id/btn_test_save"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:text="测试并保存"
+        android:text="@string/domain_test_save"
         android:textStyle="bold" />
 
 </LinearLayout>

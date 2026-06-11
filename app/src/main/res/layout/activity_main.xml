@@ -50,13 +50,44 @@
                         android:layout_height="wrap_content"
                         android:textColor="@android:color/black"
                         android:onClick="handleAccountIDClick"
-                        android:text="@{userVM.accountID,default=未获取到账号ID}"
+                        android:text="@{userVM.accountID,default=Account ID unavailable}"
                         android:textStyle="bold" />
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/pairing_qr_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:visibility="@{userVM.showPairingQr ? View.VISIBLE : View.GONE}"
+                    android:paddingTop="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pairing_title"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:id="@+id/pairing_qr_image"
+                        android:layout_width="220dp"
+                        android:layout_height="220dp"
+                        android:layout_marginTop="12dp"
+                        android:contentDescription="@string/pairing_title"
+                        android:scaleType="fitCenter" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="@string/pairing_hint"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="14sp" />
                 </LinearLayout>
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:visibility="@{userVM.showBoundFeatures ? View.VISIBLE : View.GONE}"
                     android:paddingTop="16dp">
                     <TextView
                         android:layout_width="wrap_content"
@@ -93,16 +124,16 @@
                         android:textStyle="bold"
                         android:textSize="16sp" />
                 </LinearLayout>
-                <!-- 权限部分 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:visibility="@{userVM.showBoundFeatures ? View.VISIBLE : View.GONE}"
                     android:paddingTop="16dp">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/permissions"
+                        android:text="@string/status"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                     <androidx.constraintlayout.widget.ConstraintLayout
@@ -110,7 +141,7 @@
                         android:layout_height="wrap_content"
                         android:padding="12dp">
                         <TextView
-                            android:id="@+id/phone_permission_label"
+                            android:id="@+id/phone_status_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/phone"
@@ -119,19 +150,19 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
                         <ImageView
+                            android:id="@+id/phone_status_icon"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent"
-                            android:src="@{userVM.phonePermissions ? @drawable/success :@drawable/wrong}"
-                            />
+                            android:src="@{userVM.phoneStatus ? @drawable/success : @drawable/wrong}" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:padding="12dp">
                         <TextView
-                            android:id="@+id/sms_permission_label"
+                            android:id="@+id/sms_status_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/sms"
@@ -140,20 +171,20 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
                         <ImageView
+                            android:id="@+id/sms_status_icon"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent"
-                            android:src="@{userVM.smsPermissions ? @drawable/success :@drawable/wrong}"
-                            />
+                            android:src="@{userVM.smsStatus ? @drawable/success : @drawable/wrong}" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </LinearLayout>
-                <!-- 连接部分 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingTop="16dp"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:visibility="@{userVM.showBoundFeatures ? View.VISIBLE : View.GONE}">
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
