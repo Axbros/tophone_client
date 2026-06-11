@@ -39,16 +39,19 @@ android {
         val devLanHost = (project.findProperty("DEV_LAN_HOST") as String?) ?: "192.168.100.126"
         val devHttpPort = (project.findProperty("DEV_HTTP_PORT") as String?) ?: "8081"
         val devMqttPort = (project.findProperty("DEV_MQTT_PORT") as String?) ?: "1883"
+        val remoteApiHost = (project.findProperty("REMOTE_API_HOST") as String?) ?: "api-v3.flbxw.cn"
         buildConfigField("boolean", "DEV_USE_LOCAL", devUseLocal)
         buildConfigField("String", "DEV_LAN_HOST", "\"$devLanHost\"")
         buildConfigField("int", "DEV_HTTP_PORT", devHttpPort)
         buildConfigField("int", "DEV_MQTT_PORT", devMqttPort)
+        buildConfigField("String", "REMOTE_API_HOST", "\"$remoteApiHost\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("boolean", "DEV_USE_LOCAL", "false")
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

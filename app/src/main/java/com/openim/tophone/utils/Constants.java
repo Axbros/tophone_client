@@ -16,10 +16,10 @@ public class Constants {
     private static final String NORMAL_USER_ID_KEY = "normalUserID";
     private static final String PERSISTED_CLIENT_DEVICE_ID_KEY = "persistedClientDeviceId";
 
-    /** true：走本地开发机；false：走线上 api.flbxw.cn */
+    /** true：走本地开发机；false：走线上 REMOTE_API_HOST */
     public static final boolean USE_LOCAL_LAN = BuildConfig.DEV_USE_LOCAL;
 
-    private static final String REMOTE_HOST = "api.flbxw.cn";
+    private static final String REMOTE_HOST = BuildConfig.REMOTE_API_HOST;
     private static final String EMULATOR_HOST = "10.0.2.2";
 
     private static String fileDir;
@@ -79,7 +79,7 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return getLocalManagementBase() + "/";
         }
-        return "https://" + CURRENT_HOST + "/api-management/";
+        return "https://" + CURRENT_HOST + "/";
     }
 
     public static String RTC_APP_ID = "";
@@ -88,7 +88,7 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return getLocalManagementBase();
         }
-        return "https://" + CURRENT_HOST + "/api-management";
+        return "https://" + CURRENT_HOST;
     }
 
     public static String getVerifyRoomURL() {
@@ -119,9 +119,9 @@ public class Constants {
 
     public static String getMqttBrokerTcp() {
         if (USE_LOCAL_LAN) {
-            return "tcp://" + resolveLocalHost() + ":" + BuildConfig.DEV_MQTT_PORT;
+            return "ws://" + resolveLocalHost() + ":8083/mqtt";
         }
-        return "ssl://api.flbxw.cn:8883";
+        return "wss://" + REMOTE_HOST + "/mqtt";
     }
 
     public static boolean isUseMqtt() {

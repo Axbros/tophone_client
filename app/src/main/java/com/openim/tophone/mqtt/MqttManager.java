@@ -191,15 +191,22 @@ public class MqttManager {
     }
 
     /**
-     * 后端 brokerTCP 多为 127.0.0.1（给服务端自用）；设备端使用 Constants 自动解析的地址。
+     * 后端 brokerTCP 可能配置为 127.0.0.1（仅服务端本机）；设备端统一走 Constants 或公网 wss 地址。
      */
     private static String resolveMqttBroker(String serverBroker) {
         if (Constants.USE_LOCAL_LAN) {
             return Constants.getMqttBrokerTcp();
         }
-        if (!TextUtils.isEmpty(serverBroker)) {
+        if (!TextUtils.isEmpty(serverBroker) && !isInternalBroker(serverBroker)) {
             return serverBroker;
         }
         return Constants.getMqttBrokerTcp();
+    }
+
+    private static boolean isInternalBroker(String broker) {
+        String b = broker.toLowerCase();
+        return b.contains("127.0.0.1")
+                || b.contains("localhost")
+                || b.contains("10.0.2.2");
     }
 }
