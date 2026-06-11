@@ -172,6 +172,12 @@ public class MqttManager {
         }
     }
 
+    public void publishSmsUplink(String messageId, String mobile, String content, long deviceTime) {
+        if (client != null) {
+            client.publishSmsUplink(messageId, mobile, content, deviceTime);
+        }
+    }
+
     public void disconnect() {
         if (client != null) {
             client.disconnect();

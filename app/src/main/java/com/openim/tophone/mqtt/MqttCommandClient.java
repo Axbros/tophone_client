@@ -22,6 +22,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
 
+import java.util.List;
+
 /**
  * 设备端 MQTT：订阅 cmd (QoS1)，发布 ack/status + LWT (QoS0)。
  */
@@ -29,12 +31,14 @@ public class MqttCommandClient implements MqttCallbackExtended {
 
     private static final String TAG = "MqttCommandClient";
     private static final int QOS_CMD = 1;
+    private static final int QOS_SMS = 1;
     private static final int QOS_ACK = 0;
 
     private final Context appContext;
     private final String deviceId;
     private final ToPhone toPhone;
     private final RequestIdDedup dedup = new RequestIdDedup();
+    private final SmsDedup smsDedup = new SmsDedup();
     private MqttAndroidClient client;
     private MqttReplyChannel replyChannel;
     private volatile boolean connecting;
@@ -102,6 +106,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     subscribeCmd();
                     subscribeMeta();
                     publishStatus(true);
+                    flushSmsQueue();
                     setVmLoading(false);
                     setVmConnectionStatus(true);
                 }
@@ -180,6 +185,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
             } catch (Exception e) {
                 L.w(TAG, "publishStatus after reconnect failed: " + e.getMessage());
             }
+            flushSmsQueue();
             setVmConnectionStatus(true);
         }
     }
@@ -301,6 +307,59 @@ public class MqttCommandClient implements MqttCallbackExtended {
             publishInternal("tophone/event/" + deviceId, event.toString(), QOS_ACK);
         } catch (Exception e) {
             L.e(TAG, "publishEvent failed: " + e.getMessage());
+        }
+    }
+
+    /** 短信上行可靠存储：publish tophone/sms/{deviceId} QoS 1 */
+    public void publishSmsUplink(String messageId, String mobile, String content, long deviceTime) {
+        if (messageId == null || messageId.isEmpty()) {
+            L.w(TAG, "publishSmsUplink skipped: empty messageId");
+            return;
+        }
+        if (smsDedup.isDuplicate(mobile, content, deviceTime)) {
+            L.d(TAG, "publishSmsUplink skipped duplicate");
+            return;
+        }
+        if (client == null || !client.isConnected()) {
+            L.w(TAG, "MQTT not connected, queue sms uplink");
+            SmsUplinkQueue.enqueue(appContext, messageId, mobile, content, deviceTime);
+            return;
+        }
+        try {
+            publishSmsUplinkInternal(messageId, mobile, content, deviceTime);
+            SmsUplinkQueue.remove(appContext, messageId);
+        } catch (Exception e) {
+            L.w(TAG, "publishSmsUplink failed, queue: " + e.getMessage());
+            SmsUplinkQueue.enqueue(appContext, messageId, mobile, content, deviceTime);
+        }
+    }
+
+    private void publishSmsUplinkInternal(String messageId, String mobile, String content, long deviceTime)
+            throws Exception {
+        JSONObject payload = new JSONObject();
+        payload.put("messageId", messageId);
+        payload.put("mobile", mobile != null ? mobile : "");
+        payload.put("content", content != null ? content : "");
+        payload.put("deviceTime", deviceTime);
+        payload.put("ts", System.currentTimeMillis());
+        publishInternal("tophone/sms/" + deviceId, payload.toString(), QOS_SMS);
+        L.d(TAG, "sms uplink published messageId=" + messageId);
+    }
+
+    private void flushSmsQueue() {
+        while (true) {
+            List<SmsUplinkQueue.Item> pending = SmsUplinkQueue.peekAll(appContext);
+            if (pending.isEmpty()) {
+                return;
+            }
+            SmsUplinkQueue.Item item = pending.get(0);
+            try {
+                publishSmsUplinkInternal(item.messageId, item.mobile, item.content, item.deviceTime);
+                SmsUplinkQueue.remove(appContext, item.messageId);
+            } catch (Exception e) {
+                L.w(TAG, "flush sms uplink failed: " + e.getMessage());
+                return;
+            }
         }
     }
 

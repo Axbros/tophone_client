@@ -9,7 +9,6 @@ import android.widget.Toast;
 
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.utils.MqttEventUtil;
 
 public class SmsBroadcastReceiver extends BroadcastReceiver {
@@ -32,7 +31,8 @@ public class SmsBroadcastReceiver extends BroadcastReceiver {
                 String messageBody = smsMessage.getMessageBody();
 
                 if (sender != null && sender.length() >= 11) {
-                    MqttEventUtil.publishEvent(ActionEnums.RECEIVED_SMS.getType(), sender, messageBody);
+                    long deviceTime = System.currentTimeMillis();
+                    MqttEventUtil.publishSmsReceived(sender, messageBody, deviceTime);
                     Toast.makeText(BaseApp.inst(), R.string.toast_sms_reported, Toast.LENGTH_LONG).show();
                     break; // 处理一条后就退出
                 }
