@@ -82,7 +82,7 @@
                 android:textColor="@color/rtc_text_hint"
                 android:textSize="13sp"
                 android:visibility="gone"
-                tools:text="上行网络质量：好 下行网络质量：好"
+                tools:text="Uplink: Good  Downlink: Good"
                 tools:visibility="visible" />
         </LinearLayout>
 

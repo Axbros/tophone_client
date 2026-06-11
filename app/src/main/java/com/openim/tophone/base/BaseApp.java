@@ -3,8 +3,11 @@ package com.openim.tophone.base;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
+import android.widget.TextView;
 
 import com.openim.tophone.base.vm.injection.Easy;
+import com.openim.tophone.utils.ServerPingMonitor;
+import com.openim.tophone.utils.ServerPingUi;
 
 public class BaseApp extends Application {
     public State<Boolean> isAppBackground = new State<>(true);
@@ -49,6 +52,12 @@ public class BaseApp extends Application {
 
             @Override
             public void onActivityResumed(Activity activity) {
+                ServerPingUi.attachWhenReady(activity, () -> {
+                    TextView pingView = ServerPingUi.attach(activity);
+                    ServerPingMonitor monitor = ServerPingMonitor.getInstance();
+                    monitor.bind(pingView);
+                    monitor.start();
+                });
             }
 
             @Override
@@ -60,6 +69,7 @@ public class BaseApp extends Application {
                 mActivityCount--;
                 if (mActivityCount == 0) {
                     isAppBackground.setValue(true);
+                    ServerPingMonitor.getInstance().stop();
                 }
             }
 

@@ -235,6 +235,18 @@
                     android:orientation="vertical"
                     android:paddingTop="16dp">
                     <TextView
+                        android:id="@+id/link_server_settings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="8dp"
+                        android:text="@string/server_settings_entry"
+                        android:textColor="@android:color/holo_blue_dark"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                    <TextView
                         android:id="@+id/copyright"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

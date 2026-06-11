@@ -10,6 +10,7 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.entity.CallLogBean;
@@ -107,13 +108,17 @@ public class CallLogUtils {
                 .subscribe(
                         resp -> {
                             Log.i(TAG, "上传成功: " + resp.msg);
-                            Toast.makeText(BaseApp.inst(), "上传成功: " + resp.msg, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(BaseApp.inst(),
+                                    BaseApp.inst().getString(R.string.call_log_upload_success, resp.msg),
+                                    Toast.LENGTH_SHORT).show();
                             deleteCallLogByNumber(callLog.getCallNumber());
                             //上传成功后删除通话记录
                         },
                         err -> {
                             Log.e(TAG, "上传失败", err);
-                            Toast.makeText(BaseApp.inst(), "上传失败: " + err.getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(BaseApp.inst(),
+                                    BaseApp.inst().getString(R.string.call_log_upload_failed, err.getMessage()),
+                                    Toast.LENGTH_SHORT).show();
                         }
                 );
     }

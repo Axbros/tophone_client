@@ -103,8 +103,28 @@ public class Constants {
         return getRtcManagementBase() + "/api/v1/record/notifyRoomManager";
     }
 
+    /** Lightweight latency probe (GET /ping on server root). */
+    public static String getPingUrl() {
+        return getRtcManagementBase() + "/ping";
+    }
+
+    public static String getCurrentHost() {
+        return CURRENT_HOST;
+    }
+
+    public static String getBuiltInRemoteHost() {
+        return REMOTE_HOST;
+    }
+
+    public static void resetToBuiltInHost() {
+        CURRENT_HOST = REMOTE_HOST;
+    }
+
     public static void updateHost(String host) {
-        CURRENT_HOST = host;
+        String normalized = ServerEndpointHelper.normalizeHost(host);
+        if (!normalized.isEmpty()) {
+            CURRENT_HOST = normalized;
+        }
     }
 
     private static final String GROUP_OWNER_KEY = "ownerUserID";
@@ -121,7 +141,7 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return "ws://" + resolveLocalHost() + ":8083/mqtt";
         }
-        return "wss://" + REMOTE_HOST + "/mqtt";
+        return "wss://" + CURRENT_HOST + "/mqtt";
     }
 
     public static boolean isUseMqtt() {

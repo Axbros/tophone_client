@@ -79,6 +79,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         pairingQrImage = findViewById(R.id.pairing_qr_image);
         View headerBGImage = findViewById(R.id.header_include);
         setupHiddenDomainEntry(headerBGImage);
+        findViewById(R.id.link_server_settings).setOnClickListener(v ->
+                startActivity(new Intent(this, DomainConfigActivity.class)));
         setupHiddenRtcEntry(callLogStatisticText);
         connectBtn = findViewById(R.id.btn_connect);
         // 格式化字符串并设置

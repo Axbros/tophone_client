@@ -31,8 +31,8 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 133
-        versionName = "1.4.3"
+        versionCode = 201
+        versionName = "2.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val devUseLocal = (project.findProperty("DEV_USE_LOCAL") as String?) ?: "true"
