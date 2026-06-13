@@ -100,10 +100,6 @@ public class Constants {
         return getRtcManagementBase() + "/api/v1/config/tophone_world";
     }
 
-    public static String getNotifyRoomManagerURL() {
-        return getRtcManagementBase() + "/api/v1/record/notifyRoomManager";
-    }
-
     /** Lightweight latency probe (GET /ping on server root). */
     public static String getPingUrl() {
         return getRtcManagementBase() + "/ping";

@@ -21,6 +21,7 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.enums.CallLogType;
+import com.openim.tophone.rtc.RtcSessionController;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.utils.MqttEventUtil;
 import com.openim.tophone.repository.LocationService;
@@ -81,6 +82,9 @@ public class PhoneStateService extends Service {
                             Log.i(TAG, "onCallStateChanged: 响铃结束未接通 " + phoneNumber);
                             MqttEventUtil.publishEvent(ActionEnums.IDLE.getType(), phoneNumber, "0");
                         }
+                        if (isCallConnected || isRinging) {
+                            notifyRtcPhoneCallActive(false);
+                        }
                         startTime = 0;
                         isCallConnected = false;
                         isRinging = false;
@@ -99,6 +103,7 @@ public class PhoneStateService extends Service {
                             isCallConnected = true;
                             Log.i(TAG, "onCallStateChanged: 接听" + phoneNumber);
                         }
+                        notifyRtcPhoneCallActive(true);
                         break;
 
                     // 响铃
@@ -222,5 +227,12 @@ public class PhoneStateService extends Service {
         intent.putExtra("number", number);
         intent.putExtra("type", type);
         sendBroadcast(intent); // 发送广播
+    }
+
+    private void notifyRtcPhoneCallActive(boolean active) {
+        Intent intent = new Intent(RtcSessionController.ACTION_PHONE_CALL_STATE);
+        intent.putExtra(RtcSessionController.EXTRA_PHONE_CALL_ACTIVE, active);
+        intent.setPackage(getPackageName());
+        sendBroadcast(intent);
     }
 }

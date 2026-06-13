@@ -1,8 +1,10 @@
 package com.openim.tophone.rtc;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -44,7 +46,6 @@ import com.ss.bytertc.engine.data.RemoteStreamKey;
 import com.ss.bytertc.engine.data.StreamIndex;
 import com.ss.bytertc.engine.handler.IRTCRoomEventHandler;
 import com.ss.bytertc.engine.handler.IRTCVideoEventHandler;
-import com.ss.bytertc.engine.type.AudioScenarioType;
 import com.ss.bytertc.engine.type.ChannelProfile;
 import com.ss.bytertc.engine.type.ConnectionState;
 import com.ss.bytertc.engine.type.MediaTypeEnhancementConfig;
@@ -52,23 +53,14 @@ import com.ss.bytertc.engine.type.NetworkQualityStats;
 import com.ss.bytertc.engine.type.RTCRoomStats;
 import com.ss.bytertc.engine.utils.IAudioFrame;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 public class RawAudioDataActivity extends RtcBaseActivity {
-
-    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private int clickCount = 0;
     private long lastClickTime = 0;
@@ -87,7 +79,12 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     private TextView usernameTextView;
     private TextView onlineUsersCountTextView;
     private TextView networkQuality;
+    private TextView usbAudioStatus;
     private boolean isLoopJoinRoom;
+
+    private UsbAudioDetector usbAudioDetector;
+    private BroadcastReceiver phoneCallReceiver;
+    private boolean preferSpeakerOutput;
 
     Map<AudioRoute, String> audioTypeMap = new HashMap<>();
 
@@ -101,7 +98,6 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     boolean isShowRemoteUserDataLog;
     TextureView textureView;
     private Button btnOpenFloatWindow;
-    private Button btnDialog;
     private int onlineUsers = 0;
     private static final int REQUEST_CODE_FLOATING_WINDOW = 1001;
 
@@ -116,10 +112,10 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_raw_audio);
         initUI();
+        setupUsbAudioMonitoring();
         showLoading(getString(R.string.rtc_loading_config));
         cacheUtil = new RtcCacheUtil(this);
-        checkAndLoadConfig();
-        access();
+        refreshRtcAppIdOnStartup();
         setTitle(getString(R.string.title_raw_audio_data) + " v" + AppVersionUtil.getVersionName(this));
         setupHiddenEntry(findViewById(R.id.join_result_icon));
         updateCheckInStatus();
@@ -182,73 +178,165 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         MediaTypeEnhancementConfig mediaTypeEnhancementConfig = new MediaTypeEnhancementConfig();
         mediaTypeEnhancementConfig.enhanceAudio = true;
         rtcVideo.setCellularEnhancement(mediaTypeEnhancementConfig);
-    }
-
-    private void checkAndLoadConfig() {
-        String cachedAppId = cacheUtil.getKeyAppId();
-        if (!TextUtils.isEmpty(cachedAppId)) {
-            Constants.RTC_APP_ID = cachedAppId;
-            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_using_cached_config));
-        } else {
-            Log.d(TAG, "缓存不存在，从服务器获取配置");
-            fetchConfigFromServer();
+        if (isJoined) {
+            bindRtcSession();
         }
     }
 
-    private void fetchConfigFromServer() {
-        Request request = new Request.Builder()
-                .url(Constants.getRtcConfigURL())
-                .addHeader("Content-Type", "application/json")
-                .get()
-                .build();
+    private void bindRtcSession() {
+        if (rtcVideo == null) {
+            return;
+        }
+        RtcSessionController controller = RtcSessionController.getInstance();
+        boolean usbConnected = usbAudioDetector != null && usbAudioDetector.isUsbAudioConnected();
+        controller.setUsbAudioConnected(usbConnected);
+        controller.bindSession(rtcVideo, this, preferSpeakerOutput);
+        updateUsbAudioStatus(usbConnected);
+    }
 
-        okHttpClient.newCall(request).enqueue(new Callback() {
+    private void setupUsbAudioMonitoring() {
+        usbAudioDetector = new UsbAudioDetector(this);
+        usbAudioDetector.setListener(connected -> runOnUiThread(() -> {
+            RtcSessionController.getInstance().onUsbAudioChanged(connected);
+            updateUsbAudioStatus(connected);
+            if (connected && isJoined) {
+                RtcToastUtil.showLongToast(this, getString(R.string.rtc_usb_bridge_active));
+            }
+        }));
+        usbAudioDetector.start();
+        updateUsbAudioStatus(usbAudioDetector.isUsbAudioConnected());
+    }
+
+    private void updateUsbAudioStatus(boolean connected) {
+        if (usbAudioStatus == null) {
+            return;
+        }
+        usbAudioStatus.setText(connected
+                ? getString(R.string.rtc_usb_audio_connected)
+                : getString(R.string.rtc_usb_audio_disconnected));
+    }
+
+    private void onInitialConfigReady(boolean fromCacheFallback) {
+        hideLoading();
+        access();
+        if (fromCacheFallback) {
+            RtcToastUtil.showLongToast(this, getString(R.string.rtc_using_cached_config));
+        } else if (!TextUtils.isEmpty(Constants.RTC_APP_ID)) {
+            RtcToastUtil.showLongToast(this, getString(R.string.rtc_config_loaded));
+        }
+    }
+
+    private void applyRtcAppId(String appId, boolean fromCacheFallback) {
+        if (TextUtils.isEmpty(appId)) {
+            return;
+        }
+        Constants.RTC_APP_ID = appId;
+        if (!fromCacheFallback) {
+            cacheUtil.saveAppID(appId);
+        }
+        Log.i(TAG, "RTC_APP_ID=" + appId + (fromCacheFallback ? " (cache fallback)" : " (server)"));
+    }
+
+    private void refreshRtcAppIdOnStartup() {
+        RtcConfigLoader.fetchAppId(okHttpClient, new RtcConfigLoader.AppIdCallback() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                Log.e(TAG, "获取配置失败: " + e.getMessage());
+            public void onSuccess(String appId) {
+                mHandler.post(() -> {
+                    applyRtcAppId(appId, false);
+                    onInitialConfigReady(false);
+                });
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful() && response.body() != null) {
-                    String responseData = response.body().string();
-                    Log.d(TAG, "服务器返回: " + responseData);
-
-                    try {
-                        org.json.JSONObject jsonObject = new org.json.JSONObject(responseData);
-                        int code = jsonObject.getInt("code");
-
-                        if (code == 0) {
-                            org.json.JSONObject data = jsonObject.getJSONObject("data");
-                            String appID = data.getString("appID");
-                            if (!TextUtils.isEmpty(appID)) {
-                                saveConfigToCache(appID);
-                                mHandler.post(() -> {
-                                    Constants.RTC_APP_ID = appID;
-                                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_config_loaded));
-                                });
-                            } else {
-                                Log.e(TAG, "解密失败，appID为空");
-                                RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_decrypt_failed));
-                            }
-                        } else {
-                            String msg = jsonObject.getString("msg");
-                            Log.e(TAG, "接口返回错误: " + msg);
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "解析数据失败: " + e.getMessage());
-                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_parse_failed, e.getMessage()));
+            public void onFailure(String message) {
+                mHandler.post(() -> {
+                    Log.w(TAG, "startup tophone_world failed: " + message);
+                    String cached = cacheUtil.getKeyAppId();
+                    if (!TextUtils.isEmpty(cached)) {
+                        applyRtcAppId(cached, true);
+                        onInitialConfigReady(true);
+                    } else {
+                        onInitialConfigReady(false);
                     }
-                } else {
-                    Log.e(TAG, "服务器返回错误: " + response.code());
-                    RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_server_error, response.code()));
-                }
+                });
             }
         });
     }
 
-    private void saveConfigToCache(String appId) {
-        cacheUtil.saveAppID(appId);
+    private void refreshRtcAppIdBeforeJoin(String roomId) {
+        RtcConfigLoader.fetchAppId(okHttpClient, new RtcConfigLoader.AppIdCallback() {
+            @Override
+            public void onSuccess(String appId) {
+                runOnUiThread(() -> {
+                    applyRtcAppId(appId, false);
+                    verifyAndJoinRoom(roomId);
+                });
+            }
+
+            @Override
+            public void onFailure(String message) {
+                runOnUiThread(() -> {
+                    hideJoinLoading();
+                    RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                            getString(R.string.rtc_config_fetch_failed, message));
+                });
+            }
+        });
+    }
+
+    private void verifyAndJoinRoom(String roomId) {
+        RoomVerifier.verifyRoom(roomId, getNickname(), RawAudioDataActivity.this, new RoomVerifier.RoomCallback() {
+            @Override
+            public void onResult(boolean isExist, String t) {
+                runOnUiThread(() -> {
+                    hideJoinLoading();
+                    if (!isExist) {
+                        RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                                getString(R.string.rtc_room_not_found, roomId));
+                        return;
+                    }
+                    if (TextUtils.isEmpty(t)) {
+                        RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                                getString(R.string.rtc_token_empty));
+                        return;
+                    }
+                    if (!RtcTokenUtil.isValidFormat(t)) {
+                        RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                                getString(R.string.rtc_token_invalid));
+                        return;
+                    }
+                    warnIfTokenAppIdMismatch(t);
+
+                    initRTCVideo();
+                    if (rtcVideo == null) {
+                        return;
+                    }
+                    btnClearCache.setVisibility(View.GONE);
+                    token = t;
+                    joinRoom(roomId);
+                    audioFrameCallbackSwitch.setEnabled(true);
+                    btnJoinRoom.setText(getString(R.string.rtc_leave_room));
+                    btnJoinRoom.setBackgroundColor(Color.parseColor("#E91E63"));
+                });
+            }
+
+            @Override
+            public void onError(Exception e) {
+                runOnUiThread(() -> {
+                    hideJoinLoading();
+                    RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                            getString(R.string.rtc_verify_room_failed, e.getMessage()));
+                });
+            }
+
+            @Override
+            public void onMessage(String message) {
+                runOnUiThread(() -> {
+                    hideJoinLoading();
+                    RtcToastUtil.showAlert(RawAudioDataActivity.this, message);
+                });
+            }
+        });
     }
 
     private void initUI() {
@@ -271,7 +359,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         onlineUsersCountTextView = findViewById(R.id.onlineUsersCount);
         localViewContainer = findViewById(R.id.local_view_container);
         networkQuality = findViewById(R.id.networkQuality);
-        btnDialog = findViewById(R.id.btn_open_message_dialog);
+        usbAudioStatus = findViewById(R.id.usb_audio_status);
         textureView = new TextureView(this);
         floatWindowManager = new FloatWindowManager(this, textureView);
         floatWindowManager.getCloseButton().setOnClickListener(v -> closeFloatingWindow());
@@ -294,46 +382,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                 return;
             }
             showJoinLoading();
-            RoomVerifier.verifyRoom(roomId, getNickname(), RawAudioDataActivity.this, new RoomVerifier.RoomCallback() {
-                @Override
-                public void onResult(boolean isExist, String t) {
-                    runOnUiThread(() -> {
-                        hideJoinLoading();
-                        if (!isExist) {
-                            RtcToastUtil.showAlert(RawAudioDataActivity.this,
-                                    getString(R.string.rtc_room_not_found, roomId));
-                            return;
-                        }
-
-                        initRTCVideo();
-                        btnDialog.setVisibility(View.VISIBLE);
-                        btnClearCache.setVisibility(View.GONE);
-                        token = t;
-                        joinRoom(roomId);
-                        isJoined = true;
-                        isLoopJoinRoom = true;
-                        audioFrameCallbackSwitch.setEnabled(true);
-                        btnJoinRoom.setText(getString(R.string.rtc_leave_room));
-                        btnJoinRoom.setBackgroundColor(Color.parseColor("#E91E63"));
-                    });
-                }
-
-                @Override
-                public void onError(Exception e) {
-                    runOnUiThread(() -> {
-                        hideJoinLoading();
-                        RtcToastUtil.showAlert(RawAudioDataActivity.this, getString(R.string.rtc_verify_room_failed, e.getMessage()));
-                    });
-                }
-
-                @Override
-                public void onMessage(String message) {
-                    runOnUiThread(() -> {
-                        hideJoinLoading();
-                        RtcToastUtil.showAlert(RawAudioDataActivity.this, message);
-                    });
-                }
-            });
+            refreshRtcAppIdBeforeJoin(roomId);
         });
 
         btnClearCache.setOnClickListener(v -> {
@@ -364,40 +413,13 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                 audioRouteSwitch.setChecked(!isChecked);
                 return;
             }
-            rtcVideo.setAudioScenario(AudioScenarioType.AUDIO_SCENARIO_COMMUNICATION);
-
-            if (isChecked) {
-                int result = rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_HEADSET);
-                if (result != 0) {
-                    rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_EARPIECE);
-                }
-            } else {
-                rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
+            if (usbAudioDetector != null && usbAudioDetector.isUsbAudioConnected()) {
+                RtcToastUtil.showLongToast(this, getString(R.string.rtc_usb_bridge_active));
+                audioRouteSwitch.setChecked(false);
+                return;
             }
-        });
-
-        btnDialog.setOnClickListener(v -> {
-            View dialogView = getLayoutInflater().inflate(R.layout.dialog_send_message, null);
-
-            EditText input = dialogView.findViewById(R.id.dialog_message_input);
-            Button btnSend = dialogView.findViewById(R.id.dialog_send_btn);
-            Button btnCancel = dialogView.findViewById(R.id.dialog_cancel_btn);
-
-            AlertDialog dialog = new AlertDialog.Builder(RawAudioDataActivity.this)
-                    .setView(dialogView)
-                    .create();
-
-            btnSend.setOnClickListener(view -> {
-                String msg = input.getText().toString().trim();
-                if (!msg.isEmpty()) {
-                    RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_notifying_dispatch));
-                    sendMessageToRoom(roomIdInput.getText().toString(), msg);
-                    dialog.dismiss();
-                }
-            });
-
-            btnCancel.setOnClickListener(view -> dialog.dismiss());
-            dialog.show();
+            preferSpeakerOutput = !isChecked;
+            RtcSessionController.getInstance().updatePreferSpeaker(preferSpeakerOutput);
         });
     }
 
@@ -518,6 +540,10 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     private Runnable createJoinRoomRunnable(final String roomId) {
         return () -> {
+            if (rtcRoom == null || rtcVideo == null) {
+                Log.e(TAG, "joinRoom skipped: rtcRoom or rtcVideo is null");
+                return;
+            }
             long currentTime = System.currentTimeMillis();
             Log.d("JoinRoomTimer", "执行joinRoom，roomId=" + roomId +
                     "，时间戳=" + currentTime +
@@ -531,12 +557,21 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                     false
             );
             rtcRoom.joinRoom(token, userInfo, roomConfig);
-            rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         };
     }
 
     private void joinRoom(String roomId) {
+        if (rtcVideo == null) {
+            Log.e(TAG, "joinRoom skipped: rtcVideo is null");
+            return;
+        }
+        if (rtcRoom != null) {
+            rtcRoom.leaveRoom();
+            rtcRoom.destroy();
+            rtcRoom = null;
+        }
         rtcRoom = rtcVideo.createRTCRoom(roomId);
+        rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         refreshNicknameDisplay();
         startRoomKeepLifeService();
         mHandler.post(createJoinRoomRunnable(roomId));
@@ -559,6 +594,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     }
 
     private void leaveRoom() {
+        isLoopJoinRoom = false;
+        RtcSessionController.getInstance().clearSession();
         applyJoinResultIcon(R.drawable.icon_failed);
         if (rtcRoom != null) {
             rtcRoom.leaveRoom();
@@ -573,8 +610,17 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         lockRoomInput();
         btnClearCache.setVisibility(View.VISIBLE);
         btnOpenFloatWindow.setVisibility(View.GONE);
-        btnDialog.setVisibility(View.GONE);
-        mHandler.removeCallbacks(createJoinRoomRunnable(roomIdInput.getText().toString()));
+    }
+
+    private void scheduleRejoinRoom(String roomId) {
+        if (!isLoopJoinRoom || TextUtils.isEmpty(roomId) || rtcVideo == null) {
+            return;
+        }
+        mHandler.postDelayed(() -> {
+            if (isLoopJoinRoom && rtcVideo != null) {
+                joinRoom(roomId);
+            }
+        }, 1500);
     }
 
     private final IRTCVideoEventHandler rtcVideoEventHandler = new IRTCVideoEventHandler() {
@@ -599,20 +645,30 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         @Override
         public void onRoomStateChanged(String roomId, String uid, int state, String extraInfo) {
             super.onRoomStateChanged(roomId, uid, state, extraInfo);
+            Log.w(TAG, "onRoomStateChanged roomId=" + roomId + " uid=" + uid
+                    + " state=" + state + " extraInfo=" + extraInfo);
             if (state != 0) {
-                if (isLoopJoinRoom) {
+                String detail = TextUtils.isEmpty(extraInfo) ? getString(R.string.rtc_conn_failed) : extraInfo;
+                if (state == -1000) {
+                    detail = getString(R.string.rtc_token_invalid_code);
+                }
+                if (isJoined && isLoopJoinRoom) {
                     RtcToastUtil.showLongToast(RawAudioDataActivity.this,
                             getString(R.string.rtc_room_rejoining, state));
+                    scheduleRejoinRoom(roomId);
                     return;
                 }
                 RtcToastUtil.showAlert(RawAudioDataActivity.this,
-                        getString(R.string.rtc_room_join_failed, extraInfo));
+                        getString(R.string.rtc_room_join_failed, state, detail));
                 leaveRoom();
-            } else {
-                RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_room_joined));
-                applyJoinResultIcon(R.drawable.icon_success);
-                lockRoomInput();
+                return;
             }
+            isJoined = true;
+            isLoopJoinRoom = true;
+            bindRtcSession();
+            RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_room_joined));
+            applyJoinResultIcon(R.drawable.icon_success);
+            lockRoomInput();
         }
 
         @Override
@@ -633,10 +689,62 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     };
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        registerPhoneCallReceiver();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterPhoneCallReceiver();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         updateCheckInStatus();
         refreshNicknameDisplay();
+        if (isJoined && rtcVideo != null) {
+            bindRtcSession();
+        }
+    }
+
+    private void registerPhoneCallReceiver() {
+        if (phoneCallReceiver != null) {
+            return;
+        }
+        phoneCallReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (!RtcSessionController.ACTION_PHONE_CALL_STATE.equals(intent.getAction())) {
+                    return;
+                }
+                boolean active = intent.getBooleanExtra(RtcSessionController.EXTRA_PHONE_CALL_ACTIVE, false);
+                RtcSessionController.getInstance().onPhoneCallStateChanged(active);
+                if (active && RtcSessionController.getInstance().isUsbAudioConnected()) {
+                    RtcToastUtil.showShortToast(RawAudioDataActivity.this,
+                            getString(R.string.rtc_phone_call_usb_bridge));
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(RtcSessionController.ACTION_PHONE_CALL_STATE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(phoneCallReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(phoneCallReceiver, filter);
+        }
+    }
+
+    private void unregisterPhoneCallReceiver() {
+        if (phoneCallReceiver == null) {
+            return;
+        }
+        try {
+            unregisterReceiver(phoneCallReceiver);
+        } catch (IllegalArgumentException ignored) {
+        }
+        phoneCallReceiver = null;
     }
 
     private String getNickname() {
@@ -657,6 +765,12 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        unregisterPhoneCallReceiver();
+        if (usbAudioDetector != null) {
+            usbAudioDetector.stop();
+            usbAudioDetector = null;
+        }
+        RtcSessionController.getInstance().clearSession();
         if (rtcVideo != null) {
             rtcVideo.stopAudioCapture();
             rtcVideo.stopVideoCapture();
@@ -692,38 +806,13 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }
     }
 
-    private void sendMessageToRoom(String roomId, String msg) {
-        String json = "{"
-                + "\"roomID\":\"" + roomId + "\","
-                + "\"message\":\"" + msg + "\""
-                + "}";
-
-        RequestBody body = RequestBody.create(json, JSON);
-
-        Request request = new Request.Builder()
-                .url(Constants.getNotifyRoomManagerURL())
-                .post(body)
-                .addHeader("Content-Type", "application/json")
-                .build();
-
-        new Thread(() -> {
-            try (Response response = okHttpClient.newCall(request).execute()) {
-                if (response.isSuccessful()) {
-                    runOnUiThread(() ->
-                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_message_sent))
-                    );
-                } else {
-                    runOnUiThread(() ->
-                            RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_message_send_failed, response.code()))
-                    );
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() ->
-                        RtcToastUtil.showLongToast(RawAudioDataActivity.this, getString(R.string.rtc_network_error, e.getMessage()))
-                );
-            }
-        }).start();
+    private void warnIfTokenAppIdMismatch(String rtcToken) {
+        String tokenAppId = RtcTokenUtil.extractAppId(rtcToken);
+        if (TextUtils.isEmpty(tokenAppId) || TextUtils.equals(tokenAppId, Constants.RTC_APP_ID)) {
+            return;
+        }
+        Log.w(TAG, "token appId differs from tophone_world: token=" + tokenAppId
+                + " server=" + Constants.RTC_APP_ID);
     }
 
     private void setupHiddenEntry(View targetView) {
