@@ -26,6 +26,7 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.rtc.RtcCrashHandler;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,6 +52,7 @@ public class MainApplication extends BaseApp {
         L.e(TAG, "-----onCreate------ pid=" + android.os.Process.myPid());
 
         Constants.initFileDir(getFilesDir().getAbsolutePath());
+        RtcCrashHandler.install(this);
         initFile();
         initController();
 

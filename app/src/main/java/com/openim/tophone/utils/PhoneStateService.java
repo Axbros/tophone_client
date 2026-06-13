@@ -85,6 +85,7 @@ public class PhoneStateService extends Service {
                         if (isCallConnected || isRinging) {
                             notifyRtcPhoneCallActive(false);
                         }
+                        RtcSessionController.getInstance().onPhoneCallStateChanged(false);
                         startTime = 0;
                         isCallConnected = false;
                         isRinging = false;
@@ -104,6 +105,7 @@ public class PhoneStateService extends Service {
                             Log.i(TAG, "onCallStateChanged: 接听" + phoneNumber);
                         }
                         notifyRtcPhoneCallActive(true);
+                        RtcSessionController.getInstance().onPhoneCallStateChanged(true);
                         break;
 
                     // 响铃

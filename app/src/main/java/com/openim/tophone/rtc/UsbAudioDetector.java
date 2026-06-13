@@ -10,7 +10,6 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -139,7 +138,10 @@ public final class UsbAudioDetector {
     private void refreshState(boolean notify) {
         boolean connected = scanUsbAudioDevices();
         boolean changed = usbConnected.getAndSet(connected) != connected;
-        Log.i(TAG, "USB audio " + (connected ? "connected" : "disconnected"));
+        RtcDebugLog.i(TAG, "USB audio " + (connected ? "connected" : "disconnected"));
+        if (connected) {
+            logConnectedDevices(appContext);
+        }
         if (notify && changed) {
             notifyCurrentState();
         }
@@ -174,5 +176,48 @@ public final class UsbAudioDetector {
                     || type == AudioDeviceInfo.TYPE_USB_DEVICE;
         }
         return type == AudioDeviceInfo.TYPE_USB_ACCESSORY;
+    }
+
+    public static void logConnectedDevices(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            RtcDebugLog.i(TAG, "audio devices: API<23, skip dump");
+            return;
+        }
+        AudioManager audioManager = context.getApplicationContext().getSystemService(AudioManager.class);
+        if (audioManager == null) {
+            RtcDebugLog.w(TAG, "audio devices: AudioManager null");
+            return;
+        }
+        AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_ALL);
+        RtcDebugLog.i(TAG, "audio devices count=" + devices.length);
+        for (AudioDeviceInfo device : devices) {
+            RtcDebugLog.i(TAG, "  device id=" + device.getId()
+                    + " type=" + deviceTypeName(device.getType())
+                    + " in=" + device.isSource()
+                    + " out=" + device.isSink()
+                    + " name=" + safeDeviceName(device));
+        }
+    }
+
+    private static String safeDeviceName(AudioDeviceInfo device) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            CharSequence name = device.getProductName();
+            return name != null ? name.toString() : "?";
+        }
+        return "?";
+    }
+
+    private static String deviceTypeName(int type) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (type == AudioDeviceInfo.TYPE_USB_HEADSET) return "USB_HEADSET";
+            if (type == AudioDeviceInfo.TYPE_USB_DEVICE) return "USB_DEVICE";
+        }
+        if (type == AudioDeviceInfo.TYPE_USB_ACCESSORY) return "USB_ACCESSORY";
+        if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET) return "WIRED_HEADSET";
+        if (type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) return "BUILTIN_SPEAKER";
+        if (type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) return "BUILTIN_EARPIECE";
+        if (type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) return "BT_SCO";
+        if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) return "BT_A2DP";
+        return "type_" + type;
     }
 }

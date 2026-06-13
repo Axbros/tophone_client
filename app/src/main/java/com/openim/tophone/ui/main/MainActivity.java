@@ -29,6 +29,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.openim.tophone.MainApplication;
 import com.openim.tophone.R;
+import com.openim.tophone.rtc.RtcDebugLog;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
@@ -416,6 +417,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             refreshCallLogStatistic();
         }
         ((MainApplication) getApplication()).triggerDeviceProfileRefresh();
+        if (RtcDebugLog.hasCrashReport()) {
+            Toast.makeText(this, R.string.rtc_debug_crash_main_hint, Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

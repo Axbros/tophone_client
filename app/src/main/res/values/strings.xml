@@ -112,6 +112,14 @@
     <string name="rtc_usb_audio_disconnected">USB sound card not detected</string>
     <string name="rtc_usb_bridge_active">RTC routed to USB sound card (phone bridge)</string>
     <string name="rtc_phone_call_usb_bridge">Phone call active — RTC stays in room on USB route</string>
+    <string name="rtc_overlay_permission_title">Display over other apps</string>
+    <string name="rtc_overlay_permission_message">Allow overlay permission so RTC stays visible on the system phone call screen (like during a bridged call).</string>
+    <string name="rtc_debug_log_title">Audio route debug log</string>
+    <string name="rtc_debug_log_copy">Copy log</string>
+    <string name="rtc_debug_log_clear">Clear</string>
+    <string name="rtc_debug_log_copied">Log copied to clipboard</string>
+    <string name="rtc_debug_crash_loaded">Previous crash detected — see debug log below</string>
+    <string name="rtc_debug_crash_main_hint">App crashed last time. Open RTC room (tap Call Log 7×) and copy the debug log.</string>
     <string name="domain_line_auto">Current environment (auto)</string>
     <string name="domain_line_lan">LAN device</string>
     <string name="domain_line_emulator">Emulator</string>

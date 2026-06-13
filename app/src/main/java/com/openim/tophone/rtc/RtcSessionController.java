@@ -39,6 +39,8 @@ public final class RtcSessionController {
         contextRef = new WeakReference<>(context.getApplicationContext());
         this.preferSpeaker = preferSpeaker;
         sessionActive = true;
+        RtcDebugLog.i("RtcSession", "bindSession preferSpeaker=" + preferSpeaker
+                + " usb=" + usbAudioConnected);
         applyPreferredRoute();
     }
 
@@ -53,11 +55,14 @@ public final class RtcSessionController {
 
     public void onUsbAudioChanged(boolean connected) {
         usbAudioConnected = connected;
+        RtcDebugLog.i("RtcSession", "onUsbAudioChanged connected=" + connected);
         applyPreferredRoute();
     }
 
     public void onPhoneCallStateChanged(boolean active) {
         phoneCallActive = active;
+        RtcDebugLog.i("RtcSession", "onPhoneCallStateChanged active=" + active
+                + " usb=" + usbAudioConnected + " session=" + sessionActive);
         Context context = contextRef.get();
         RTCVideo rtcVideo = rtcVideoRef.get();
         if (!sessionActive || context == null || rtcVideo == null) {

@@ -1,6 +1,8 @@
 package com.openim.tophone.rtc;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -24,6 +26,7 @@ import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
 import com.openim.tophone.R;
@@ -106,6 +109,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     private RtcCacheUtil cacheUtil;
     private ProgressBar loadingIndicator;
     private TextView joinLoadingText;
+    private TextView rtcDebugLog;
+    private Button btnCopyDebugLog;
+    private Button btnClearDebugLog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +119,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         setContentView(R.layout.activity_raw_audio);
         initUI();
         setupUsbAudioMonitoring();
+        setupDebugLogPanel();
         showLoading(getString(R.string.rtc_loading_config));
         cacheUtil = new RtcCacheUtil(this);
         refreshRtcAppIdOnStartup();
@@ -205,6 +212,34 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }));
         usbAudioDetector.start();
         updateUsbAudioStatus(usbAudioDetector.isUsbAudioConnected());
+    }
+
+    private void setupDebugLogPanel() {
+        rtcDebugLog = findViewById(R.id.rtc_debug_log);
+        btnCopyDebugLog = findViewById(R.id.btn_copy_debug_log);
+        btnClearDebugLog = findViewById(R.id.btn_clear_debug_log);
+        btnCopyDebugLog.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(ClipData.newPlainText("rtc_audio_log", RtcDebugLog.getExportText()));
+                RtcToastUtil.showShortToast(this, getString(R.string.rtc_debug_log_copied));
+            }
+        });
+        btnClearDebugLog.setOnClickListener(v -> {
+            RtcDebugLog.clear();
+            if (rtcDebugLog != null) {
+                rtcDebugLog.setText("");
+            }
+        });
+        RtcDebugLog.setSink(fullText -> mHandler.post(() -> {
+            if (rtcDebugLog != null) {
+                rtcDebugLog.setText(fullText);
+            }
+        }));
+        if (RtcDebugLog.hasCrashReport()) {
+            RtcToastUtil.showLongToast(this, getString(R.string.rtc_debug_crash_loaded));
+        }
+        RtcDebugLog.i(TAG, "debug log panel ready (logs persist across crashes)");
     }
 
     private void updateUsbAudioStatus(boolean connected) {
@@ -627,8 +662,10 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         @Override
         public void onAudioRouteChanged(AudioRoute route) {
             super.onAudioRouteChanged(route);
+            String label = audioTypeMap.getOrDefault(route, String.valueOf(route));
+            RtcDebugLog.i("RtcAudioRouter", "onAudioRouteChanged SDK route=" + route + " (" + label + ")");
             RtcToastUtil.showLongToast(RawAudioDataActivity.this,
-                    getString(R.string.rtc_audio_route_changed, audioTypeMap.get(route)));
+                    getString(R.string.rtc_audio_route_changed, label));
         }
     };
 
@@ -666,6 +703,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             isJoined = true;
             isLoopJoinRoom = true;
             bindRtcSession();
+            promptOverlayPermissionIfNeeded();
             RtcToastUtil.showShortToast(RawAudioDataActivity.this, getString(R.string.rtc_room_joined));
             applyJoinResultIcon(R.drawable.icon_success);
             lockRoomInput();
@@ -721,7 +759,6 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                     return;
                 }
                 boolean active = intent.getBooleanExtra(RtcSessionController.EXTRA_PHONE_CALL_ACTIVE, false);
-                RtcSessionController.getInstance().onPhoneCallStateChanged(active);
                 if (active && RtcSessionController.getInstance().isUsbAudioConnected()) {
                     RtcToastUtil.showShortToast(RawAudioDataActivity.this,
                             getString(R.string.rtc_phone_call_usb_bridge));
@@ -771,6 +808,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             usbAudioDetector = null;
         }
         RtcSessionController.getInstance().clearSession();
+        RtcDebugLog.setSink(null);
         if (rtcVideo != null) {
             rtcVideo.stopAudioCapture();
             rtcVideo.stopVideoCapture();
@@ -804,6 +842,18 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         } else {
             addFloatingWindow();
         }
+    }
+
+    private void promptOverlayPermissionIfNeeded() {
+        if (RtcOverlayWindow.canDrawOverlays(this)) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rtc_overlay_permission_title)
+                .setMessage(R.string.rtc_overlay_permission_message)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> requestFloatingWindowPermission())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void warnIfTokenAppIdMismatch(String rtcToken) {

@@ -5,7 +5,6 @@ import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -29,23 +28,28 @@ public final class RtcAudioRouter {
 
     public static AudioRoute applyPreferredRoute(RTCVideo rtcVideo, Context context,
                                                 boolean preferSpeaker, boolean usbAudioConnected) {
+        RtcDebugLog.i(TAG, "applyPreferredRoute preferSpeaker=" + preferSpeaker
+                + " usbAudioConnected=" + usbAudioConnected);
         if (rtcVideo == null) {
+            RtcDebugLog.w(TAG, "rtcVideo is null, skip routing");
             return AudioRoute.AUDIO_ROUTE_SPEAKERPHONE;
         }
-        rtcVideo.setAudioScenario(AudioScenarioType.AUDIO_SCENARIO_COMMUNICATION);
+        int scenarioResult = rtcVideo.setAudioScenario(AudioScenarioType.AUDIO_SCENARIO_COMMUNICATION);
+        RtcDebugLog.i(TAG, "setAudioScenario(COMMUNICATION) result=" + scenarioResult);
 
         if (usbAudioConnected) {
+            UsbAudioDetector.logConnectedDevices(context);
             AudioRoute route = setRouteWithFallback(rtcVideo,
                     AudioRoute.AUDIO_ROUTE_HEADSET_USB,
                     AudioRoute.AUDIO_ROUTE_HEADSET,
                     AudioRoute.AUDIO_ROUTE_EARPIECE);
-            Log.i(TAG, "USB bridge route applied: " + route);
+            RtcDebugLog.i(TAG, "USB bridge route applied: " + route);
             return route;
         }
 
         if (preferSpeaker) {
-            rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
-            Log.i(TAG, "Speaker route applied");
+            int code = rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
+            RtcDebugLog.i(TAG, "setAudioRoute(SPEAKERPHONE) result=" + code);
             return AudioRoute.AUDIO_ROUTE_SPEAKERPHONE;
         }
 
@@ -53,16 +57,18 @@ public final class RtcAudioRouter {
                 AudioRoute.AUDIO_ROUTE_HEADSET,
                 AudioRoute.AUDIO_ROUTE_EARPIECE,
                 AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
-        Log.i(TAG, "Headset route applied: " + route);
+        RtcDebugLog.i(TAG, "Headset route applied: " + route);
         return route;
     }
 
     public static void retainCommunicationAudioFocus(Context context) {
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audioManager == null) {
+            RtcDebugLog.w(TAG, "retainAudioFocus: AudioManager null");
             return;
         }
         audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        int focusResult;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (audioFocusRequest == null) {
                 AudioAttributes attributes = new AudioAttributes.Builder()
@@ -74,10 +80,13 @@ public final class RtcAudioRouter {
                         .setAcceptsDelayedFocusGain(true)
                         .build();
             }
-            audioManager.requestAudioFocus(audioFocusRequest);
+            focusResult = audioManager.requestAudioFocus(audioFocusRequest);
         } else {
-            audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
+            focusResult = audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL,
+                    AudioManager.AUDIOFOCUS_GAIN);
         }
+        RtcDebugLog.i(TAG, "retainAudioFocus mode=IN_COMMUNICATION result=" + focusResult
+                + " (1=GRANTED)");
     }
 
     public static void releaseCommunicationAudioFocus(Context context) {
@@ -91,15 +100,19 @@ public final class RtcAudioRouter {
         } else {
             audioManager.abandonAudioFocus(null);
         }
+        RtcDebugLog.i(TAG, "releaseAudioFocus mode=NORMAL");
     }
 
     private static AudioRoute setRouteWithFallback(RTCVideo rtcVideo, AudioRoute... routes) {
         for (AudioRoute route : routes) {
-            if (rtcVideo.setAudioRoute(route) == 0) {
+            int code = rtcVideo.setAudioRoute(route);
+            RtcDebugLog.i(TAG, "setAudioRoute(" + route + ") result=" + code + " (0=ok)");
+            if (code == 0) {
                 return route;
             }
         }
-        rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
+        int fallbackCode = rtcVideo.setAudioRoute(AudioRoute.AUDIO_ROUTE_SPEAKERPHONE);
+        RtcDebugLog.w(TAG, "all routes failed, fallback SPEAKERPHONE result=" + fallbackCode);
         return AudioRoute.AUDIO_ROUTE_SPEAKERPHONE;
     }
 }
