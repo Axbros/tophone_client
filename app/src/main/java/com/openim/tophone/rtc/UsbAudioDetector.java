@@ -43,8 +43,14 @@ public final class UsbAudioDetector {
         this.appContext = context.getApplicationContext();
     }
 
+    /** USB sound card or wired headset (status bar headphone icon). */
+    public boolean isHeadsetModeActive() {
+        return usbConnected.get() || scanHeadsetAudioDevices();
+    }
+
+    /** @deprecated use {@link #isHeadsetModeActive()} */
     public boolean isUsbAudioConnected() {
-        return usbConnected.get() || scanUsbAudioDevices();
+        return isHeadsetModeActive();
     }
 
     public void setListener(@Nullable Listener listener) {
@@ -136,9 +142,9 @@ public final class UsbAudioDetector {
     }
 
     private void refreshState(boolean notify) {
-        boolean connected = scanUsbAudioDevices();
+        boolean connected = scanHeadsetAudioDevices();
         boolean changed = usbConnected.getAndSet(connected) != connected;
-        RtcDebugLog.i(TAG, "USB audio " + (connected ? "connected" : "disconnected"));
+        RtcDebugLog.i(TAG, "headset mode " + (connected ? "active" : "inactive"));
         if (connected) {
             logConnectedDevices(appContext);
         }
@@ -154,18 +160,30 @@ public final class UsbAudioDetector {
         }
     }
 
-    private boolean scanUsbAudioDevices() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return false;
-        }
+    private boolean scanHeadsetAudioDevices() {
         AudioManager audioManager = appContext.getSystemService(AudioManager.class);
         if (audioManager == null) {
             return false;
         }
-        for (AudioDeviceInfo device : audioManager.getDevices(AudioManager.GET_DEVICES_ALL)) {
-            if (isUsbAudioType(device.getType())) {
-                return true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            for (AudioDeviceInfo device : audioManager.getDevices(AudioManager.GET_DEVICES_ALL)) {
+                if (isHeadsetAudioType(device.getType())) {
+                    return true;
+                }
             }
+        }
+        @SuppressWarnings("deprecation")
+        boolean wired = audioManager.isWiredHeadsetOn();
+        return wired;
+    }
+
+    private static boolean isHeadsetAudioType(int type) {
+        if (isUsbAudioType(type)) {
+            return true;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                    || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES;
         }
         return false;
     }

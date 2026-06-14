@@ -23,6 +23,9 @@ public final class RtcAudioRouter {
     @Nullable
     private static AudioFocusRequest audioFocusRequest;
 
+    private static final AudioManager.OnAudioFocusChangeListener AUDIO_FOCUS_LISTENER =
+            focusChange -> RtcDebugLog.i(TAG, "audioFocusChange=" + focusChange);
+
     private RtcAudioRouter() {
     }
 
@@ -67,26 +70,30 @@ public final class RtcAudioRouter {
             RtcDebugLog.w(TAG, "retainAudioFocus: AudioManager null");
             return;
         }
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        int focusResult;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocusRequest == null) {
-                AudioAttributes attributes = new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build();
-                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                        .setAudioAttributes(attributes)
-                        .setAcceptsDelayedFocusGain(true)
-                        .build();
+        try {
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            int focusResult;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (audioFocusRequest == null) {
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build();
+                    audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                            .setAudioAttributes(attributes)
+                            .setOnAudioFocusChangeListener(AUDIO_FOCUS_LISTENER)
+                            .build();
+                }
+                focusResult = audioManager.requestAudioFocus(audioFocusRequest);
+            } else {
+                focusResult = audioManager.requestAudioFocus(AUDIO_FOCUS_LISTENER,
+                        AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
             }
-            focusResult = audioManager.requestAudioFocus(audioFocusRequest);
-        } else {
-            focusResult = audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN);
+            RtcDebugLog.i(TAG, "retainAudioFocus mode=IN_COMMUNICATION result=" + focusResult
+                    + " (1=GRANTED)");
+        } catch (Exception e) {
+            RtcDebugLog.e(TAG, "retainAudioFocus failed: " + e.getMessage());
         }
-        RtcDebugLog.i(TAG, "retainAudioFocus mode=IN_COMMUNICATION result=" + focusResult
-                + " (1=GRANTED)");
     }
 
     public static void releaseCommunicationAudioFocus(Context context) {
@@ -94,13 +101,17 @@ public final class RtcAudioRouter {
         if (audioManager == null) {
             return;
         }
-        audioManager.setMode(AudioManager.MODE_NORMAL);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
-            audioManager.abandonAudioFocusRequest(audioFocusRequest);
-        } else {
-            audioManager.abandonAudioFocus(null);
+        try {
+            audioManager.setMode(AudioManager.MODE_NORMAL);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest);
+            } else {
+                audioManager.abandonAudioFocus(AUDIO_FOCUS_LISTENER);
+            }
+            RtcDebugLog.i(TAG, "releaseAudioFocus mode=NORMAL");
+        } catch (Exception e) {
+            RtcDebugLog.e(TAG, "releaseAudioFocus failed: " + e.getMessage());
         }
-        RtcDebugLog.i(TAG, "releaseAudioFocus mode=NORMAL");
     }
 
     private static AudioRoute setRouteWithFallback(RTCVideo rtcVideo, AudioRoute... routes) {

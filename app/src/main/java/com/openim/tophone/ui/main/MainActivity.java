@@ -175,6 +175,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private boolean checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO);
+        }
+
         // 常规权限列表
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
                 != PackageManager.PERMISSION_GRANTED) {

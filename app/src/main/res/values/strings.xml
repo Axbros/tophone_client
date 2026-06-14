@@ -21,7 +21,7 @@
     <string name="toast_sms_disabled">SMS disabled by admin</string>
     <string name="toast_sms_enabled">SMS restored</string>
     <string name="toast_device_paused">Device paused by admin</string>
-    <string name="toast_permissions_denied">Some permissions were denied. Phone and SMS features may not work.</string>
+    <string name="toast_permissions_denied">Some permissions were denied. Phone, SMS, and voice call features may not work.</string>
     <string name="toast_permissions_granted">All permissions granted</string>
     <string name="toast_phone_service_failed">Unable to start call monitor. Check phone and notification permissions.</string>
     <string name="toast_device_id_missing">Device ID unavailable. Check required permissions.</string>
@@ -55,7 +55,15 @@
     <string name="upload_logs">Upload Logs</string>
     <string name="title_raw_audio_data">ToPhone Voice Room</string>
     <string name="rtc_user_id_label">User ID:</string>
+    <string name="rtc_room_id_label">Room ID:</string>
     <string name="rtc_room_account_label">Room account</string>
+    <string name="rtc_status_loading">Loading…</string>
+    <string name="rtc_status_wait_checkin">Waiting for check-in</string>
+    <string name="rtc_status_wait_headset">Plug in USB headset to join</string>
+    <string name="rtc_status_connecting">Connecting to room…</string>
+    <string name="rtc_status_connected">In room</string>
+    <string name="rtc_status_reconnecting">Reconnecting…</string>
+    <string name="rtc_status_join_failed">Connection failed, retrying…</string>
     <string name="rtc_online_users_default">Online users: --</string>
     <string name="toast_call_no_permission">Call detected but phone permission is missing.</string>
     <string name="toast_call_duration">Call duration (sec): %1$d</string>
