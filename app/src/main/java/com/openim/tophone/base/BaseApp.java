@@ -52,8 +52,8 @@ public class BaseApp extends Application {
 
             @Override
             public void onActivityResumed(Activity activity) {
-                ServerPingUi.attachWhenReady(activity, () -> {
-                    TextView pingView = ServerPingUi.attach(activity);
+                ServerPingUi.bindWhenReady(activity, () -> {
+                    TextView pingView = ServerPingUi.bind(activity);
                     ServerPingMonitor monitor = ServerPingMonitor.getInstance();
                     monitor.bind(pingView);
                     monitor.start();

@@ -100,9 +100,9 @@ public class Constants {
         return getRtcManagementBase() + "/api/v1/config/tophone_world";
     }
 
-    /** Lightweight latency probe (GET /ping on server root). */
+    /** Lightweight latency probe (GET /api/v1/ping). Root /ping may not be proxied by nginx. */
     public static String getPingUrl() {
-        return getRtcManagementBase() + "/ping";
+        return getRtcManagementBase() + "/api/v1/ping";
     }
 
     public static String getCurrentHost() {

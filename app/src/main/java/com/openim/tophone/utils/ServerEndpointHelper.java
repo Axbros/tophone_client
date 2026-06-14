@@ -72,7 +72,7 @@ public final class ServerEndpointHelper {
     }
 
     public static String pingUrlForHost(String host) {
-        return "https://" + normalizeHost(host) + "/ping";
+        return "https://" + normalizeHost(host) + "/api/v1/ping";
     }
 
     public static String mqttWssUrlForHost(String host) {

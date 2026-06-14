@@ -92,14 +92,21 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_raw_audio);
         initUI();
-        setupUsbAudioMonitoring();
         cacheUtil = new RtcCacheUtil(this);
         setTitle(getString(R.string.title_raw_audio_data) + " v" + AppVersionUtil.getVersionName(this));
-        updateCheckInStatus();
-        refreshUserIdDisplay();
-        updateStatusForCurrentState();
-        showLoading(getString(R.string.rtc_loading_config));
-        refreshRtcAppIdOnStartup();
+        if (restorePersistedSession()) {
+            configReady = true;
+            hideLoading();
+            refreshUserIdDisplay();
+            syncUiForJoinedState();
+        } else {
+            setupUsbAudioMonitoring();
+            updateCheckInStatus();
+            refreshUserIdDisplay();
+            updateStatusForCurrentState();
+            showLoading(getString(R.string.rtc_loading_config));
+            refreshRtcAppIdOnStartup();
+        }
     }
 
     private void initUI() {
@@ -199,7 +206,14 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     }
 
     private void setupUsbAudioMonitoring() {
-        usbAudioDetector = new UsbAudioDetector(this);
+        RtcRoomSession session = RtcRoomSession.get();
+        UsbAudioDetector existing = session.getUsbAudioDetector();
+        if (existing != null) {
+            usbAudioDetector = existing;
+        } else {
+            usbAudioDetector = new UsbAudioDetector(this);
+            usbAudioDetector.start();
+        }
         usbAudioDetector.setListener(connected -> runOnUiThread(() -> {
             RtcSessionController.getInstance().onUsbAudioChanged(connected);
             updateStatusForCurrentState();
@@ -207,7 +221,6 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                 tryAutoJoinRoom();
             }
         }));
-        usbAudioDetector.start();
     }
 
     private void updateCheckInStatus() {
@@ -229,7 +242,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             applyJoinResultIcon(R.drawable.icon_warning);
             return;
         }
-        if (!isJoined) {
+        if (isJoined) {
+            applyJoinResultIcon(R.drawable.icon_success);
+        } else if (!joinInProgress) {
             applyJoinResultIcon(R.drawable.icon_taiji);
         }
     }
@@ -320,8 +335,10 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             return;
         }
         if (rtcVideo != null) {
-            RTCVideo.destroyRTCVideo();
-            rtcVideo = null;
+            if (isJoined) {
+                bindRtcSession();
+            }
+            return;
         }
         rtcVideo = RTCVideo.createRTCVideo(this, Constants.RTC_APP_ID, rtcVideoConnectionHandler, null, null);
         rtcVideo.startAudioCapture();
@@ -352,7 +369,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             RtcToastUtil.showLongToast(this, getString(R.string.rtc_using_cached_config));
         }
         updateStatusForCurrentState();
-        tryAutoJoinRoom();
+        if (!isJoined) {
+            tryAutoJoinRoom();
+        }
     }
 
     private void applyRtcAppId(String appId, boolean fromCacheFallback) {
@@ -492,6 +511,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             Log.e(TAG, "joinRoom skipped: rtcVideo null");
             return;
         }
+        joinInProgress = true;
+        updateJoinButtonState();
         if (rtcRoom != null) {
             rtcRoom.leaveRoom();
             rtcRoom.destroy();
@@ -531,6 +552,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     private void leaveRoom() {
         isLoopJoinRoom = false;
         cancelPendingRejoin();
+        RtcRoomSession.get().clear();
         RtcSessionController.getInstance().clearSession();
         applyJoinResultIcon(R.drawable.icon_failed);
         if (rtcRoom != null) {
@@ -541,6 +563,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }
         isJoined = false;
         joinInProgress = false;
+        destroyRtcEngine();
         updateStatusForCurrentState();
         updateJoinButtonState();
     }
@@ -580,31 +603,37 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         @Override
         public void onNetworkTypeChanged(int type) {
             super.onNetworkTypeChanged(type);
-            if (type == 0) {
-                isJoined = false;
-                applyJoinResultIcon(R.drawable.icon_failed);
-                scheduleReconnect();
-            } else if (isLoopJoinRoom && !isJoined && !joinInProgress) {
-                scheduleReconnect();
-            }
+            runOnUiThread(() -> {
+                if (type == 0) {
+                    isJoined = false;
+                    applyJoinResultIcon(R.drawable.icon_failed);
+                    updateJoinButtonState();
+                    scheduleReconnect();
+                } else if (isLoopJoinRoom && !isJoined && !joinInProgress) {
+                    scheduleReconnect();
+                }
+            });
         }
 
         @Override
         public void onConnectionStateChanged(int state, int reason) {
             super.onConnectionStateChanged(state, reason);
-            if (state == ConnectionState.CONNECTION_STATE_RECONNECTING.getValue()) {
-                setStatusText(getString(R.string.rtc_status_reconnecting));
-            } else if (state == ConnectionState.CONNECTION_STATE_CONNECTED.getValue()
-                    || state == ConnectionState.CONNECTION_STATE_RECONNECTED.getValue()) {
-                if (isJoined) {
-                    setStatusText(getString(R.string.rtc_status_connected));
+            runOnUiThread(() -> {
+                if (state == ConnectionState.CONNECTION_STATE_RECONNECTING.getValue()) {
+                    setStatusText(getString(R.string.rtc_status_reconnecting));
+                } else if (state == ConnectionState.CONNECTION_STATE_CONNECTED.getValue()
+                        || state == ConnectionState.CONNECTION_STATE_RECONNECTED.getValue()) {
+                    if (isJoined) {
+                        setStatusText(getString(R.string.rtc_status_connected));
+                    }
+                } else if (state == ConnectionState.CONNECTION_STATE_LOST.getValue()
+                        || state == ConnectionState.CONNECTION_STATE_FAILED.getValue()
+                        || state == ConnectionState.CONNECTION_STATE_DISCONNECTED.getValue()) {
+                    isJoined = false;
+                    updateJoinButtonState();
+                    scheduleReconnect();
                 }
-            } else if (state == ConnectionState.CONNECTION_STATE_LOST.getValue()
-                    || state == ConnectionState.CONNECTION_STATE_FAILED.getValue()
-                    || state == ConnectionState.CONNECTION_STATE_DISCONNECTED.getValue()) {
-                isJoined = false;
-                scheduleReconnect();
-            }
+            });
         }
     };
 
@@ -612,36 +641,21 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         @Override
         public void onRoomStateChanged(String roomId, String uid, int state, String extraInfo) {
             super.onRoomStateChanged(roomId, uid, state, extraInfo);
-            Log.w(TAG, "onRoomStateChanged state=" + state + " uid=" + uid);
-            if (state != 0) {
-                isJoined = false;
-                joinInProgress = false;
-                hideJoinLoading();
-                if (isLoopJoinRoom) {
-                    setStatusText(getString(R.string.rtc_status_reconnecting));
-                    scheduleReconnect();
-                    return;
-                }
-                leaveRoom();
-                return;
-            }
-            isJoined = true;
-            joinInProgress = false;
-            isLoopJoinRoom = true;
-            hideJoinLoading();
-            bindRtcSession();
-            applyJoinResultIcon(R.drawable.icon_success);
-            setStatusText(getString(R.string.rtc_status_connected));
-            refreshUserIdDisplay();
-            updateJoinButtonState();
+            Log.i(TAG, "onRoomStateChanged state=" + state + " uid=" + uid + " extra=" + extraInfo);
+            runOnUiThread(() -> handleRoomStateChanged(state));
         }
 
         @Override
         public void onRoomStats(RTCRoomStats stats) {
             super.onRoomStats(stats);
-            @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            String formattedDate = sdf.format(new Date());
-            onlineUsersCountTextView.setText(getString(R.string.rtc_online_users, stats.users, formattedDate));
+            runOnUiThread(() -> {
+                if (onlineUsersCountTextView == null) {
+                    return;
+                }
+                @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+                String formattedDate = sdf.format(new Date());
+                onlineUsersCountTextView.setText(getString(R.string.rtc_online_users, stats.users, formattedDate));
+            });
         }
 
         @Override
@@ -649,6 +663,35 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             super.onNetworkQuality(localQuality, remoteQualities);
         }
     };
+
+    private void handleRoomStateChanged(int state) {
+        if (state != 0) {
+            isJoined = false;
+            joinInProgress = false;
+            hideJoinLoading();
+            updateJoinButtonState();
+            if (isLoopJoinRoom) {
+                setStatusText(getString(R.string.rtc_status_reconnecting));
+                scheduleReconnect();
+                return;
+            }
+            leaveRoom();
+            return;
+        }
+        isJoined = true;
+        joinInProgress = false;
+        isLoopJoinRoom = true;
+        hideJoinLoading();
+        bindRtcSession();
+        syncUiForJoinedState();
+    }
+
+    private void syncUiForJoinedState() {
+        applyJoinResultIcon(R.drawable.icon_success);
+        setStatusText(getString(R.string.rtc_status_connected));
+        refreshUserIdDisplay();
+        updateJoinButtonState();
+    }
 
     @Override
     protected void onStart() {
@@ -665,9 +708,17 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (RtcRoomSession.get().hasActiveSession() && rtcVideo == null) {
+            restorePersistedSession();
+        }
         updateCheckInStatus();
         refreshUserIdDisplay();
-        updateStatusForCurrentState();
+        if (isJoined) {
+            syncUiForJoinedState();
+        } else {
+            updateStatusForCurrentState();
+        }
+        updateJoinButtonState();
         if (isJoined && rtcVideo != null) {
             bindRtcSession();
         } else if (!isJoined && !joinInProgress) {
@@ -732,14 +783,54 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         cancelPendingRejoin();
         unregisterPhoneCallReceiver();
+        if (isJoined && isLoopJoinRoom) {
+            persistSessionForBackground();
+            super.onDestroy();
+            return;
+        }
         if (usbAudioDetector != null) {
             usbAudioDetector.stop();
             usbAudioDetector = null;
         }
         RtcSessionController.getInstance().clearSession();
+        destroyRtcEngine();
+        super.onDestroy();
+    }
+
+    private boolean restorePersistedSession() {
+        RtcRoomSession session = RtcRoomSession.get();
+        if (!session.hasActiveSession()) {
+            return false;
+        }
+        rtcVideo = session.getRtcVideo();
+        rtcRoom = session.getRtcRoom();
+        usbAudioDetector = session.getUsbAudioDetector();
+        isJoined = session.isJoined();
+        isLoopJoinRoom = session.isLoopJoin();
+        joinInProgress = false;
+        setupUsbAudioMonitoring();
+        if (rtcRoom != null) {
+            rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
+        }
+        bindRtcSession();
+        updateCheckInStatus();
+        return true;
+    }
+
+    private void persistSessionForBackground() {
+        if (usbAudioDetector != null) {
+            usbAudioDetector.setListener(null);
+        }
+        RtcRoomSession.get().persist(rtcVideo, rtcRoom, usbAudioDetector, isJoined, isLoopJoinRoom);
+        rtcVideo = null;
+        rtcRoom = null;
+        usbAudioDetector = null;
+    }
+
+    private void destroyRtcEngine() {
+        RtcRoomSession.get().clear();
         if (rtcVideo != null) {
             rtcVideo.stopAudioCapture();
         }
@@ -747,6 +838,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             rtcRoom.destroy();
             rtcRoom = null;
         }
+        rtcVideo = null;
         RTCVideo.destroyRTCVideo();
     }
 
