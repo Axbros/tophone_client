@@ -3,6 +3,7 @@ package com.openim.tophone.utils;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -20,10 +21,11 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * Periodically probes GET /ping and updates the bound latency label.
+ * Periodically probes GET /api/v1/ping and updates the bound latency label.
  * Runs while the app is in the foreground.
  */
 public final class ServerPingMonitor {
+    private static final String TAG = "ServerPing";
     private static final ServerPingMonitor INSTANCE = new ServerPingMonitor();
     private static final long INTERVAL_MS = 3_000L;
     private static final int TIMEOUT_SEC = 5;
@@ -64,10 +66,14 @@ public final class ServerPingMonitor {
     public void bind(@Nullable TextView textView) {
         target = textView;
         if (textView == null) {
+            Log.w(TAG, "bind: ping TextView is null, UI will not update");
             return;
         }
+        Log.i(TAG, "bind: attached to " + textView.getClass().getSimpleName()
+                + " id=" + textView.getId());
         if (lastDisplayText != null) {
             textView.setText(lastDisplayText);
+            Log.d(TAG, "bind: restored lastDisplayText=" + lastDisplayText);
         } else if (running.get()) {
             textView.setText(R.string.server_ping_measuring);
         }
@@ -75,14 +81,22 @@ public final class ServerPingMonitor {
 
     public void start() {
         if (running.getAndSet(true)) {
+            Log.d(TAG, "start: already running, url=" + Constants.getPingUrl());
             return;
         }
+        Log.i(TAG, "start: primary=" + Constants.getPingUrlPrimary()
+                + " fallback=" + Constants.getPingUrlFallback()
+                + " host=" + Constants.getCurrentHost()
+                + " localLan=" + Constants.USE_LOCAL_LAN);
         showMeasuring();
         mainHandler.post(tick);
     }
 
     public void stop() {
-        running.set(false);
+        if (!running.getAndSet(false)) {
+            return;
+        }
+        Log.i(TAG, "stop");
         mainHandler.removeCallbacks(tick);
         inFlight.set(false);
     }
@@ -96,15 +110,19 @@ public final class ServerPingMonitor {
 
     private void probeOnce() {
         if (!inFlight.compareAndSet(false, true)) {
+            Log.d(TAG, "probeOnce: skipped, previous request still in flight");
             return;
         }
+        String url = Constants.getPingUrlPrimary();
+        Log.d(TAG, "probeOnce: GET " + url + " (fallback " + Constants.getPingUrlFallback() + ")");
         executor.execute(() -> {
-            PingResult measured = measurePing();
+            PingResult measured = measurePingWithFallback();
             if (measured.latencyMs <= 0 && measured.ok) {
                 measured = PingResult.ok(1);
             }
             inFlight.set(false);
             if (!running.get()) {
+                Log.d(TAG, "probeOnce: monitor stopped, ignore result");
                 return;
             }
             final PingResult result = measured;
@@ -112,20 +130,43 @@ public final class ServerPingMonitor {
         });
     }
 
-    private PingResult measurePing() {
-        String url = Constants.getPingUrl();
+    private PingResult measurePingWithFallback() {
+        String primary = Constants.getPingUrlPrimary();
+        PingResult primaryResult = measurePing(primary);
+        if (primaryResult.ok) {
+            return primaryResult;
+        }
+        if (primaryResult.httpCode != 404) {
+            return primaryResult;
+        }
+        String fallback = Constants.getPingUrlFallback();
+        Log.i(TAG, "measurePingWithFallback: primary 404, try " + fallback);
+        return measurePing(fallback);
+    }
+
+    private PingResult measurePing(String url) {
         Request request = new Request.Builder().url(url).get().build();
+        long startMs = System.currentTimeMillis();
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                return PingResult.error();
-            }
+            int code = response.code();
+            long elapsed = System.currentTimeMillis() - startMs;
             long rtt = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
             if (rtt <= 0) {
-                rtt = 1;
+                rtt = elapsed;
             }
+            if (!response.isSuccessful()) {
+                Log.w(TAG, "measurePing: HTTP " + code + " url=" + url
+                        + " elapsed=" + elapsed + "ms");
+                return PingResult.error(code, "HTTP " + code);
+            }
+            Log.i(TAG, "measurePing: ok url=" + url + " code=" + code
+                    + " rtt=" + rtt + "ms elapsed=" + elapsed + "ms");
             return PingResult.ok(rtt);
         } catch (IOException e) {
-            return PingResult.error();
+            long elapsed = System.currentTimeMillis() - startMs;
+            Log.w(TAG, "measurePing: failed url=" + url
+                    + " elapsed=" + elapsed + "ms error=" + e.getMessage(), e);
+            return PingResult.error(-1, e.getMessage());
         }
     }
 
@@ -135,13 +176,21 @@ public final class ServerPingMonitor {
         }
         Context context = appContext();
         if (context == null) {
+            Log.w(TAG, "applyResult: app context null");
             return;
         }
+        CharSequence display;
         if (!result.ok) {
-            setDisplayText(context.getString(R.string.server_ping_offline));
-            return;
+            display = context.getString(R.string.server_ping_offline);
+            Log.w(TAG, "applyResult: offline reason=" + result.error
+                    + " httpCode=" + result.httpCode
+                    + " target=" + (target != null ? "set" : "null"));
+        } else {
+            display = context.getString(R.string.server_ping_ms, result.latencyMs);
+            Log.i(TAG, "applyResult: display=" + display
+                    + " target=" + (target != null ? "set" : "null"));
         }
-        setDisplayText(context.getString(R.string.server_ping_ms, result.latencyMs));
+        setDisplayText(display);
     }
 
     private void setDisplayText(CharSequence text) {
@@ -149,6 +198,8 @@ public final class ServerPingMonitor {
         TextView current = target;
         if (current != null) {
             current.setText(text);
+        } else {
+            Log.w(TAG, "setDisplayText: no TextView bound, text=" + text);
         }
     }
 
@@ -161,18 +212,23 @@ public final class ServerPingMonitor {
     private static final class PingResult {
         final boolean ok;
         final long latencyMs;
+        final int httpCode;
+        @Nullable
+        final String error;
 
-        private PingResult(boolean ok, long latencyMs) {
+        private PingResult(boolean ok, long latencyMs, int httpCode, @Nullable String error) {
             this.ok = ok;
             this.latencyMs = latencyMs;
+            this.httpCode = httpCode;
+            this.error = error;
         }
 
         static PingResult ok(long latencyMs) {
-            return new PingResult(true, latencyMs);
+            return new PingResult(true, latencyMs, 200, null);
         }
 
-        static PingResult error() {
-            return new PingResult(false, -1);
+        static PingResult error(int httpCode, @Nullable String error) {
+            return new PingResult(false, -1, httpCode, error);
         }
     }
 }

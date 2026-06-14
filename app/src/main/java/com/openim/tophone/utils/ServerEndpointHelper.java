@@ -80,13 +80,31 @@ public final class ServerEndpointHelper {
     }
 
     public static long probePingMs(String host) throws IOException {
+        IOException lastError = null;
+        for (String path : new String[]{"/api/v1/ping", "/ping"}) {
+            try {
+                return probePingAtUrl("https://" + normalizeHost(host) + path);
+            } catch (IOException e) {
+                lastError = e;
+                if (!String.valueOf(e.getMessage()).contains("404")) {
+                    throw e;
+                }
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new IOException("ping failed");
+    }
+
+    private static long probePingAtUrl(String url) throws IOException {
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(TIMEOUT_SEC, TimeUnit.SECONDS)
                 .readTimeout(TIMEOUT_SEC, TimeUnit.SECONDS)
                 .writeTimeout(TIMEOUT_SEC, TimeUnit.SECONDS)
                 .build();
         Request request = new Request.Builder()
-                .url(pingUrlForHost(host))
+                .url(url)
                 .get()
                 .build();
         try (Response response = client.newCall(request).execute()) {

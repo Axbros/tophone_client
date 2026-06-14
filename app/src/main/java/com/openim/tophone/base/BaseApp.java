@@ -3,6 +3,7 @@ package com.openim.tophone.base;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.openim.tophone.base.vm.injection.Easy;
@@ -10,6 +11,7 @@ import com.openim.tophone.utils.ServerPingMonitor;
 import com.openim.tophone.utils.ServerPingUi;
 
 public class BaseApp extends Application {
+    private static final String TAG = "ServerPing";
     public State<Boolean> isAppBackground = new State<>(true);
     private static BaseApp instance;
     private int mActivityCount;
@@ -52,6 +54,7 @@ public class BaseApp extends Application {
 
             @Override
             public void onActivityResumed(Activity activity) {
+                Log.d(TAG, "onActivityResumed: " + activity.getClass().getSimpleName());
                 ServerPingUi.bindWhenReady(activity, () -> {
                     TextView pingView = ServerPingUi.bind(activity);
                     ServerPingMonitor monitor = ServerPingMonitor.getInstance();

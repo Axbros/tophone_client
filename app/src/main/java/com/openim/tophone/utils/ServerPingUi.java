@@ -1,6 +1,7 @@
 package com.openim.tophone.utils;
 
 import android.app.Activity;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +17,7 @@ import com.openim.tophone.R;
  * Binds server latency to an in-layout badge when present, otherwise a floating top-left overlay.
  */
 public final class ServerPingUi {
+    private static final String TAG = "ServerPing";
     private static final String OVERLAY_TAG = "server_ping_overlay";
 
     private ServerPingUi() {
@@ -28,7 +30,10 @@ public final class ServerPingUi {
         activity.getWindow().getDecorView().post(() -> {
             TextView pingView = bind(activity);
             if (pingView != null) {
+                Log.i(TAG, "bindWhenReady: ok activity=" + activity.getClass().getSimpleName());
                 onBound.run();
+            } else {
+                Log.w(TAG, "bindWhenReady: failed activity=" + activity.getClass().getSimpleName());
             }
         });
     }
@@ -40,12 +45,14 @@ public final class ServerPingUi {
         }
         TextView embedded = activity.findViewById(R.id.server_ping_text);
         if (embedded != null) {
+            Log.d(TAG, "bind: embedded badge activity=" + activity.getClass().getSimpleName());
             View badge = (View) embedded.getParent();
             if (badge != null) {
                 badge.setVisibility(View.VISIBLE);
             }
             return embedded;
         }
+        Log.d(TAG, "bind: floating overlay activity=" + activity.getClass().getSimpleName());
         return attachFloatingOverlay(activity);
     }
 
