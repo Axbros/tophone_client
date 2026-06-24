@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.openim.tophone.R;
+import com.openim.tophone.ui.main.MainActivity;
 
 public class RoomKeepLifeService extends Service {
     public static final String CHANNEL_ID = "RoomKeepLifeServiceChannel";
@@ -56,7 +57,7 @@ public class RoomKeepLifeService extends Service {
     private void startAsForeground(Intent intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             createNotificationChannel();
-            Intent notificationIntent = new Intent(this, RawAudioDataActivity.class);
+            Intent notificationIntent = new Intent(this, MainActivity.class);
             PendingIntent pendingIntent = PendingIntent.getActivity(this,
                     0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 

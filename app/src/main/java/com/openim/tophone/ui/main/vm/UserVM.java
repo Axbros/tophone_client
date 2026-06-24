@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.widget.Toast;
 
 import androidx.lifecycle.MutableLiveData;
@@ -35,6 +36,7 @@ public class UserVM extends BaseViewModel {
     public MutableLiveData<Boolean> showPairingQr = new MutableLiveData<>(false);
     /** Call log, status, and connection UI — only after device is assigned to a group */
     public MutableLiveData<Boolean> showBoundFeatures = new MutableLiveData<>(false);
+    public MutableLiveData<Boolean> showRoomSwitch = new MutableLiveData<>(false);
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -49,6 +51,13 @@ public class UserVM extends BaseViewModel {
             loadSavedPolicy(sp);
         }
         connectionStatus.setValue(MqttManager.getInstance().isConnected());
+        refreshRoomSwitchVisibility(sp);
+    }
+
+    private void refreshRoomSwitchVisibility(SharedPreferences sp) {
+        boolean checked = sp.getBoolean(Constants.getCheckedInKey(), false);
+        String roomId = sp.getString(Constants.getAssignedRoomIdKey(), "");
+        showRoomSwitch.setValue(checked && !TextUtils.isEmpty(roomId));
     }
 
     private void loadSavedPolicy(SharedPreferences sp) {

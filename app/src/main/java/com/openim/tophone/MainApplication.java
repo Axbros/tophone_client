@@ -26,6 +26,7 @@ import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.rtc.RtcCrashHandler;
 
 import java.io.File;
@@ -60,6 +61,7 @@ public class MainApplication extends BaseApp {
         Log.i(TAG, "API host=" + Constants.getCurrentHost()
                 + " baseUrl=" + Constants.getManagementUrl());
 
+        RtcBackgroundJoiner.get().init(this);
         initNet();
         initService();
     }
@@ -225,6 +227,7 @@ public class MainApplication extends BaseApp {
                     MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
                 }
             }
+            RtcBackgroundJoiner.get().tryJoinWhenReady();
             schedulePolicySync();
             if (reconnectMqtt && resp.data.info != null && !resp.data.info.isEmpty()) {
                 toast(context, resp.data.info);
@@ -234,6 +237,7 @@ public class MainApplication extends BaseApp {
 
         saveCheckInStatus(context, false);
         clearAssignedRoomId(context);
+        RtcBackgroundJoiner.get().leaveRoom();
         activeCheckedInDeviceCode = null;
         stopPolicySync();
         MqttManager.getInstance().disconnect();

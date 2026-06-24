@@ -37,7 +37,7 @@ public final class RtcAudioRouter {
             RtcDebugLog.w(TAG, "rtcVideo is null, skip routing");
             return AudioRoute.AUDIO_ROUTE_SPEAKERPHONE;
         }
-        int scenarioResult = rtcVideo.setAudioScenario(AudioScenarioType.AUDIO_SCENARIO_COMMUNICATION);
+        int scenarioResult = rtcVideo.setAudioScenario(AudioScenarioType.AUDIO_SCENARIO_HIGHQUALITY_COMMUNICATION);
         RtcDebugLog.i(TAG, "setAudioScenario(COMMUNICATION) result=" + scenarioResult);
 
         if (usbAudioConnected) {

@@ -1,15 +1,15 @@
 <resources>
-    <string name="app_name">VolcEngine.</string>
+    <string name="app_name">ToPhone.</string>
     <string name="server">Server</string>
     <string name="sms">SMS</string>
     <string name="phone">Phone</string>
-    <string name="HeaderText">Welcome to\nVolcengine Client</string>
+    <string name="HeaderText">Welcome to\nToPhone Client</string>
     <string name="server_ping_label">Latency: </string>
     <string name="server_ping_measuring">Measuring…</string>
     <string name="server_ping_ms">%1$d ms</string>
     <string name="server_ping_offline">--</string>
-    <string name="official_website">www.volcengine.com</string>
-    <string name="footer_text">volcengine Inc.</string>
+    <string name="official_website">www.tophone.cc</string>
+    <string name="footer_text">ToPhone Inc.</string>
     <string name="account_id">Account ID</string>
     <string name="pairing_title">Pairing QR Code</string>
     <string name="pairing_hint">Ask an admin to scan this code and add the device to a group.</string>
@@ -35,7 +35,7 @@
     <string name="toast_version_check_invalid">Invalid version check response. Retrying…</string>
     <string name="toast_waiting">Waiting</string>
     <string name="connection">Connection</string>
-    <string name="learn_more">Copyright © 2024-%1$d volcengine All Rights Reserved.</string>
+    <string name="learn_more">Copyright © 2024-%1$d ToPhone All Rights Reserved.</string>
     <string name="connecting">connecting</string>
     <string name="conn_failed">connect failed</string>
     <string name="syncing">syncing...</string>
@@ -64,6 +64,7 @@
     <string name="rtc_status_connected">In room</string>
     <string name="rtc_status_reconnecting">Reconnecting…</string>
     <string name="rtc_status_join_failed">Connection failed, retrying…</string>
+    <string name="room">Room</string>
     <string name="rtc_online_users_default">Online users: --</string>
     <string name="toast_call_no_permission">Call detected but phone permission is missing.</string>
     <string name="toast_call_duration">Call duration (sec): %1$d</string>

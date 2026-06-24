@@ -1,16 +1,18 @@
 package com.openim.tophone.rtc;
 
+
+
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
-import android.graphics.Color;
 import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
@@ -24,7 +26,6 @@ import android.widget.TextView;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
-
 import com.openim.tophone.R;
 import com.openim.tophone.ui.main.DomainConfigActivity;
 import com.openim.tophone.utils.AppVersionUtil;
@@ -38,6 +39,8 @@ import com.ss.bytertc.engine.VideoCanvas;
 import com.ss.bytertc.engine.data.StreamIndex;
 import com.ss.bytertc.engine.handler.IRTCRoomEventHandler;
 import com.ss.bytertc.engine.handler.IRTCVideoEventHandler;
+import com.ss.bytertc.engine.type.AnsMode;
+import com.ss.bytertc.engine.type.AudioProfileType;
 import com.ss.bytertc.engine.type.ChannelProfile;
 import com.ss.bytertc.engine.type.ConnectionState;
 import com.ss.bytertc.engine.type.MediaTypeEnhancementConfig;
@@ -107,6 +110,12 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             showLoading(getString(R.string.rtc_loading_config));
             refreshRtcAppIdOnStartup();
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
     }
 
     private void initUI() {
@@ -247,6 +256,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         } else if (!joinInProgress) {
             applyJoinResultIcon(R.drawable.icon_taiji);
         }
+        if (checkedIn && !isJoined && !joinInProgress && !RtcRoomSession.get().hasActiveSession()) {
+            tryAutoJoinRoom();
+        }
     }
 
     private void applyJoinResultIcon(int iconRes) {
@@ -272,6 +284,23 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         return usbAudioDetector != null && usbAudioDetector.isHeadsetModeActive();
     }
 
+    private boolean isServerConnectionReady() {
+        return RtcBackgroundJoiner.isServerConnected();
+    }
+
+    /** Auto-join when checked in + server connected, or when USB headset is ready. */
+    private boolean canProceedAutoJoin(boolean reconnect) {
+        if (reconnect) {
+            return true;
+        }
+        if (isHeadsetReady()) {
+            return true;
+        }
+        return isCheckedIn()
+                && isServerConnectionReady()
+                && !TextUtils.isEmpty(getAssignedRoomId());
+    }
+
     private void tryAutoJoinRoom() {
         tryAutoJoinRoom(false);
     }
@@ -290,7 +319,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             updateStatusForCurrentState();
             return;
         }
-        if (!reconnect && !isHeadsetReady()) {
+        if (!canProceedAutoJoin(reconnect)) {
             updateStatusForCurrentState();
             return;
         }
@@ -316,7 +345,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             setStatusText(getString(R.string.rtc_status_wait_checkin));
             return;
         }
-        if (!isHeadsetReady()) {
+        if (!isHeadsetReady() && !canProceedAutoJoin(false)) {
             setStatusText(getString(R.string.rtc_status_wait_headset));
             return;
         }
@@ -520,6 +549,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }
         rtcRoom = rtcVideo.createRTCRoom(roomId);
         rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
+        rtcVideo.setAudioProfile(AudioProfileType.AUDIO_PROFILE_HD);
+        rtcVideo.setAnsMode(AnsMode.ANS_MODE_HIGH);
+
         refreshUserIdDisplay();
         startRoomKeepLifeService();
         String rtcUserId = getRtcUserId();
@@ -721,7 +753,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         updateJoinButtonState();
         if (isJoined && rtcVideo != null) {
             bindRtcSession();
-        } else if (!isJoined && !joinInProgress) {
+        } else if (!isJoined && !joinInProgress && !RtcRoomSession.get().hasActiveSession()) {
             tryAutoJoinRoom();
         }
     }

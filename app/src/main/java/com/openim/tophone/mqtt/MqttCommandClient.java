@@ -3,6 +3,7 @@ package com.openim.tophone.mqtt;
 import android.content.Context;
 
 import com.openim.tophone.MainApplication;
+import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.entity.DevicePresenceReq;
 import com.openim.tophone.stroage.VMStore;
@@ -109,6 +110,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     flushSmsQueue();
                     setVmLoading(false);
                     setVmConnectionStatus(true);
+                    RtcBackgroundJoiner.get().tryJoinWhenReady();
                 }
 
                 @Override
@@ -187,6 +189,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
             }
             flushSmsQueue();
             setVmConnectionStatus(true);
+            RtcBackgroundJoiner.get().tryJoinWhenReady();
         }
     }
 

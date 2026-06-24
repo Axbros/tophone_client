@@ -21,6 +21,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.widget.SwitchCompat;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -36,6 +38,7 @@ import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.rtc.RawAudioDataActivity;
+import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -55,8 +58,11 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public static SharedPreferences sp;
     private TextView callLogStatisticText;
     private ImageView pairingQrImage;
+    private SwitchCompat roomSwitch;
 
     private static Button connectBtn;
+
+    private boolean roomSwitchInternal;
 
 
     private int clickCount = 0;
@@ -83,6 +89,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         findViewById(R.id.link_server_settings).setOnClickListener(v ->
                 startActivity(new Intent(this, DomainConfigActivity.class)));
         setupHiddenRtcEntry(callLogStatisticText);
+        roomSwitch = findViewById(R.id.room_switch);
+        setupRoomSwitch();
         connectBtn = findViewById(R.id.btn_connect);
         // 格式化字符串并设置
         int currentYear = Calendar.getInstance().get(Calendar.YEAR) ;
@@ -362,6 +370,33 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private boolean callLogReceiverRegistered = false;
 
+    private void setupRoomSwitch() {
+        if (roomSwitch == null) {
+            return;
+        }
+        RtcBackgroundJoiner.get().setListener((joined, joining) ->
+                runOnUiThread(() -> syncRoomSwitch()));
+        roomSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (roomSwitchInternal) {
+                return;
+            }
+            if (isChecked) {
+                RtcBackgroundJoiner.get().requestJoin();
+            } else {
+                RtcBackgroundJoiner.get().leaveRoom();
+            }
+        });
+    }
+
+    private void syncRoomSwitch() {
+        if (roomSwitch == null) {
+            return;
+        }
+        roomSwitchInternal = true;
+        roomSwitch.setChecked(RtcBackgroundJoiner.get().shouldSwitchBeOn());
+        roomSwitchInternal = false;
+    }
+
     private void onBoundFeaturesChanged(Boolean bound) {
         if (Boolean.TRUE.equals(bound)) {
             refreshCallLogStatistic();
@@ -431,6 +466,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     protected void onStop() {
         super.onStop();
         unregisterCallLogReceiverIfNeeded();
+    }
+
+    @Override
+    protected void onDestroy() {
+        RtcBackgroundJoiner.get().setListener(null);
+        super.onDestroy();
     }
 
     private void setupHiddenDomainEntry(View targetView) {
