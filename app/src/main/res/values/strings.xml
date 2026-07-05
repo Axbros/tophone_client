@@ -156,8 +156,8 @@
     <string name="domain_config_title">Server Settings</string>
     <string name="domain_current_host">Current server</string>
     <string name="domain_host_label">Server address</string>
-    <string name="domain_host_hint">e.g. api-v3.flbxw.cn</string>
-    <string name="domain_notice">Enter the domain only (no https://). Nginx should proxy / to the API and /mqtt to WebSocket, same as api-v3.flbxw.cn.</string>
+    <string name="domain_host_hint">e.g. api.tophone.cc</string>
+    <string name="domain_notice">Enter the domain only (no https://). Nginx should proxy / to the API and /mqtt to WebSocket, same as api.tophone.cc.</string>
     <string name="domain_test_ping">Test connection</string>
     <string name="domain_test_ok">Connected. Latency %1$d ms</string>
     <string name="domain_test_failed">Connection failed: %1$s</string>

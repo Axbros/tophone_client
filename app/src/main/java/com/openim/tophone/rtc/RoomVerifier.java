@@ -2,7 +2,6 @@ package com.openim.tophone.rtc;
 
 import android.content.Context;
 
-import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
 
 import org.json.JSONObject;
@@ -34,8 +33,7 @@ public class RoomVerifier {
         try {
             json.put("roomID", roomID);
             json.put("userID", userID);
-            json.put("deviceType", "android");
-            json.put("version", AppVersionUtil.getVersionName(context));
+            json.put("deviceType", "android_device");
         } catch (Exception e) {
             callback.onError(e);
             return;

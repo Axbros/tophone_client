@@ -28,6 +28,9 @@ public class Constants {
     public static final String DEFAULT_HOST = USE_LOCAL_LAN ? resolveLocalHost() : REMOTE_HOST;
 
     private static String CURRENT_HOST = DEFAULT_HOST;
+    private static String CURRENT_API_BASE_URL = USE_LOCAL_LAN ? getLocalManagementBase() : "https://" + REMOTE_HOST;
+    private static String CURRENT_RTC_BASE_URL = CURRENT_API_BASE_URL;
+    private static String CURRENT_MQTT_BROKER_TCP = "";
 
     /** 模拟器 → 10.0.2.2；真机 → gradle.properties 中的 DEV_LAN_HOST */
     public static String resolveLocalHost() {
@@ -80,7 +83,7 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return getLocalManagementBase() + "/";
         }
-        return "https://" + CURRENT_HOST + "/";
+        return trimTrailingSlash(CURRENT_API_BASE_URL) + "/";
     }
 
     public static String RTC_APP_ID = "";
@@ -89,7 +92,7 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return getLocalManagementBase();
         }
-        return "https://" + CURRENT_HOST;
+        return trimTrailingSlash(CURRENT_RTC_BASE_URL);
     }
 
     public static String getVerifyRoomURL() {
@@ -109,7 +112,7 @@ public class Constants {
         return getRtcManagementBase() + "/api/v1/ping";
     }
 
-    /** Legacy root ping; available on api-v3 before /api/v1/ping is deployed. */
+    /** Legacy root ping; available before /api/v1/ping is deployed. */
     public static String getPingUrlFallback() {
         return getRtcManagementBase() + "/ping";
     }
@@ -124,13 +127,39 @@ public class Constants {
 
     public static void resetToBuiltInHost() {
         CURRENT_HOST = REMOTE_HOST;
+        CURRENT_API_BASE_URL = "https://" + REMOTE_HOST;
+        CURRENT_RTC_BASE_URL = CURRENT_API_BASE_URL;
+        CURRENT_MQTT_BROKER_TCP = "";
     }
 
     public static void updateHost(String host) {
         String normalized = ServerEndpointHelper.normalizeHost(host);
         if (!normalized.isEmpty()) {
             CURRENT_HOST = normalized;
+            CURRENT_API_BASE_URL = "https://" + normalized;
+            CURRENT_RTC_BASE_URL = CURRENT_API_BASE_URL;
         }
+    }
+
+    public static void updateApiBaseUrl(String apiBaseUrl) {
+        String normalized = normalizeBaseUrl(apiBaseUrl);
+        if (normalized.isEmpty()) {
+            return;
+        }
+        CURRENT_API_BASE_URL = normalized;
+        String host = extractHost(normalized);
+        if (!host.isEmpty()) {
+            CURRENT_HOST = host;
+        }
+    }
+
+    public static void updateRtcBaseUrl(String rtcBaseUrl) {
+        String normalized = normalizeBaseUrl(rtcBaseUrl);
+        CURRENT_RTC_BASE_URL = normalized.isEmpty() ? CURRENT_API_BASE_URL : normalized;
+    }
+
+    public static void updateMqttBrokerTcp(String brokerTcp) {
+        CURRENT_MQTT_BROKER_TCP = brokerTcp != null ? brokerTcp.trim() : "";
     }
 
     /**
@@ -173,7 +202,54 @@ public class Constants {
         if (USE_LOCAL_LAN) {
             return "ws://" + resolveLocalHost() + ":8083/mqtt";
         }
+        if (CURRENT_MQTT_BROKER_TCP != null && !CURRENT_MQTT_BROKER_TCP.isEmpty()) {
+            return CURRENT_MQTT_BROKER_TCP;
+        }
         return "wss://" + CURRENT_HOST + "/mqtt";
+    }
+
+    public static String getBootstrapUrl() {
+        return "https://api.tophone.cc/api/v1/app/bootstrap";
+    }
+
+    private static String normalizeBaseUrl(String url) {
+        if (url == null) {
+            return "";
+        }
+        String out = trimTrailingSlash(url.trim());
+        if (out.startsWith("https://") || out.startsWith("http://")) {
+            return out;
+        }
+        return "";
+    }
+
+    private static String trimTrailingSlash(String url) {
+        if (url == null) {
+            return "";
+        }
+        String out = url.trim();
+        while (out.endsWith("/")) {
+            out = out.substring(0, out.length() - 1);
+        }
+        return out;
+    }
+
+    private static String extractHost(String baseUrl) {
+        String host = baseUrl;
+        if (host.startsWith("https://")) {
+            host = host.substring(8);
+        } else if (host.startsWith("http://")) {
+            host = host.substring(7);
+        }
+        int slash = host.indexOf('/');
+        if (slash >= 0) {
+            host = host.substring(0, slash);
+        }
+        int colon = host.indexOf(':');
+        if (colon >= 0) {
+            host = host.substring(0, colon);
+        }
+        return host.trim();
     }
 
     public static boolean isUseMqtt() {
