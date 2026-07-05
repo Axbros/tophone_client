@@ -21,10 +21,10 @@ import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.repository.LoginApi;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.ActivityManager;
+import com.openim.tophone.utils.AppBootstrapClient;
 import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
-import com.openim.tophone.utils.DomainManager;
 import com.openim.tophone.utils.L;
 import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.rtc.RtcCrashHandler;
@@ -58,6 +58,7 @@ public class MainApplication extends BaseApp {
         initController();
 
         Constants.resolveHostFromStorage(this);
+        AppBootstrapClient.applyCached(this);
         Log.i(TAG, "API host=" + Constants.getCurrentHost()
                 + " baseUrl=" + Constants.getManagementUrl());
 
@@ -98,7 +99,17 @@ public class MainApplication extends BaseApp {
 
     /** 由 MainActivity 在界面就绪后触发（无需电话/SMS 权限即可登录） */
     public void startBootstrap() {
-        mainHandler.postDelayed(this::ensureDeviceAccountAndCheckIn, 500L);
+        mainHandler.postDelayed(this::refreshRemoteConfigAndStart, 500L);
+    }
+
+    private void refreshRemoteConfigAndStart() {
+        AppBootstrapClient.refresh(this, updated -> {
+            if (updated) {
+                Log.i(TAG, "remote bootstrap applied, rebuild retrofit baseUrl=" + Constants.getManagementUrl());
+                initNet();
+            }
+            ensureDeviceAccountAndCheckIn();
+        });
     }
 
     /** 设备 ID 自动注册/登录，再执行 check_version */

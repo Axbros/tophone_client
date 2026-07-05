@@ -31,15 +31,15 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 201
-        versionName = "2.0.1"
+        versionCode = 300
+        versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val devUseLocal = (project.findProperty("DEV_USE_LOCAL") as String?) ?: "true"
         val devLanHost = (project.findProperty("DEV_LAN_HOST") as String?) ?: "192.168.100.126"
         val devHttpPort = (project.findProperty("DEV_HTTP_PORT") as String?) ?: "8081"
         val devMqttPort = (project.findProperty("DEV_MQTT_PORT") as String?) ?: "1883"
-        val remoteApiHost = (project.findProperty("REMOTE_API_HOST") as String?) ?: "api-v3.flbxw.cn"
+        val remoteApiHost = (project.findProperty("REMOTE_API_HOST") as String?) ?: "api.tophone.cc"
         buildConfigField("boolean", "DEV_USE_LOCAL", devUseLocal)
         buildConfigField("String", "DEV_LAN_HOST", "\"$devLanHost\"")
         buildConfigField("int", "DEV_HTTP_PORT", devHttpPort)
