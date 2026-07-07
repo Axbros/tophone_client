@@ -2,7 +2,9 @@ package com.openim.tophone;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -103,13 +105,31 @@ public class MainApplication extends BaseApp {
     }
 
     private void refreshRemoteConfigAndStart() {
-        AppBootstrapClient.refresh(this, updated -> {
-            if (updated) {
-                Log.i(TAG, "remote bootstrap applied, rebuild retrofit baseUrl=" + Constants.getManagementUrl());
-                initNet();
+        AppBootstrapClient.refresh(this, new AppBootstrapClient.Callback() {
+            @Override
+            public void onComplete(boolean updated) {
+                if (updated) {
+                    Log.i(TAG, "remote bootstrap applied, rebuild retrofit baseUrl=" + Constants.getManagementUrl());
+                    initNet();
+                }
+                ensureDeviceAccountAndCheckIn();
             }
-            ensureDeviceAccountAndCheckIn();
+
+            @Override
+            public void onForceUpgrade(String upgradeUrl) {
+                openUpgradeUrl(upgradeUrl);
+            }
         });
+    }
+
+    private void openUpgradeUrl(String upgradeUrl) {
+        if (upgradeUrl == null || upgradeUrl.trim().isEmpty()) {
+            Toast.makeText(this, "需要更新 App，请联系管理员获取新版安装包", Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(upgradeUrl.trim()));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
     /** 设备 ID 自动注册/登录，再执行 check_version */

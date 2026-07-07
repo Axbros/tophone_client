@@ -7,6 +7,8 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.openim.tophone.BuildConfig;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -33,6 +35,8 @@ public final class AppBootstrapClient {
 
     public interface Callback {
         void onComplete(boolean updated);
+
+        void onForceUpgrade(String upgradeUrl);
     }
 
     private AppBootstrapClient() {
@@ -58,6 +62,11 @@ public final class AppBootstrapClient {
                 apply(payload.apiBaseUrl, payload.rtcBaseUrl, payload.mqttTcp);
                 updated = true;
                 Log.i(TAG, "bootstrap ok url=" + bootstrapUrl + " api=" + payload.apiBaseUrl);
+                if (payload.forceUpgrade || (payload.minNativeVersionCode > 0
+                        && BuildConfig.VERSION_CODE < payload.minNativeVersionCode)) {
+                    postForceUpgrade(callback, payload.upgradeUrl);
+                    return;
+                }
             } catch (Exception e) {
                 Log.w(TAG, "bootstrap failed url=" + bootstrapUrl + " err=" + e.getMessage());
             }
@@ -71,7 +80,10 @@ public final class AppBootstrapClient {
     }
 
     private static BootstrapPayload fetchFrom(String bootstrapUrl) throws Exception {
-        String url = bootstrapUrl + "?app=" + urlEncode(APP_NAME);
+        String url = bootstrapUrl
+                + "?app=" + urlEncode(APP_NAME)
+                + "&versionCode=" + BuildConfig.VERSION_CODE
+                + "&versionName=" + urlEncode(BuildConfig.VERSION_NAME);
         Request request = new Request.Builder()
                 .url(url)
                 .addHeader("Accept", "application/json")
@@ -98,8 +110,18 @@ public final class AppBootstrapClient {
             payload.rtcBaseUrl = data.optString("rtcBaseUrl", apiBase).trim();
             payload.mqttTcp = firstNonEmpty(data.optString("mqttTcp", ""), data.optString("mqttWss", ""));
             payload.configVersion = data.optInt("configVersion", 0);
+            payload.minNativeVersionCode = data.optInt("minNativeVersionCode", 0);
+            payload.forceUpgrade = data.optBoolean("forceUpgrade", false);
+            payload.upgradeUrl = data.optString("upgradeUrl", "").trim();
             return payload;
         }
+    }
+
+    private static void postForceUpgrade(Callback callback, String upgradeUrl) {
+        if (callback == null) {
+            return;
+        }
+        MAIN.post(() -> callback.onForceUpgrade(upgradeUrl));
     }
 
     private static void save(Context context, BootstrapPayload payload) {
@@ -147,5 +169,8 @@ public final class AppBootstrapClient {
         String rtcBaseUrl;
         String mqttTcp;
         int configVersion;
+        int minNativeVersionCode;
+        boolean forceUpgrade;
+        String upgradeUrl;
     }
 }

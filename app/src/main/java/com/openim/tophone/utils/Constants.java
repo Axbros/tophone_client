@@ -209,7 +209,7 @@ public class Constants {
     }
 
     public static String getBootstrapUrl() {
-        return "https://api.tophone.cc/api/v1/app/bootstrap";
+        return "https://" + BuildConfig.BOOTSTRAP_HOST + "/api/v1/app/bootstrap";
     }
 
     private static String normalizeBaseUrl(String url) {

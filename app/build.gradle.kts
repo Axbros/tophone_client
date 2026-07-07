@@ -1,6 +1,24 @@
+import com.android.build.OutputFile
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+val tophoneVersionCode = 300
+val tophoneVersionName = "3.0.0"
+
+fun tophoneAbiName(abi: String?): String = when (abi) {
+    "armeabi-v7a" -> "armeabi_v7a"
+    "arm64-v8a" -> "armeabi_v8"
+    null, "" -> "universal"
+    else -> abi.replace("-", "_")
+}
+
+fun tophoneApkName(appName: String, buildType: String, abi: String?, versionCode: Int): String {
+    return "${appName}_${buildType}_${tophoneAbiName(abi)}_${versionCode}.apk"
+}
+
 android {
     signingConfigs {
         create("release") {
@@ -31,8 +49,8 @@ android {
         minSdk     = 26
         targetSdk  = 32
         compileSdk = 33
-        versionCode = 300
-        versionName = "3.0.0"
+        versionCode = tophoneVersionCode
+        versionName = tophoneVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val devUseLocal = (project.findProperty("DEV_USE_LOCAL") as String?) ?: "true"
@@ -40,11 +58,13 @@ android {
         val devHttpPort = (project.findProperty("DEV_HTTP_PORT") as String?) ?: "8081"
         val devMqttPort = (project.findProperty("DEV_MQTT_PORT") as String?) ?: "1883"
         val remoteApiHost = (project.findProperty("REMOTE_API_HOST") as String?) ?: "api.tophone.cc"
+        val bootstrapHost = (project.findProperty("BOOTSTRAP_HOST") as String?) ?: "bridge.tophone.cc"
         buildConfigField("boolean", "DEV_USE_LOCAL", devUseLocal)
         buildConfigField("String", "DEV_LAN_HOST", "\"$devLanHost\"")
         buildConfigField("int", "DEV_HTTP_PORT", devHttpPort)
         buildConfigField("int", "DEV_MQTT_PORT", devMqttPort)
         buildConfigField("String", "REMOTE_API_HOST", "\"$remoteApiHost\"")
+        buildConfigField("String", "BOOTSTRAP_HOST", "\"$bootstrapHost\"")
     }
 
     buildTypes {
@@ -67,6 +87,18 @@ android {
             include("armeabi-v7a", "arm64-v8a")
             // 不要打 universal 包（会把两套 so 都打进去，体积可达 200MB+）
             isUniversalApk = false
+        }
+    }
+    applicationVariants.all {
+        val variantBuildType = buildType.name
+        outputs.all {
+            val output = this as BaseVariantOutputImpl
+            output.outputFileName = tophoneApkName(
+                "tophone_device",
+                variantBuildType,
+                output.getFilter(OutputFile.ABI),
+                tophoneVersionCode
+            )
         }
     }
     packaging {
