@@ -67,7 +67,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
     private Switch microphoneSwitch;
     private Switch audioRouteSwitch;
     private TextView usernameTextView;
-    private TextView roomIdDisplay;
+    private TextView roomIDDisplay;
     private TextView roomStatusTextView;
     private TextView onlineUsersCountTextView;
     private ProgressBar loadingIndicator;
@@ -124,7 +124,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         microphoneSwitch = findViewById(R.id.audio_mute_switch);
         audioRouteSwitch = findViewById(R.id.audio_route_switch);
         usernameTextView = findViewById(R.id.username);
-        roomIdDisplay = findViewById(R.id.room_id_display);
+        roomIDDisplay = findViewById(R.id.room_id_display);
         roomStatusTextView = findViewById(R.id.room_status);
         onlineUsersCountTextView = findViewById(R.id.onlineUsersCount);
         loadingIndicator = findViewById(R.id.loading_indicator);
@@ -204,14 +204,14 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             RtcToastUtil.showAlert(this, getString(R.string.rtc_status_wait_checkin));
             return;
         }
-        String roomId = getAssignedRoomId();
-        if (TextUtils.isEmpty(roomId)) {
+        String roomID = getAssignedRoomID();
+        if (TextUtils.isEmpty(roomID)) {
             RtcToastUtil.showAlert(this, getString(R.string.rtc_no_room_account));
             return;
         }
         isLoopJoinRoom = true;
         showJoinLoading(getString(R.string.rtc_status_connecting));
-        refreshRtcAppIdBeforeJoin(roomId);
+        refreshRtcAppIdBeforeJoin(roomID);
     }
 
     private void setupUsbAudioMonitoring() {
@@ -234,9 +234,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     private void updateCheckInStatus() {
         var sp = getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), MODE_PRIVATE);
-        String roomId = sp.getString(Constants.getAssignedRoomIdKey(), null);
-        if (roomIdDisplay != null) {
-            roomIdDisplay.setText(TextUtils.isEmpty(roomId) ? "—" : roomId);
+        String roomID = sp.getString(Constants.getAssignedRoomIDKey(), null);
+        if (roomIDDisplay != null) {
+            roomIDDisplay.setText(TextUtils.isEmpty(roomID) ? "—" : roomID);
         }
         if (!sp.contains(Constants.getCheckedInKey())) {
             applyJoinResultIcon(R.drawable.icon_warning);
@@ -275,9 +275,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         return sp.getBoolean(Constants.getCheckedInKey(), false);
     }
 
-    private String getAssignedRoomId() {
+    private String getAssignedRoomID() {
         return getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), MODE_PRIVATE)
-                .getString(Constants.getAssignedRoomIdKey(), "");
+                .getString(Constants.getAssignedRoomIDKey(), "");
     }
 
     private boolean isHeadsetReady() {
@@ -298,7 +298,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }
         return isCheckedIn()
                 && isServerConnectionReady()
-                && !TextUtils.isEmpty(getAssignedRoomId());
+                && !TextUtils.isEmpty(getAssignedRoomID());
     }
 
     private void tryAutoJoinRoom() {
@@ -314,8 +314,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             updateStatusForCurrentState();
             return;
         }
-        String roomId = getAssignedRoomId();
-        if (TextUtils.isEmpty(roomId)) {
+        String roomID = getAssignedRoomID();
+        if (TextUtils.isEmpty(roomID)) {
             updateStatusForCurrentState();
             return;
         }
@@ -325,7 +325,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         }
         isLoopJoinRoom = true;
         showJoinLoading(getString(R.string.rtc_status_connecting));
-        refreshRtcAppIdBeforeJoin(roomId);
+        refreshRtcAppIdBeforeJoin(roomID);
     }
 
     private void updateStatusForCurrentState() {
@@ -341,7 +341,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             setStatusText(getString(R.string.rtc_status_wait_checkin));
             return;
         }
-        if (TextUtils.isEmpty(getAssignedRoomId())) {
+        if (TextUtils.isEmpty(getAssignedRoomID())) {
             setStatusText(getString(R.string.rtc_status_wait_checkin));
             return;
         }
@@ -438,13 +438,13 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         });
     }
 
-    private void refreshRtcAppIdBeforeJoin(String roomId) {
+    private void refreshRtcAppIdBeforeJoin(String roomID) {
         RtcConfigLoader.fetchAppId(okHttpClient, new RtcConfigLoader.AppIdCallback() {
             @Override
             public void onSuccess(String appId) {
                 runOnUiThread(() -> {
                     applyRtcAppId(appId, false);
-                    verifyAndJoinRoom(roomId);
+                    verifyAndJoinRoom(roomID);
                 });
             }
 
@@ -462,10 +462,10 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         });
     }
 
-    private void verifyAndJoinRoom(String roomId) {
+    private void verifyAndJoinRoom(String roomID) {
         String rtcUserId = getRtcUserId();
         refreshUserIdDisplay();
-        RoomVerifier.verifyRoom(roomId, rtcUserId, RawAudioDataActivity.this, new RoomVerifier.RoomCallback() {
+        RoomVerifier.verifyRoom(roomID, rtcUserId, RawAudioDataActivity.this, new RoomVerifier.RoomCallback() {
             @Override
             public void onResult(boolean isExist, String t) {
                 runOnUiThread(() -> {
@@ -474,7 +474,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         hideJoinLoading();
                         setStatusText(getString(R.string.rtc_status_join_failed));
                         RtcToastUtil.showAlert(RawAudioDataActivity.this,
-                                getString(R.string.rtc_room_not_found, roomId));
+                                getString(R.string.rtc_room_not_found, roomID));
                         scheduleReconnect();
                         return;
                     }
@@ -496,7 +496,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         return;
                     }
                     token = t;
-                    joinRoom(roomId);
+                    joinRoom(roomID);
                 });
             }
 
@@ -535,7 +535,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         rtcVideo.setLocalVideoCanvas(StreamIndex.STREAM_INDEX_MAIN, videoCanvas);
     }
 
-    private void joinRoom(String roomId) {
+    private void joinRoom(String roomID) {
         if (rtcVideo == null) {
             Log.e(TAG, "joinRoom skipped: rtcVideo null");
             return;
@@ -547,7 +547,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             rtcRoom.destroy();
             rtcRoom = null;
         }
-        rtcRoom = rtcVideo.createRTCRoom(roomId);
+        rtcRoom = rtcVideo.createRTCRoom(roomID);
         rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         rtcVideo.setAudioProfile(AudioProfileType.AUDIO_PROFILE_HD);
         rtcVideo.setAnsMode(AnsMode.ANS_MODE_HIGH);
@@ -611,8 +611,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         if (!isLoopJoinRoom || !isCheckedIn()) {
             return;
         }
-        String roomId = getAssignedRoomId();
-        if (TextUtils.isEmpty(roomId)) {
+        String roomID = getAssignedRoomID();
+        if (TextUtils.isEmpty(roomID)) {
             return;
         }
         cancelPendingRejoin();
@@ -623,7 +623,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             if (!isLoopJoinRoom || isJoined || joinInProgress) {
                 return;
             }
-            if (!isCheckedIn() || TextUtils.isEmpty(getAssignedRoomId())) {
+            if (!isCheckedIn() || TextUtils.isEmpty(getAssignedRoomID())) {
                 return;
             }
             tryAutoJoinRoom(true);
@@ -671,8 +671,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     private final IRTCRoomEventHandler rtcRoomEventHandler = new IRTCRoomEventHandler() {
         @Override
-        public void onRoomStateChanged(String roomId, String uid, int state, String extraInfo) {
-            super.onRoomStateChanged(roomId, uid, state, extraInfo);
+        public void onRoomStateChanged(String roomID, String uid, int state, String extraInfo) {
+            super.onRoomStateChanged(roomID, uid, state, extraInfo);
             Log.i(TAG, "onRoomStateChanged state=" + state + " uid=" + uid + " extra=" + extraInfo);
             runOnUiThread(() -> handleRoomStateChanged(state));
         }

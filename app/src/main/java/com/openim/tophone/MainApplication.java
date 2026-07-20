@@ -250,7 +250,7 @@ public class MainApplication extends BaseApp {
             pendingCheckDeviceCode = null;
             activeCheckedInDeviceCode = deviceCode;
             saveCheckInStatus(context, true);
-            saveAssignedRoomId(context, resp.data.roomID);
+            saveAssignedRoomID(context, resp.data.roomID);
             if (reconnectMqtt || !MqttManager.getInstance().isConnected()) {
                 if (reconnectMqtt) {
                     MqttManager.getInstance().forceReconnect(context, deviceCode, resp.data);
@@ -267,7 +267,7 @@ public class MainApplication extends BaseApp {
         }
 
         saveCheckInStatus(context, false);
-        clearAssignedRoomId(context);
+        clearAssignedRoomID(context);
         RtcBackgroundJoiner.get().leaveRoom();
         activeCheckedInDeviceCode = null;
         stopPolicySync();
@@ -498,21 +498,21 @@ public class MainApplication extends BaseApp {
         }
     }
 
-    private void saveAssignedRoomId(Context context, String roomID) {
+    private void saveAssignedRoomID(Context context, String roomID) {
         if (roomID == null || roomID.trim().isEmpty()) {
-            clearAssignedRoomId(context);
+            clearAssignedRoomID(context);
             return;
         }
         context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
                 .edit()
-                .putString(Constants.getAssignedRoomIdKey(), roomID.trim())
+                .putString(Constants.getAssignedRoomIDKey(), roomID.trim())
                 .apply();
     }
 
-    private void clearAssignedRoomId(Context context) {
+    private void clearAssignedRoomID(Context context) {
         context.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
                 .edit()
-                .remove(Constants.getAssignedRoomIdKey())
+                .remove(Constants.getAssignedRoomIDKey())
                 .apply();
     }
 

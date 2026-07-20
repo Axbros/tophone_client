@@ -38,6 +38,8 @@ public final class RtcBackgroundJoiner {
 
     private static final String TAG = "RtcBackgroundJoiner";
     private static final long REJOIN_DELAY_MS = 2000L;
+    private static final long WATCHDOG_INTERVAL_MS = 5000L;
+    private static final long JOIN_ATTEMPT_TIMEOUT_MS = 15000L;
 
     private static RtcBackgroundJoiner instance;
 
@@ -54,6 +56,11 @@ public final class RtcBackgroundJoiner {
     private boolean isJoined;
     private boolean joinInProgress;
     private boolean userWantsRoom;
+    private boolean watchdogScheduled;
+    private long joinAttemptStartedAt;
+    private long joinGeneration;
+    private long activeJoinGeneration;
+    private String activeRoomID = "";
     private String token;
     private Runnable pendingRejoin;
     private Listener listener;
@@ -90,6 +97,10 @@ public final class RtcBackgroundJoiner {
         } else if (!configReady) {
             refreshRtcAppIdOnStartup();
         }
+        if (isCheckedIn() && !TextUtils.isEmpty(getAssignedRoomID())) {
+            userWantsRoom = true;
+            startWatchdog();
+        }
     }
 
     public void requestJoin() {
@@ -97,31 +108,42 @@ public final class RtcBackgroundJoiner {
             return;
         }
         userWantsRoom = true;
+        startWatchdog();
         notifyListener();
         attemptJoin();
     }
 
     /** Auto-join after check-in + room id and/or MQTT connected. */
     public void tryJoinWhenReady() {
-        if (appContext == null || !isCheckedIn() || TextUtils.isEmpty(getAssignedRoomId())) {
+        if (appContext == null || !isCheckedIn() || TextUtils.isEmpty(getAssignedRoomID())) {
             return;
         }
         userWantsRoom = true;
+        startWatchdog();
         notifyListener();
         attemptJoin();
     }
 
     private void attemptJoin() {
-        if (RtcRoomSession.get().hasActiveSession() || isJoined || joinInProgress) {
+        if (RtcRoomSession.get().hasActiveSession() || isJoined) {
             return;
+        }
+        if (joinInProgress) {
+            if (!isJoinAttemptStalled()) {
+                return;
+            }
+            Log.w(TAG, "RTC join attempt timed out, resetting before retry");
+            resetJoinAttempt();
         }
         if (!canJoin()) {
             return;
         }
         Log.i(TAG, "attemptJoin");
         joinInProgress = true;
+        joinAttemptStartedAt = System.currentTimeMillis();
+        activeJoinGeneration = ++joinGeneration;
         notifyListener();
-        refreshRtcAppIdBeforeJoin(getAssignedRoomId());
+        refreshRtcAppIdBeforeJoin(getAssignedRoomID(), activeJoinGeneration);
     }
 
     public boolean shouldSwitchBeOn() {
@@ -130,7 +152,11 @@ public final class RtcBackgroundJoiner {
 
     public void leaveRoom() {
         userWantsRoom = false;
+        stopWatchdog();
         cancelPendingRejoin();
+        activeJoinGeneration = ++joinGeneration;
+        joinAttemptStartedAt = 0L;
+        activeRoomID = "";
         RtcRoomSession.get().clear();
         RtcSessionController.getInstance().clearSession();
         if (rtcRoom != null) {
@@ -151,7 +177,7 @@ public final class RtcBackgroundJoiner {
 
     private boolean canJoin() {
         return isCheckedIn()
-                && !TextUtils.isEmpty(getAssignedRoomId())
+                && !TextUtils.isEmpty(getAssignedRoomID())
                 && (isHeadsetReady() || isServerConnected());
     }
 
@@ -205,22 +231,28 @@ public final class RtcBackgroundJoiner {
         });
     }
 
-    private void refreshRtcAppIdBeforeJoin(String roomId) {
+    private void refreshRtcAppIdBeforeJoin(String roomID, long generation) {
         RtcConfigLoader.fetchAppId(okHttpClient, new RtcConfigLoader.AppIdCallback() {
             @Override
             public void onSuccess(String appId) {
                 mainHandler.post(() -> {
+                    if (!isCurrentJoinAttempt(generation)) {
+                        return;
+                    }
                     applyRtcAppId(appId, false);
                     configReady = true;
-                    verifyAndJoinRoom(roomId);
+                    verifyAndJoinRoom(roomID, generation);
                 });
             }
 
             @Override
             public void onFailure(String message) {
                 mainHandler.post(() -> {
+                    if (!isCurrentJoinAttempt(generation)) {
+                        return;
+                    }
                     joinInProgress = false;
-                    userWantsRoom = false;
+                    joinAttemptStartedAt = 0L;
                     notifyListener();
                     scheduleReconnect();
                 });
@@ -228,22 +260,27 @@ public final class RtcBackgroundJoiner {
         });
     }
 
-    private void verifyAndJoinRoom(String roomId) {
+    private void verifyAndJoinRoom(String roomID, long generation) {
         joinInProgress = true;
         notifyListener();
         String rtcUserId = getRtcUserId();
-        RoomVerifier.verifyRoom(roomId, rtcUserId, appContext, new RoomVerifier.RoomCallback() {
+        RoomVerifier.verifyRoom(roomID, rtcUserId, appContext, new RoomVerifier.RoomCallback() {
             @Override
             public void onResult(boolean isExist, String t) {
                 mainHandler.post(() -> {
+                    if (!isCurrentJoinAttempt(generation)) {
+                        return;
+                    }
                     if (!isExist) {
                         joinInProgress = false;
+                        joinAttemptStartedAt = 0L;
                         notifyListener();
                         scheduleReconnect();
                         return;
                     }
                     if (TextUtils.isEmpty(t) || !RtcTokenUtil.isValidFormat(t)) {
                         joinInProgress = false;
+                        joinAttemptStartedAt = 0L;
                         notifyListener();
                         scheduleReconnect();
                         return;
@@ -251,18 +288,23 @@ public final class RtcBackgroundJoiner {
                     initRtcVideo();
                     if (rtcVideo == null) {
                         joinInProgress = false;
+                        joinAttemptStartedAt = 0L;
                         scheduleReconnect();
                         return;
                     }
                     token = t;
-                    joinRoom(roomId);
+                    joinRoom(roomID, generation);
                 });
             }
 
             @Override
             public void onError(Exception e) {
                 mainHandler.post(() -> {
+                    if (!isCurrentJoinAttempt(generation)) {
+                        return;
+                    }
                     joinInProgress = false;
+                    joinAttemptStartedAt = 0L;
                     notifyListener();
                     scheduleReconnect();
                 });
@@ -271,7 +313,11 @@ public final class RtcBackgroundJoiner {
             @Override
             public void onMessage(String message) {
                 mainHandler.post(() -> {
+                    if (!isCurrentJoinAttempt(generation)) {
+                        return;
+                    }
                     joinInProgress = false;
+                    joinAttemptStartedAt = 0L;
                     notifyListener();
                     scheduleReconnect();
                 });
@@ -306,8 +352,11 @@ public final class RtcBackgroundJoiner {
         controller.bindSession(rtcVideo, appContext, false);
     }
 
-    private void joinRoom(String roomId) {
+    private void joinRoom(String roomID, long generation) {
         if (rtcVideo == null) {
+            return;
+        }
+        if (!isCurrentJoinAttempt(generation)) {
             return;
         }
         joinInProgress = true;
@@ -316,7 +365,8 @@ public final class RtcBackgroundJoiner {
             rtcRoom.destroy();
             rtcRoom = null;
         }
-        rtcRoom = rtcVideo.createRTCRoom(roomId);
+        activeRoomID = roomID;
+        rtcRoom = rtcVideo.createRTCRoom(roomID);
         rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         rtcVideo.setAudioProfile(AudioProfileType.AUDIO_PROFILE_HD);
         rtcVideo.setAnsMode(AnsMode.ANS_MODE_HIGH);
@@ -331,11 +381,19 @@ public final class RtcBackgroundJoiner {
         rtcRoom.joinRoom(token, userInfo, roomConfig);
     }
 
-    private void handleRoomStateChanged(int state) {
+    private void handleRoomStateChanged(String roomID, int state) {
+        if (TextUtils.isEmpty(activeRoomID)
+                || (!TextUtils.isEmpty(roomID) && !activeRoomID.equals(roomID))) {
+            Log.w(TAG, "ignoring stale RTC room callback room=" + roomID
+                    + " activeRoom=" + activeRoomID);
+            return;
+        }
         if (state != 0) {
+            boolean shouldRejoin = userWantsRoom;
+            resetJoinAttempt();
             isJoined = false;
             joinInProgress = false;
-            if (userWantsRoom) {
+            if (shouldRejoin) {
                 scheduleReconnect();
             } else {
                 leaveRoom();
@@ -344,6 +402,8 @@ public final class RtcBackgroundJoiner {
         }
         isJoined = true;
         joinInProgress = false;
+        joinAttemptStartedAt = 0L;
+        activeJoinGeneration = 0L;
         bindRtcSession();
         persistSession();
         notifyListener();
@@ -366,10 +426,13 @@ public final class RtcBackgroundJoiner {
         }
         rtcVideo = session.getRtcVideo();
         rtcRoom = session.getRtcRoom();
+        activeRoomID = getAssignedRoomID();
         usbAudioDetector = session.getUsbAudioDetector();
         isJoined = session.isJoined();
         userWantsRoom = session.isLoopJoin();
         joinInProgress = false;
+        joinAttemptStartedAt = 0L;
+        activeJoinGeneration = 0L;
         configReady = true;
         ensureUsbMonitoring();
         if (rtcRoom != null) {
@@ -385,7 +448,7 @@ public final class RtcBackgroundJoiner {
             notifyListener();
             return;
         }
-        if (TextUtils.isEmpty(getAssignedRoomId())) {
+        if (TextUtils.isEmpty(getAssignedRoomID())) {
             notifyListener();
             return;
         }
@@ -395,14 +458,94 @@ public final class RtcBackgroundJoiner {
             if (!userWantsRoom || isJoined) {
                 return;
             }
-            if (!isCheckedIn() || TextUtils.isEmpty(getAssignedRoomId())) {
+            if (!isCheckedIn() || TextUtils.isEmpty(getAssignedRoomID())) {
                 return;
             }
             if (!RtcRoomSession.get().hasActiveSession()) {
-                refreshRtcAppIdBeforeJoin(getAssignedRoomId());
+                attemptJoin();
             }
         };
         mainHandler.postDelayed(pendingRejoin, REJOIN_DELAY_MS);
+    }
+
+    private void startWatchdog() {
+        if (watchdogScheduled || appContext == null) {
+            return;
+        }
+        watchdogScheduled = true;
+        mainHandler.post(watchdogRunnable);
+    }
+
+    private void stopWatchdog() {
+        watchdogScheduled = false;
+        mainHandler.removeCallbacks(watchdogRunnable);
+    }
+
+    private final Runnable watchdogRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!watchdogScheduled) {
+                return;
+            }
+            if (!userWantsRoom || !isCheckedIn() || TextUtils.isEmpty(getAssignedRoomID())) {
+                stopWatchdog();
+                notifyListener();
+                return;
+            }
+
+            if (joinInProgress && isJoinAttemptStalled()) {
+                Log.w(TAG, "RTC watchdog detected a stalled join attempt");
+                resetJoinAttempt();
+            }
+            if (!isJoined() && !RtcRoomSession.get().hasActiveSession()) {
+                attemptJoin();
+            }
+            mainHandler.postDelayed(this, WATCHDOG_INTERVAL_MS);
+        }
+    };
+
+    private boolean isJoinAttemptStalled() {
+        return joinInProgress
+                && joinAttemptStartedAt > 0L
+                && System.currentTimeMillis() - joinAttemptStartedAt >= JOIN_ATTEMPT_TIMEOUT_MS;
+    }
+
+    private boolean isCurrentJoinAttempt(long generation) {
+        return joinInProgress && activeJoinGeneration == generation;
+    }
+
+    private void resetJoinAttempt() {
+        activeJoinGeneration = ++joinGeneration;
+        joinInProgress = false;
+        isJoined = false;
+        joinAttemptStartedAt = 0L;
+        token = null;
+        activeRoomID = "";
+
+        RtcRoomSession session = RtcRoomSession.get();
+        RTCRoom currentRoom = rtcRoom != null ? rtcRoom : session.getRtcRoom();
+        RTCVideo currentVideo = rtcVideo != null ? rtcVideo : session.getRtcVideo();
+        UsbAudioDetector persistedDetector = session.getUsbAudioDetector();
+        RtcSessionController.getInstance().clearSession();
+        if (currentRoom != null) {
+            currentRoom.leaveRoom();
+            currentRoom.destroy();
+        }
+        if (currentVideo != null) {
+            currentVideo.stopAudioCapture();
+            RTCVideo.destroyRTCVideo();
+        }
+        session.clear();
+        if (persistedDetector != null && usbAudioDetector == persistedDetector) {
+            usbAudioDetector = null;
+        }
+        rtcRoom = null;
+        rtcVideo = null;
+        if (currentRoom != null || currentVideo != null) {
+            stopRoomKeepLifeService();
+        }
+        ensureUsbMonitoring();
+        notifyListener();
     }
 
     private void cancelPendingRejoin() {
@@ -443,12 +586,12 @@ public final class RtcBackgroundJoiner {
                 .getBoolean(Constants.getCheckedInKey(), false);
     }
 
-    private String getAssignedRoomId() {
+    private String getAssignedRoomID() {
         if (appContext == null) {
             return "";
         }
         return appContext.getSharedPreferences(Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE)
-                .getString(Constants.getAssignedRoomIdKey(), "");
+                .getString(Constants.getAssignedRoomIDKey(), "");
     }
 
     private String getRtcUserId() {
@@ -496,9 +639,13 @@ public final class RtcBackgroundJoiner {
                 if (state == ConnectionState.CONNECTION_STATE_LOST.getValue()
                         || state == ConnectionState.CONNECTION_STATE_FAILED.getValue()
                         || state == ConnectionState.CONNECTION_STATE_DISCONNECTED.getValue()) {
-                    isJoined = false;
-                    notifyListener();
-                    scheduleReconnect();
+                    boolean shouldRejoin = userWantsRoom;
+                    resetJoinAttempt();
+                    if (shouldRejoin) {
+                        scheduleReconnect();
+                    } else {
+                        leaveRoom();
+                    }
                 }
             });
         }
@@ -506,9 +653,9 @@ public final class RtcBackgroundJoiner {
 
     private final IRTCRoomEventHandler rtcRoomEventHandler = new IRTCRoomEventHandler() {
         @Override
-        public void onRoomStateChanged(String roomId, String uid, int state, String extraInfo) {
+        public void onRoomStateChanged(String roomID, String uid, int state, String extraInfo) {
             Log.i(TAG, "onRoomStateChanged state=" + state + " uid=" + uid);
-            mainHandler.post(() -> handleRoomStateChanged(state));
+            mainHandler.post(() -> handleRoomStateChanged(roomID, state));
         }
     };
 }

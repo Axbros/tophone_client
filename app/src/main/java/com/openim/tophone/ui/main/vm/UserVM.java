@@ -56,8 +56,8 @@ public class UserVM extends BaseViewModel {
 
     private void refreshRoomSwitchVisibility(SharedPreferences sp) {
         boolean checked = sp.getBoolean(Constants.getCheckedInKey(), false);
-        String roomId = sp.getString(Constants.getAssignedRoomIdKey(), "");
-        showRoomSwitch.setValue(checked && !TextUtils.isEmpty(roomId));
+        String roomID = sp.getString(Constants.getAssignedRoomIDKey(), "");
+        showRoomSwitch.setValue(checked && !TextUtils.isEmpty(roomID));
     }
 
     private void loadSavedPolicy(SharedPreferences sp) {

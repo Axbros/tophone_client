@@ -260,7 +260,7 @@ public class Constants {
 
     public static String getGroupName() { return GROUP_NAME; }
 
-    public static String getAssignedRoomIdKey() { return ASSIGNED_ROOM_ID_KEY; }
+    public static String getAssignedRoomIDKey() { return ASSIGNED_ROOM_ID_KEY; }
 
     public static String getCheckedInKey() { return CHECKED_IN_KEY; }
 
