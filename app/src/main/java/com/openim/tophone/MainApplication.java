@@ -2,9 +2,7 @@ package com.openim.tophone;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -25,6 +23,7 @@ import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.ActivityManager;
 import com.openim.tophone.utils.AppBootstrapClient;
 import com.openim.tophone.utils.AppVersionUtil;
+import com.openim.tophone.utils.ApkUpdateInstaller;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
@@ -127,9 +126,18 @@ public class MainApplication extends BaseApp {
             Toast.makeText(this, "需要更新 App，请联系管理员获取新版安装包", Toast.LENGTH_LONG).show();
             return;
         }
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(upgradeUrl.trim()));
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
+        Toast.makeText(this, "正在下载最新版本，下载完成后将打开安装界面", Toast.LENGTH_LONG).show();
+        ApkUpdateInstaller.downloadAndInstall(this, upgradeUrl, new ApkUpdateInstaller.Callback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(MainApplication.this, "升级包已下载，请确认安装", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onFailure(String message) {
+                Toast.makeText(MainApplication.this, "升级失败：" + message, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     /** 设备 ID 自动注册/登录，再执行 check_version */

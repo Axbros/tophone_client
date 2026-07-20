@@ -62,8 +62,12 @@ public final class AppBootstrapClient {
                 apply(payload.apiBaseUrl, payload.rtcBaseUrl, payload.mqttTcp);
                 updated = true;
                 Log.i(TAG, "bootstrap ok url=" + bootstrapUrl + " api=" + payload.apiBaseUrl);
-                if (payload.forceUpgrade || (payload.minNativeVersionCode > 0
-                        && BuildConfig.VERSION_CODE < payload.minNativeVersionCode)) {
+                boolean belowMinimum = payload.minNativeVersionCode > 0
+                        && BuildConfig.VERSION_CODE < payload.minNativeVersionCode;
+                boolean forcedUpgradePending = payload.forceUpgrade
+                        && payload.latestNativeVersionCode > 0
+                        && BuildConfig.VERSION_CODE < payload.latestNativeVersionCode;
+                if (belowMinimum || forcedUpgradePending) {
                     postForceUpgrade(callback, payload.upgradeUrl);
                     return;
                 }
@@ -111,6 +115,7 @@ public final class AppBootstrapClient {
             payload.mqttTcp = firstNonEmpty(data.optString("mqttTcp", ""), data.optString("mqttWss", ""));
             payload.configVersion = data.optInt("configVersion", 0);
             payload.minNativeVersionCode = data.optInt("minNativeVersionCode", 0);
+            payload.latestNativeVersionCode = data.optInt("latestNativeVersionCode", 0);
             payload.forceUpgrade = data.optBoolean("forceUpgrade", false);
             payload.upgradeUrl = data.optString("upgradeUrl", "").trim();
             return payload;
@@ -170,6 +175,7 @@ public final class AppBootstrapClient {
         String mqttTcp;
         int configVersion;
         int minNativeVersionCode;
+        int latestNativeVersionCode;
         boolean forceUpgrade;
         String upgradeUrl;
     }
