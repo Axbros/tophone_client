@@ -1,6 +1,8 @@
 package com.openim.tophone.mqtt;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.openim.tophone.MainApplication;
 import com.openim.tophone.rtc.RtcBackgroundJoiner;
@@ -34,12 +36,14 @@ public class MqttCommandClient implements MqttCallbackExtended {
     private static final int QOS_CMD = 1;
     private static final int QOS_SMS = 1;
     private static final int QOS_ACK = 0;
+    private static final long PRESENCE_HEARTBEAT_MS = 60_000L;
 
     private final Context appContext;
     private final String deviceId;
     private final ToPhone toPhone;
     private final Runnable onConnectionLost;
     private final Runnable onConnectionReady;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final RequestIdDedup dedup = new RequestIdDedup();
     private final SmsDedup smsDedup = new SmsDedup();
     private MqttAndroidClient client;
@@ -114,6 +118,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     flushSmsQueue();
                     setVmLoading(false);
                     setVmConnectionStatus(true);
+                    startPresenceHeartbeat();
                     notifyConnectionReady();
                     RtcBackgroundJoiner.get().tryJoinWhenReady();
                 }
@@ -194,6 +199,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
             }
             flushSmsQueue();
             setVmConnectionStatus(true);
+            startPresenceHeartbeat();
             notifyConnectionReady();
             RtcBackgroundJoiner.get().tryJoinWhenReady();
         }
@@ -279,6 +285,26 @@ public class MqttCommandClient implements MqttCallbackExtended {
             L.e(TAG, "publishStatus failed: " + e.getMessage());
         }
     }
+
+    private void startPresenceHeartbeat() {
+        mainHandler.removeCallbacks(presenceHeartbeatRunnable);
+        mainHandler.postDelayed(presenceHeartbeatRunnable, PRESENCE_HEARTBEAT_MS);
+    }
+
+    private void stopPresenceHeartbeat() {
+        mainHandler.removeCallbacks(presenceHeartbeatRunnable);
+    }
+
+    private final Runnable presenceHeartbeatRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (client == null || !client.isConnected()) {
+                return;
+            }
+            publishStatus(true);
+            mainHandler.postDelayed(this, PRESENCE_HEARTBEAT_MS);
+        }
+    };
 
     private void reportPresenceToServer(boolean online) {
         if (!N.isInitialized()) {
@@ -381,6 +407,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
     @Override
     public void connectionLost(Throwable cause) {
         L.w(TAG, "connection lost: " + (cause != null ? cause.getMessage() : ""));
+        stopPresenceHeartbeat();
         setVmConnectionStatus(false);
         if (onConnectionLost != null) {
             onConnectionLost.run();
@@ -415,9 +442,11 @@ public class MqttCommandClient implements MqttCallbackExtended {
     }
 
     public void disconnect() {
+        stopPresenceHeartbeat();
         MqttAndroidClient c = client;
         client = null;
         connecting = false;
+        reportPresenceToServer(false);
         if (c != null) {
             try {
                 c.setCallback(null);
