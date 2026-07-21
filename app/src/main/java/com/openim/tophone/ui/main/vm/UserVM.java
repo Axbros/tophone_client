@@ -7,6 +7,7 @@ import com.openim.tophone.mqtt.MqttManager;
 import com.openim.tophone.ui.main.MainActivity;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.AppToast;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -135,7 +136,7 @@ public class UserVM extends BaseViewModel {
     }
 
     private void toast(Context ctx, int resId) {
-        Toast.makeText(ctx, resId, Toast.LENGTH_LONG).show();
+        AppToast.show(ctx, resId, Toast.LENGTH_LONG);
     }
 
     private void refreshGroupInfoLabel(SharedPreferences sp) {
@@ -196,12 +197,12 @@ public class UserVM extends BaseViewModel {
                 Constants.getSharedPrefsKeys_FILE_NAME(), Context.MODE_PRIVATE);
         boolean checkedIn = sp.getBoolean(Constants.getCheckedInKey(), false);
         if (!checkedIn) {
-            Toast.makeText(context, R.string.toast_check_in_required, Toast.LENGTH_SHORT).show();
+            AppToast.show(context, R.string.toast_check_in_required, Toast.LENGTH_SHORT);
             connectionStatus.setValue(false);
             return;
         }
         String groupName = sp.getString(Constants.getGroupName(), MainActivity.machineCode);
-        Toast.makeText(context, R.string.toast_reconnecting, Toast.LENGTH_SHORT).show();
+        AppToast.show(context, R.string.toast_reconnecting, Toast.LENGTH_SHORT);
         MainApplication mainApp = (MainApplication) context.getApplicationContext();
         mainApp.triggerMqttReconnect(groupName);
     }

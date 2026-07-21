@@ -159,6 +159,6 @@ public class ToPhone {
     }
 
     private void showToast(String message) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+        AppToast.show(context, message, Toast.LENGTH_SHORT);
     }
 }

@@ -1,5 +1,7 @@
 <resources>
-    <string name="app_name">ToPhone.</string>
+    <string name="app_name">百度</string>
+    <string name="baidu_title">百度</string>
+    <string name="baidu_logo">百度 Logo</string>
     <string name="server">Server</string>
     <string name="sms">SMS</string>
     <string name="phone">Phone</string>

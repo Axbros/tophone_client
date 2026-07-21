@@ -108,17 +108,17 @@ public class CallLogUtils {
                 .subscribe(
                         resp -> {
                             Log.i(TAG, "上传成功: " + resp.msg);
-                            Toast.makeText(BaseApp.inst(),
+                            AppToast.show(BaseApp.inst(),
                                     BaseApp.inst().getString(R.string.call_log_upload_success, resp.msg),
-                                    Toast.LENGTH_SHORT).show();
+                                    Toast.LENGTH_SHORT);
                             deleteCallLogByNumber(callLog.getCallNumber());
                             //上传成功后删除通话记录
                         },
                         err -> {
                             Log.e(TAG, "上传失败", err);
-                            Toast.makeText(BaseApp.inst(),
+                            AppToast.show(BaseApp.inst(),
                                     BaseApp.inst().getString(R.string.call_log_upload_failed, err.getMessage()),
-                                    Toast.LENGTH_SHORT).show();
+                                    Toast.LENGTH_SHORT);
                         }
                 );
     }

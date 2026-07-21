@@ -10,6 +10,7 @@ import com.openim.tophone.R;
 import com.openim.tophone.net.RXRetrofit.Exception.NetworkException;
 import com.openim.tophone.net.RXRetrofit.Exception.RXRetrofitException;
 import com.openim.tophone.base.BaseApp;
+import com.openim.tophone.utils.AppToast;
 import io.reactivex.Observer;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
@@ -68,7 +69,7 @@ public abstract class NetObserver<T> implements Observer<T> {
         onComplete();
         if (!isConnected()) {
             e = new NetworkException();
-            Toast.makeText(BaseApp.inst(), R.string.toast_network_error_short, Toast.LENGTH_SHORT).show();
+            AppToast.show(BaseApp.inst(), R.string.toast_network_error_short, Toast.LENGTH_SHORT);
         }
         e.printStackTrace();
         if (HttpConfig.isDebug) {

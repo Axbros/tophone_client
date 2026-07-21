@@ -134,7 +134,6 @@ public class CallBlocker {
      * 显示提示信息
      */
     private void showToast(String message) {
-        Toast.makeText(mContext, message, Toast.LENGTH_SHORT).show();
+        AppToast.show(mContext, message, Toast.LENGTH_SHORT);
     }
 }
-

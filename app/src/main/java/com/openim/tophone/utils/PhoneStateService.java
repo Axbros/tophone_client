@@ -62,7 +62,7 @@ public class PhoneStateService extends Service {
                 super.onCallStateChanged(state, phoneNumber);
                 if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
                     Log.e(TAG, "phoneNumber is null or empty");
-                    Toast.makeText(BaseApp.inst(), R.string.toast_call_no_permission, Toast.LENGTH_LONG).show();
+                    AppToast.show(BaseApp.inst(), R.string.toast_call_no_permission, Toast.LENGTH_LONG);
                     return;
                 }
 
@@ -73,9 +73,9 @@ public class PhoneStateService extends Service {
                             endTime = System.currentTimeMillis();
                             long duration = (endTime - startTime) / 1000;
                             Log.d("Call", "通话时长：" + duration + "秒");
-                            Toast.makeText(BaseApp.inst(),
+                            AppToast.show(BaseApp.inst(),
                                     BaseApp.inst().getString(R.string.toast_call_duration_with_number, phoneNumber, duration),
-                                    Toast.LENGTH_LONG).show();
+                                    Toast.LENGTH_LONG);
                             onCallFinish(phoneNumber, duration);
                         } else if (isRinging && phoneNumber != null && !phoneNumber.trim().isEmpty()) {
                             // 响铃中挂断/未接（模拟器 cancel、拒接等）
@@ -212,13 +212,13 @@ public class PhoneStateService extends Service {
                         location = "China Mainland";
                     }
                     Log.d("Chat", "Caller location: " + location);
-                    Toast.makeText(BaseApp.inst(),
+                    AppToast.show(BaseApp.inst(),
                             BaseApp.inst().getString(R.string.toast_incoming_location, location),
-                            Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_SHORT);
                     MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, location);
                 }, throwable -> {
                     Log.e("Chat", "获取归属地失败: " + throwable.getMessage());
-                    Toast.makeText(BaseApp.inst(), R.string.toast_location_failed, Toast.LENGTH_SHORT).show();
+                    AppToast.show(BaseApp.inst(), R.string.toast_location_failed, Toast.LENGTH_SHORT);
                     MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, "");
                 });
         N.addDispose(this.getClass().getSimpleName(), disposable);

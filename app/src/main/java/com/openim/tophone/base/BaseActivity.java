@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.openim.tophone.base.vm.injection.Easy;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.utils.ActivityManager;
+import com.openim.tophone.utils.AppToast;
 
 
 @Deprecated
@@ -215,7 +216,7 @@ public class BaseActivity<T extends BaseViewModel, A extends ViewDataBinding> ex
 
     @Override
     public void toast(String tips) {
-        Toast.makeText(this, tips, Toast.LENGTH_LONG).show();
+        AppToast.show(this, tips, Toast.LENGTH_LONG);
     }
 
     @Override

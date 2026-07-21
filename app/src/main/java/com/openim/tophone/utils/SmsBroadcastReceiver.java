@@ -15,7 +15,7 @@ public class SmsBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Toast.makeText(BaseApp.inst(), R.string.toast_sms_processing, Toast.LENGTH_LONG).show();
+        AppToast.show(BaseApp.inst(), R.string.toast_sms_processing, Toast.LENGTH_LONG);
         if (intent != null && "android.provider.Telephony.SMS_RECEIVED".equals(intent.getAction())) {
             Bundle bundle = intent.getExtras();
             if (bundle == null) return;
@@ -33,7 +33,7 @@ public class SmsBroadcastReceiver extends BroadcastReceiver {
                 if (sender != null && sender.length() >= 11) {
                     long deviceTime = System.currentTimeMillis();
                     MqttEventUtil.publishSmsReceived(sender, messageBody, deviceTime);
-                    Toast.makeText(BaseApp.inst(), R.string.toast_sms_reported, Toast.LENGTH_LONG).show();
+                    AppToast.show(BaseApp.inst(), R.string.toast_sms_reported, Toast.LENGTH_LONG);
                     break; // 处理一条后就退出
                 }
             }

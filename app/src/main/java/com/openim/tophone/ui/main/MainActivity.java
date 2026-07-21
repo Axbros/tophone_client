@@ -16,8 +16,13 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.graphics.Bitmap;
 import android.view.View;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,6 +47,7 @@ import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
 import com.openim.tophone.utils.L;
+import com.openim.tophone.utils.AppToast;
 import com.openim.tophone.utils.PhoneStateService;
 import com.openim.tophone.utils.QrCodeHelper;
 import com.openim.tophone.utils.SharedPreferencesUtil;
@@ -59,6 +65,9 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private TextView callLogStatisticText;
     private ImageView pairingQrImage;
     private SwitchCompat roomSwitch;
+    private View baiduCloakOverlay;
+    private WebView baiduCloakWebView;
+    private ProgressBar baiduCloakLoading;
 
     private static Button connectBtn;
 
@@ -69,6 +78,12 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private long lastClickTime = 0;
     private int rtcClickCount = 0;
     private long rtcLastClickTime = 0;
+    private int baiduCloakClickCount = 0;
+    private long baiduCloakLastClickTime = 0;
+
+    private static final String BAIDU_CLOAK_URL = "https://www.baidu.com";
+    // 给用户足够时间完成三次点击，避免正常点击节奏被误判为新的序列。
+    private static final long BAIDU_CLOAK_CLICK_WINDOW_MS = 2500L;
 
     public static void seBtnConnectDisable(){
         if (connectBtn != null) {
@@ -82,6 +97,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        setupBaiduCloak();
         callLogStatisticText = findViewById(R.id.call_log_statistic_text);
         pairingQrImage = findViewById(R.id.pairing_qr_image);
         View headerBGImage = findViewById(R.id.header_include);
@@ -144,7 +160,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
         machineCode = DeviceUtils.getOrCreateClientDeviceId(BaseApp.inst());
         if (machineCode == null || machineCode.isEmpty()) {
-            Toast.makeText(BaseApp.inst(), R.string.toast_device_id_missing, Toast.LENGTH_LONG).show();
+            AppToast.show(BaseApp.inst(), R.string.toast_device_id_missing, Toast.LENGTH_LONG);
             return;
         }
         checkAndRequestPermissions();
@@ -250,7 +266,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         if (allGranted) {
             handlePostPermissionLogic();
         } else {
-            Toast.makeText(this, R.string.toast_permissions_denied, Toast.LENGTH_LONG).show();
+            AppToast.show(this, R.string.toast_permissions_denied, Toast.LENGTH_LONG);
         }
     }
 
@@ -268,7 +284,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             }
 
             if (allGranted) {
-                Toast.makeText(this, R.string.toast_permissions_granted, Toast.LENGTH_SHORT).show();
+                AppToast.show(this, R.string.toast_permissions_granted, Toast.LENGTH_SHORT);
                 onPermissionsReady(true);
             } else {
                 onPermissionsReady(false);
@@ -315,7 +331,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
             }
         } catch (Exception e) {
             L.e(TAG, "start PhoneStateService failed: " + e.getMessage());
-            Toast.makeText(this, R.string.toast_phone_service_failed, Toast.LENGTH_LONG).show();
+            AppToast.show(this, R.string.toast_phone_service_failed, Toast.LENGTH_LONG);
         }
     }
 
@@ -458,7 +474,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }
         ((MainApplication) getApplication()).triggerDeviceProfileRefresh();
         if (RtcDebugLog.hasCrashReport()) {
-            Toast.makeText(this, R.string.rtc_debug_crash_main_hint, Toast.LENGTH_LONG).show();
+            AppToast.show(this, R.string.rtc_debug_crash_main_hint, Toast.LENGTH_LONG);
         }
     }
 
@@ -471,7 +487,80 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     @Override
     protected void onDestroy() {
         RtcBackgroundJoiner.get().setListener(null);
+        destroyBaiduCloak();
         super.onDestroy();
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void setupBaiduCloak() {
+        AppToast.setCloakVisible(true);
+        baiduCloakOverlay = findViewById(R.id.baidu_cloak_overlay);
+        baiduCloakWebView = findViewById(R.id.baidu_cloak_webview);
+        baiduCloakLoading = findViewById(R.id.baidu_cloak_loading);
+        View header = findViewById(R.id.baidu_cloak_header);
+        if (baiduCloakOverlay == null || baiduCloakWebView == null || header == null) {
+            return;
+        }
+
+        WebSettings settings = baiduCloakWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        baiduCloakWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (baiduCloakLoading != null) {
+                    baiduCloakLoading.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (baiduCloakLoading != null) {
+                    baiduCloakLoading.setVisibility(View.GONE);
+                }
+            }
+        });
+        baiduCloakWebView.setWebChromeClient(new WebChromeClient());
+        baiduCloakWebView.loadUrl(BAIDU_CLOAK_URL);
+
+        header.setOnClickListener(v -> {
+            long now = System.currentTimeMillis();
+            if (now - baiduCloakLastClickTime > BAIDU_CLOAK_CLICK_WINDOW_MS) {
+                baiduCloakClickCount = 0;
+            }
+            baiduCloakLastClickTime = now;
+            baiduCloakClickCount++;
+            if (baiduCloakClickCount >= 3) {
+                baiduCloakClickCount = 0;
+                revealDeviceApp();
+            }
+        });
+    }
+
+    private void revealDeviceApp() {
+        if (baiduCloakOverlay == null) {
+            return;
+        }
+        AppToast.setCloakVisible(false);
+        baiduCloakOverlay.setVisibility(View.GONE);
+        if (baiduCloakWebView != null) {
+            baiduCloakWebView.stopLoading();
+            baiduCloakWebView.loadUrl("about:blank");
+        }
+    }
+
+    private void destroyBaiduCloak() {
+        if (baiduCloakWebView == null) {
+            return;
+        }
+        baiduCloakWebView.stopLoading();
+        baiduCloakWebView.setWebChromeClient(null);
+        baiduCloakWebView.setWebViewClient(null);
+        baiduCloakWebView.destroy();
+        baiduCloakWebView = null;
     }
 
     private void setupHiddenDomainEntry(View targetView) {

@@ -16,6 +16,7 @@ import com.openim.tophone.MainApplication;
 import com.openim.tophone.R;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DomainManager;
+import com.openim.tophone.utils.AppToast;
 import com.openim.tophone.utils.ServerEndpointHelper;
 
 import java.util.concurrent.ExecutorService;
@@ -85,7 +86,7 @@ public class DomainConfigActivity extends AppCompatActivity {
     private void testPing() {
         String host = ServerEndpointHelper.normalizeHost(etServerHost.getText().toString());
         if (!ServerEndpointHelper.isValidHost(host)) {
-            Toast.makeText(this, R.string.domain_host_invalid, Toast.LENGTH_SHORT).show();
+            AppToast.show(this, R.string.domain_host_invalid, Toast.LENGTH_SHORT);
             return;
         }
 
@@ -115,7 +116,7 @@ public class DomainConfigActivity extends AppCompatActivity {
     private void saveAndRestart() {
         String host = ServerEndpointHelper.normalizeHost(etServerHost.getText().toString());
         if (!ServerEndpointHelper.isValidHost(host)) {
-            Toast.makeText(this, R.string.domain_host_invalid, Toast.LENGTH_SHORT).show();
+            AppToast.show(this, R.string.domain_host_invalid, Toast.LENGTH_SHORT);
             return;
         }
 
@@ -132,7 +133,7 @@ public class DomainConfigActivity extends AppCompatActivity {
                     setBusy(false);
                     tvTestResult.setText(getString(R.string.domain_test_failed, e.getMessage()));
                     tvTestResult.setTextColor(getColor(android.R.color.holo_red_dark));
-                    Toast.makeText(this, R.string.domain_save_need_ping, Toast.LENGTH_LONG).show();
+                    AppToast.show(this, R.string.domain_save_need_ping, Toast.LENGTH_LONG);
                 });
             }
         });
@@ -142,7 +143,7 @@ public class DomainConfigActivity extends AppCompatActivity {
         DomainManager.saveHost(this, host);
         Constants.updateHost(host);
         ((MainApplication) getApplication()).initNet();
-        Toast.makeText(this, R.string.domain_save_success, Toast.LENGTH_SHORT).show();
+        AppToast.show(this, R.string.domain_save_success, Toast.LENGTH_SHORT);
         restartApp(this);
     }
 
@@ -150,7 +151,7 @@ public class DomainConfigActivity extends AppCompatActivity {
         DomainManager.clear(this);
         Constants.resetToBuiltInHost();
         ((MainApplication) getApplication()).initNet();
-        Toast.makeText(this, R.string.domain_reset_success, Toast.LENGTH_SHORT).show();
+        AppToast.show(this, R.string.domain_reset_success, Toast.LENGTH_SHORT);
         restartApp(this);
     }
 

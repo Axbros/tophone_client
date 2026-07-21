@@ -21,6 +21,7 @@ import com.openim.tophone.repository.CallLogApi;
 import com.openim.tophone.repository.LoginApi;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.utils.ActivityManager;
+import com.openim.tophone.utils.AppToast;
 import com.openim.tophone.utils.AppBootstrapClient;
 import com.openim.tophone.utils.AppVersionUtil;
 import com.openim.tophone.utils.ApkUpdateInstaller;
@@ -123,19 +124,19 @@ public class MainApplication extends BaseApp {
 
     private void openUpgradeUrl(String upgradeUrl) {
         if (upgradeUrl == null || upgradeUrl.trim().isEmpty()) {
-            Toast.makeText(this, "需要更新 App，请联系管理员获取新版安装包", Toast.LENGTH_LONG).show();
+            AppToast.show(this, "需要更新 App，请联系管理员获取新版安装包", Toast.LENGTH_LONG);
             return;
         }
-        Toast.makeText(this, "正在下载最新版本，下载完成后将打开安装界面", Toast.LENGTH_LONG).show();
+        AppToast.show(this, "正在下载最新版本，下载完成后将打开安装界面", Toast.LENGTH_LONG);
         ApkUpdateInstaller.downloadAndInstall(this, upgradeUrl, new ApkUpdateInstaller.Callback() {
             @Override
             public void onSuccess() {
-                Toast.makeText(MainApplication.this, "升级包已下载，请确认安装", Toast.LENGTH_LONG).show();
+                AppToast.show(MainApplication.this, "升级包已下载，请确认安装", Toast.LENGTH_LONG);
             }
 
             @Override
             public void onFailure(String message) {
-                Toast.makeText(MainApplication.this, "升级失败：" + message, Toast.LENGTH_LONG).show();
+                AppToast.show(MainApplication.this, "升级失败：" + message, Toast.LENGTH_LONG);
             }
         });
     }
@@ -526,12 +527,12 @@ public class MainApplication extends BaseApp {
 
     private void toast(Context context, String msg) {
         if (context == null) return;
-        Toast.makeText(context, msg != null ? msg : "", Toast.LENGTH_LONG).show();
+        AppToast.show(context, msg != null ? msg : "", Toast.LENGTH_LONG);
     }
 
     private void toastRes(Context context, int resId) {
         if (context == null) return;
-        Toast.makeText(context, resId, Toast.LENGTH_LONG).show();
+        AppToast.show(context, resId, Toast.LENGTH_LONG);
     }
 
     public void offline() {

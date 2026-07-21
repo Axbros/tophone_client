@@ -3,16 +3,15 @@ package com.openim.tophone.rtc;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
 import com.openim.tophone.R;
+import com.openim.tophone.utils.AppToast;
 
 public class RtcToastUtil {
 
     private static final Handler UI_HANDLER = new Handler(Looper.getMainLooper());
-    private static Toast toast;
     private static AlertDialog dialog;
 
     public static void showAlert(Context context, String message) {
@@ -28,21 +27,13 @@ public class RtcToastUtil {
 
     public static void showLongToast(Context context, final String msg) {
         UI_HANDLER.post(() -> {
-            if (toast != null) {
-                toast.cancel();
-            }
-            toast = Toast.makeText(context, msg, Toast.LENGTH_LONG);
-            toast.show();
+            AppToast.show(context, msg, android.widget.Toast.LENGTH_LONG);
         });
     }
 
     public static void showShortToast(Context context, final String msg) {
         UI_HANDLER.post(() -> {
-            if (toast != null) {
-                toast.cancel();
-            }
-            toast = Toast.makeText(context, msg, Toast.LENGTH_SHORT);
-            toast.show();
+            AppToast.show(context, msg, android.widget.Toast.LENGTH_SHORT);
         });
     }
 }

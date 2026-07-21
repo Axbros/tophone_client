@@ -273,6 +273,7 @@
                         android:id="@+id/copyright"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:visibility="gone"
                         android:text="@string/learn_more"
                         android:textSize="14sp"
                         android:textAlignment="center"
@@ -281,6 +282,7 @@
                         android:id="@+id/link_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:visibility="gone"
                         android:clickable="true"
                         android:focusable="true"
                         android:onClick="openLink"
@@ -291,5 +293,66 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
+        <FrameLayout
+            android:id="@+id/baidu_cloak_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/white"
+            android:elevation="24dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <!-- Header 独占固定高度，避免被 WebView 的渲染层覆盖。 -->
+                <LinearLayout
+                    android:id="@+id/baidu_cloak_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:background="#F7F7F7"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:elevation="20dp"
+                    android:translationZ="20dp">
+
+                    <ImageView
+                        android:id="@+id/baidu_cloak_logo"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="@string/baidu_logo"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/baidu_logo" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/baidu_title"
+                        android:textColor="#222222"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <WebView
+                    android:id="@+id/baidu_cloak_webview"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@android:color/white" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/baidu_cloak_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+        </FrameLayout>
     </FrameLayout>
 </layout>

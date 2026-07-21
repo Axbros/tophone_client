@@ -12,6 +12,7 @@ import android.widget.Toast;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
+import com.openim.tophone.utils.AppToast;
 import com.openim.tophone.utils.MqttEventUtil;
 
 public class SmsReceiver extends BroadcastReceiver {
@@ -22,7 +23,7 @@ public class SmsReceiver extends BroadcastReceiver {
         if (intent.getAction() != null &&
                 (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") ||
                         intent.getAction().equals("android.provider.Telephony.SMS_DELIVER"))) {
-            Toast.makeText(BaseApp.inst(), R.string.toast_sms_received, Toast.LENGTH_SHORT).show();
+            AppToast.show(BaseApp.inst(), R.string.toast_sms_received, Toast.LENGTH_SHORT);
             Bundle bundle = intent.getExtras();
             if (bundle != null) {
                 Object[] pdus = (Object[]) bundle.get("pdus");

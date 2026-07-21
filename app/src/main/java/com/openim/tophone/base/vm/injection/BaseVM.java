@@ -10,12 +10,13 @@ import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.base.vm.ISubscribe;
 import com.openim.tophone.base.vm.State;
 import com.openim.tophone.base.vm.Subject;
+import com.openim.tophone.utils.AppToast;
 
 public class BaseVM extends ViewModel {
     private final State<Subject> channel = new State<>();
 
     public void toast(String content) {
-        Toast.makeText(BaseApp.inst(), content, Toast.LENGTH_SHORT).show();
+        AppToast.show(BaseApp.inst(), content, Toast.LENGTH_SHORT);
     }
 
     void removed() {
