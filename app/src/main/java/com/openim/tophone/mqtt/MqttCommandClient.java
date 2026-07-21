@@ -38,15 +38,19 @@ public class MqttCommandClient implements MqttCallbackExtended {
     private final Context appContext;
     private final String deviceId;
     private final ToPhone toPhone;
+    private final Runnable onConnectionLost;
+    private final Runnable onConnectionReady;
     private final RequestIdDedup dedup = new RequestIdDedup();
     private final SmsDedup smsDedup = new SmsDedup();
     private MqttAndroidClient client;
     private MqttReplyChannel replyChannel;
     private volatile boolean connecting;
 
-    public MqttCommandClient(Context context, String deviceId) {
+    public MqttCommandClient(Context context, String deviceId, Runnable onConnectionLost, Runnable onConnectionReady) {
         this.appContext = context.getApplicationContext();
         this.deviceId = deviceId;
+        this.onConnectionLost = onConnectionLost;
+        this.onConnectionReady = onConnectionReady;
         this.replyChannel = new MqttReplyChannel(deviceId, this::publishInternal);
         this.toPhone = new ToPhone(replyChannel);
     }
@@ -81,7 +85,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
         client.setCallback(this);
 
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setAutomaticReconnect(false);
+        options.setAutomaticReconnect(true);
         options.setCleanSession(true);
         options.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1_1);
         options.setUserName(user);
@@ -110,6 +114,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     flushSmsQueue();
                     setVmLoading(false);
                     setVmConnectionStatus(true);
+                    notifyConnectionReady();
                     RtcBackgroundJoiner.get().tryJoinWhenReady();
                 }
 
@@ -189,7 +194,14 @@ public class MqttCommandClient implements MqttCallbackExtended {
             }
             flushSmsQueue();
             setVmConnectionStatus(true);
+            notifyConnectionReady();
             RtcBackgroundJoiner.get().tryJoinWhenReady();
+        }
+    }
+
+    private void notifyConnectionReady() {
+        if (onConnectionReady != null) {
+            onConnectionReady.run();
         }
     }
 
@@ -370,6 +382,9 @@ public class MqttCommandClient implements MqttCallbackExtended {
     public void connectionLost(Throwable cause) {
         L.w(TAG, "connection lost: " + (cause != null ? cause.getMessage() : ""));
         setVmConnectionStatus(false);
+        if (onConnectionLost != null) {
+            onConnectionLost.run();
+        }
     }
 
     @Override

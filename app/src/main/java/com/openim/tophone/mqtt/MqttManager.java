@@ -2,6 +2,8 @@ package com.openim.tophone.mqtt;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 
 import com.openim.tophone.net.RXRetrofit.N;
@@ -19,12 +21,21 @@ public class MqttManager {
 
     private static final String TAG = "MqttManager";
     private static final long CONNECT_COOLDOWN_MS = 15_000L;
+    private static final long[] RECONNECT_DELAYS_MS = {3_000L, 10_000L, 30_000L};
     private static MqttManager instance;
 
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private MqttCommandClient client;
     private String activeDeviceId;
+    private Context appContext;
+    private String activeBroker;
+    private String activeUsername;
+    private String activeToken;
+    private boolean activeAllowTokenRefresh;
     private boolean tokenRefreshInFlight;
+    private boolean intentionalDisconnect;
     private long lastConnectAttemptMs;
+    private int reconnectAttempt;
 
     public static synchronized MqttManager getInstance() {
         if (instance == null) {
@@ -100,12 +111,24 @@ public class MqttManager {
 
         lastConnectAttemptMs = System.currentTimeMillis();
         L.d(TAG, "connect MQTT broker=" + broker + " user=" + username + " jwtLen=" + token.length());
+        appContext = context.getApplicationContext();
+        activeBroker = broker;
+        activeUsername = username;
+        activeToken = token;
+        activeAllowTokenRefresh = allowTokenRefresh;
+        intentionalDisconnect = false;
+        mainHandler.removeCallbacks(reconnectRunnable);
         if (client != null && !deviceId.equals(activeDeviceId)) {
             client.disconnect();
             client = null;
         }
         if (client == null) {
-            client = new MqttCommandClient(context, deviceId);
+            client = new MqttCommandClient(
+                    context,
+                    deviceId,
+                    this::scheduleReconnectAfterLoss,
+                    this::handleConnectionReady
+            );
             activeDeviceId = deviceId;
         }
         client.connect(broker, username, token, () -> {
@@ -179,16 +202,26 @@ public class MqttManager {
     }
 
     public void disconnect() {
+        intentionalDisconnect = true;
+        mainHandler.removeCallbacks(reconnectRunnable);
         if (client != null) {
             client.disconnect();
             client = null;
         }
         activeDeviceId = null;
+        appContext = null;
+        activeBroker = null;
+        activeUsername = null;
+        activeToken = null;
+        activeAllowTokenRefresh = false;
+        reconnectAttempt = 0;
         lastConnectAttemptMs = 0L;
     }
 
     /** 用户手动重连时绕过冷却，先断开再连。 */
     public synchronized void forceReconnect(Context context, String deviceId, CheckVersionDataResp data) {
+        intentionalDisconnect = false;
+        mainHandler.removeCallbacks(reconnectRunnable);
         if (client != null) {
             client.disconnect();
         }
@@ -214,5 +247,54 @@ public class MqttManager {
         return b.contains("127.0.0.1")
                 || b.contains("localhost")
                 || b.contains("10.0.2.2");
+    }
+
+    private synchronized void scheduleReconnectAfterLoss() {
+        if (intentionalDisconnect || TextUtils.isEmpty(activeDeviceId) || appContext == null) {
+            return;
+        }
+        if (client != null && client.isConnecting()) {
+            return;
+        }
+        long delay = RECONNECT_DELAYS_MS[Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)];
+        reconnectAttempt++;
+        mainHandler.removeCallbacks(reconnectRunnable);
+        L.w(TAG, "schedule MQTT reconnect in " + delay + "ms");
+        mainHandler.postDelayed(reconnectRunnable, delay);
+    }
+
+    private final Runnable reconnectRunnable = new Runnable() {
+        @Override
+        public void run() {
+            reconnectWithActiveCredentials();
+        }
+    };
+
+    private synchronized void reconnectWithActiveCredentials() {
+        if (intentionalDisconnect || TextUtils.isEmpty(activeDeviceId) || appContext == null) {
+            return;
+        }
+        if (client != null && client.isConnected()) {
+            reconnectAttempt = 0;
+            return;
+        }
+        if (TextUtils.isEmpty(activeBroker) || TextUtils.isEmpty(activeUsername) || TextUtils.isEmpty(activeToken)) {
+            refreshTokenAndConnect(appContext, activeDeviceId, resolveMqttBroker(activeBroker));
+            return;
+        }
+        L.w(TAG, "reconnect MQTT deviceId=" + activeDeviceId + " attempt=" + reconnectAttempt);
+        connectWithCredentials(
+                appContext,
+                activeDeviceId,
+                activeBroker,
+                activeUsername,
+                activeToken,
+                activeAllowTokenRefresh
+        );
+    }
+
+    private synchronized void handleConnectionReady() {
+        reconnectAttempt = 0;
+        mainHandler.removeCallbacks(reconnectRunnable);
     }
 }

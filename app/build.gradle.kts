@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-val tophoneVersionCode = 302
-val tophoneVersionName = "3.0.2"
+val tophoneVersionCode = 303
+val tophoneVersionName = "3.0.3"
 
 fun tophoneAbiName(abi: String?): String = when (abi) {
     "armeabi-v7a" -> "armeabi_v7a"
