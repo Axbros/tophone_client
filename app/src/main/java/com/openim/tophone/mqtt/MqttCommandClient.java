@@ -315,7 +315,15 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     .reportPresence(new DevicePresenceReq(deviceId, online))
                     .subscribeOn(Schedulers.io())
                     .subscribe(
-                            resp -> L.d(TAG, "presence reported online=" + online),
+                            resp -> {
+                                if (resp != null && resp.code == 0) {
+                                    L.d(TAG, "presence reported online=" + online);
+                                } else {
+                                    L.w(TAG, "presence rejected online=" + online
+                                            + " code=" + (resp != null ? resp.code : -1)
+                                            + " msg=" + (resp != null ? resp.msg : "null"));
+                                }
+                            },
                             err -> L.w(TAG, "presence report failed: " + err.getMessage())
                     );
         } catch (Exception e) {
