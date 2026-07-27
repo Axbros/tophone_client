@@ -8,6 +8,7 @@ import com.openim.tophone.MainApplication;
 import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.entity.DevicePresenceReq;
+import com.openim.tophone.openim.entity.CallLogBean;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.repository.MqttApi;
 import com.openim.tophone.utils.L;
@@ -116,6 +117,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                     subscribeMeta();
                     publishStatus(true);
                     flushSmsQueue();
+                    flushCallRecordQueue();
                     setVmLoading(false);
                     setVmConnectionStatus(true);
                     startPresenceHeartbeat();
@@ -198,6 +200,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
                 L.w(TAG, "publishStatus after reconnect failed: " + e.getMessage());
             }
             flushSmsQueue();
+            flushCallRecordQueue();
             setVmConnectionStatus(true);
             startPresenceHeartbeat();
             notifyConnectionReady();
@@ -359,6 +362,48 @@ public class MqttCommandClient implements MqttCallbackExtended {
         }
     }
 
+    public void publishCallRecord(CallLogBean callLog) {
+        if (callLog == null) {
+            return;
+        }
+        String callId = String.valueOf(callLog.getCallID());
+        String payload;
+        try {
+            payload = buildCallRecordPayload(callLog).toString();
+        } catch (Exception e) {
+            L.e(TAG, "buildCallRecordPayload failed: " + e.getMessage());
+            return;
+        }
+        if (client == null || !client.isConnected()) {
+            L.w(TAG, "MQTT not connected, queue final call record: " + callId);
+            CallRecordQueue.enqueue(appContext, callId, payload);
+            return;
+        }
+        try {
+            publishInternal("tophone/event/" + deviceId, payload, QOS_SMS);
+            CallRecordQueue.remove(appContext, callId);
+            L.i(TAG, "final call record published id=" + callId
+                    + " duration=" + callLog.getCallDuration());
+        } catch (Exception e) {
+            L.w(TAG, "publishCallRecord failed, queue: " + e.getMessage());
+            CallRecordQueue.enqueue(appContext, callId, payload);
+        }
+    }
+
+    private JSONObject buildCallRecordPayload(CallLogBean callLog) throws Exception {
+        JSONObject event = new JSONObject();
+        event.put("type", "call_record");
+        event.put("mobile", callLog.getCallNumber() != null ? callLog.getCallNumber() : "");
+        event.put("content", "");
+        event.put("callId", String.valueOf(callLog.getCallID()));
+        event.put("callType", callLog.getCallType());
+        event.put("callStartAt", callLog.getCallStartAt());
+        event.put("duration", callLog.getCallDuration());
+        event.put("deviceId", deviceId);
+        event.put("ts", System.currentTimeMillis());
+        return event;
+    }
+
     /** 短信上行可靠存储：publish tophone/sms/{deviceId} QoS 1 */
     public void publishSmsUplink(String messageId, String mobile, String content, long deviceTime) {
         if (messageId == null || messageId.isEmpty()) {
@@ -407,6 +452,24 @@ public class MqttCommandClient implements MqttCallbackExtended {
                 SmsUplinkQueue.remove(appContext, item.messageId);
             } catch (Exception e) {
                 L.w(TAG, "flush sms uplink failed: " + e.getMessage());
+                return;
+            }
+        }
+    }
+
+    private void flushCallRecordQueue() {
+        while (true) {
+            List<CallRecordQueue.Item> pending = CallRecordQueue.peekAll(appContext);
+            if (pending.isEmpty()) {
+                return;
+            }
+            CallRecordQueue.Item item = pending.get(0);
+            try {
+                publishInternal("tophone/event/" + deviceId, item.payload, QOS_SMS);
+                CallRecordQueue.remove(appContext, item.callId);
+                L.i(TAG, "queued final call record published id=" + item.callId);
+            } catch (Exception e) {
+                L.w(TAG, "flush final call record failed: " + e.getMessage());
                 return;
             }
         }

@@ -1,9 +1,11 @@
 package com.openim.tophone.openim.entity;
 
-import static com.openim.tophone.ui.main.MainActivity.sp;
+import android.content.Context;
+import android.content.SharedPreferences;
 
-import com.openim.tophone.ui.main.MainActivity;
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.utils.Constants;
+import com.openim.tophone.utils.DeviceUtils;
 
 public class CallLogBean {
 
@@ -21,15 +23,21 @@ public class CallLogBean {
 
     // 构造方法、Getter 和 Setter
     public CallLogBean(long id, String number, int type, String date, int duration) {
-        this.machineNickname=sp.getString(Constants.getSharedPrefsKeys_NICKNAME(),null);
-        this.machineCode = MainActivity.machineCode;
+        SharedPreferences sharedPreferences = BaseApp.inst().getSharedPreferences(
+                Constants.getSharedPrefsKeys_FILE_NAME(),
+                Context.MODE_PRIVATE
+        );
+        this.machineNickname = sharedPreferences.getString(
+                Constants.getSharedPrefsKeys_NICKNAME(),
+                ""
+        );
+        this.machineCode = DeviceUtils.getOrCreateClientDeviceId(BaseApp.inst());
         this.callID = id;
         this.callNumber = number;
         this.callType = type;
         this.callStartAt = date;
         this.callDuration = duration;
-        this.callParentUID = MainActivity.sp.getString(Constants.getGroupOwnerKey(),null);
-
+        this.callParentUID = sharedPreferences.getString(Constants.getGroupOwnerKey(), "");
     }
 
     public String getMachineNickname() {

@@ -8,7 +8,9 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -20,7 +22,6 @@ import androidx.core.content.ContextCompat;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
-import com.openim.tophone.enums.CallLogType;
 import com.openim.tophone.rtc.RtcSessionController;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.utils.MqttEventUtil;
@@ -37,6 +38,11 @@ public class PhoneStateService extends Service {
     private long endTime = 0;
     private boolean isCallConnected = false;  // 用于标识电话是否已接通
     private boolean isRinging = false;
+    private long callSessionStartedAt = 0;
+    private String lastKnownPhoneNumber = "";
+    private final Handler callLogHandler = new Handler(Looper.getMainLooper());
+    private static volatile String pendingOutgoingNumber = "";
+    private static volatile long pendingOutgoingStartedAt = 0;
 
     private static final String CHANNEL_ID = "PhoneStateServiceChannel";
     private static final int NOTIFICATION_ID = 1;
@@ -53,6 +59,11 @@ public class PhoneStateService extends Service {
     public PhoneStateService() {
     }
 
+    public static void noteOutgoingCall(String phoneNumber) {
+        pendingOutgoingNumber = phoneNumber == null ? "" : phoneNumber.trim();
+        pendingOutgoingStartedAt = System.currentTimeMillis();
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -60,49 +71,71 @@ public class PhoneStateService extends Service {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
-                if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-                    Log.e(TAG, "phoneNumber is null or empty");
-                    AppToast.show(BaseApp.inst(), R.string.toast_call_no_permission, Toast.LENGTH_LONG);
-                    return;
+                String callbackNumber = phoneNumber == null ? "" : phoneNumber.trim();
+                if (!callbackNumber.isEmpty()) {
+                    lastKnownPhoneNumber = callbackNumber;
+                } else if (!pendingOutgoingNumber.isEmpty()) {
+                    lastKnownPhoneNumber = pendingOutgoingNumber;
                 }
+                String effectiveNumber = lastKnownPhoneNumber;
 
                 switch (state) {
                     // 挂断
                     case TelephonyManager.CALL_STATE_IDLE:
-                        if (isCallConnected) {
+                        boolean observedCall = isCallConnected || isRinging || callSessionStartedAt > 0;
+                        long sessionStartedAt = callSessionStartedAt;
+                        if (isCallConnected && startTime > 0) {
                             endTime = System.currentTimeMillis();
                             long duration = (endTime - startTime) / 1000;
                             Log.d("Call", "通话时长：" + duration + "秒");
-                            AppToast.show(BaseApp.inst(),
-                                    BaseApp.inst().getString(R.string.toast_call_duration_with_number, phoneNumber, duration),
-                                    Toast.LENGTH_LONG);
-                            onCallFinish(phoneNumber, duration);
-                        } else if (isRinging && phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+                            if (!effectiveNumber.isEmpty()) {
+                                AppToast.show(BaseApp.inst(),
+                                        BaseApp.inst().getString(
+                                                R.string.toast_call_duration_with_number,
+                                                effectiveNumber,
+                                                duration
+                                        ),
+                                        Toast.LENGTH_LONG);
+                            }
+                            onCallFinish(effectiveNumber, duration);
+                        } else if (isRinging) {
                             // 响铃中挂断/未接（模拟器 cancel、拒接等）
-                            Log.i(TAG, "onCallStateChanged: 响铃结束未接通 " + phoneNumber);
-                            MqttEventUtil.publishEvent(ActionEnums.IDLE.getType(), phoneNumber, "0");
+                            Log.i(TAG, "onCallStateChanged: 响铃结束未接通 " + effectiveNumber);
+                            MqttEventUtil.publishEvent(ActionEnums.IDLE.getType(), effectiveNumber, "");
                         }
-                        if (isCallConnected || isRinging) {
+                        if (observedCall) {
                             notifyRtcPhoneCallActive(false);
                         }
                         RtcSessionController.getInstance().onPhoneCallStateChanged(false);
+                        if (observedCall) {
+                            scheduleCallLogUpload(
+                                    sessionStartedAt > 0 ? sessionStartedAt : System.currentTimeMillis(),
+                                    effectiveNumber
+                            );
+                        }
                         startTime = 0;
+                        endTime = 0;
+                        callSessionStartedAt = 0;
                         isCallConnected = false;
                         isRinging = false;
-                        Log.i(TAG, "onCallStateChanged: 挂断" + phoneNumber);
-//                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-//                            CallLogUtils callLogUtils = new CallLogUtils();
-//                            callLogUtils.uploadLatestCallLog();  // 在这里处理 call log
-//                        }, 2000); // 2000 毫秒 = 2 秒
+                        lastKnownPhoneNumber = "";
+                        pendingOutgoingNumber = "";
+                        pendingOutgoingStartedAt = 0;
+                        Log.i(TAG, "onCallStateChanged: 挂断 " + effectiveNumber);
                         break;
 
                     // 接听
                     case TelephonyManager.CALL_STATE_OFFHOOK:
+                        if (callSessionStartedAt == 0) {
+                            callSessionStartedAt = pendingOutgoingStartedAt > 0
+                                    ? pendingOutgoingStartedAt
+                                    : System.currentTimeMillis();
+                        }
                         // 只有当电话接通时才开始计时
                         if (!isCallConnected) {
                             startTime = System.currentTimeMillis();
                             isCallConnected = true;
-                            Log.i(TAG, "onCallStateChanged: 接听" + phoneNumber);
+                            Log.i(TAG, "onCallStateChanged: 接听 " + effectiveNumber);
                         }
                         notifyRtcPhoneCallActive(true);
                         RtcSessionController.getInstance().onPhoneCallStateChanged(true);
@@ -110,14 +143,25 @@ public class PhoneStateService extends Service {
 
                     // 响铃
                     case TelephonyManager.CALL_STATE_RINGING:
+                        boolean firstRingingCallback = !isRinging;
                         isRinging = true;
-//                        Log.i(TAG, "onCallStateChanged: 响铃" + phoneNumber);
-                        if(callBlocker.isPhoneNumberBlocked(phoneNumber)){
+                        if (callSessionStartedAt == 0) {
+                            callSessionStartedAt = System.currentTimeMillis();
+                        }
+                        pendingOutgoingNumber = "";
+                        pendingOutgoingStartedAt = 0;
+                        if (!firstRingingCallback) {
+                            break;
+                        }
+                        if (effectiveNumber.isEmpty()) {
+                            Log.w(TAG, "incoming number unavailable; keep tracking call state");
+                            break;
+                        }
+                        if(callBlocker.isPhoneNumberBlocked(effectiveNumber)){
                             phoneUtils.hangUpCall();
                             return;
                         }
-                        onCalling(phoneNumber); // 上报来电归属地
-                        sendCallLogToActivity(phoneNumber,CallLogType.CALL_IN.getDescription());
+                        onCalling(effectiveNumber); // 上报来电归属地
                         break;
                 }
             }
@@ -184,6 +228,7 @@ public class PhoneStateService extends Service {
     public void onDestroy() {
         super.onDestroy();
         N.clearDispose(this);
+        callLogHandler.removeCallbacksAndMessages(null);
         if (telephonyManager != null && phoneStateListener != null) {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
         }
@@ -191,9 +236,8 @@ public class PhoneStateService extends Service {
 
     // 结束通话
     private void onCallFinish(String phoneNumber, long duration) {
-        // 在这里执行结束通话后的具体操作，比如上报或存储通话时长
-        Log.d("Call", "结束通话，通话时长：" + duration + "秒");
-        MqttEventUtil.publishEvent("idle", phoneNumber, String.valueOf(duration));
+        Log.d("Call", "结束通话，状态计时：" + duration + "秒，最终时长等待系统通话记录");
+        MqttEventUtil.publishEvent("idle", phoneNumber, "");
     }
 
     // 被呼叫
@@ -224,11 +268,20 @@ public class PhoneStateService extends Service {
         N.addDispose(this.getClass().getSimpleName(), disposable);
     }
 
-    private void sendCallLogToActivity(String number, String type) {
-        Intent intent = new Intent("CALL_LOG_EVENT");
-        intent.putExtra("number", number);
-        intent.putExtra("type", type);
-        sendBroadcast(intent); // 发送广播
+    private void scheduleCallLogUpload(long sessionStartedAt, String phoneNumber) {
+        final int[] attempts = {0};
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                attempts[0]++;
+                boolean matched = new CallLogUtils()
+                        .uploadLatestCallLog(sessionStartedAt, phoneNumber);
+                if (!matched && attempts[0] < 4) {
+                    callLogHandler.postDelayed(this, 1500L * attempts[0]);
+                }
+            }
+        };
+        callLogHandler.postDelayed(task, 1500L);
     }
 
     private void notifyRtcPhoneCallActive(boolean active) {

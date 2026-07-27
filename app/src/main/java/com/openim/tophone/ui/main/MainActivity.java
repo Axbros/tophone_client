@@ -241,6 +241,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
                 != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.READ_CALL_LOG);
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CALL_LOG)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.WRITE_CALL_LOG);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {

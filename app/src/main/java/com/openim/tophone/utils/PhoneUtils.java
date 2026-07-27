@@ -8,7 +8,6 @@ import android.os.Build;
 import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import com.openim.tophone.base.BaseApp;
-import com.openim.tophone.enums.CallLogType;
 
 public class PhoneUtils {
 
@@ -36,21 +35,14 @@ public class PhoneUtils {
         }
     }
     public void makePhoneCall(String phoneNumber) {
+        PhoneStateService.noteOutgoingCall(phoneNumber);
         Intent intent = new Intent(Intent.ACTION_CALL);
         intent.setData(Uri.parse("tel:"+phoneNumber));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
-
-        sendCallLogToActivity(context,phoneNumber,CallLogType.CALL_OUT.getDescription());
     }
     public void sendSms(String phoneNumber, String message) {
         SmsManager smsManager = SmsManager.getDefault();
         smsManager.sendTextMessage(phoneNumber, null, message, null, null);
-    }
-    public void sendCallLogToActivity(Context context,String number, String type) {
-        Intent intent = new Intent("CALL_LOG_EVENT");
-        intent.putExtra("number", number);
-        intent.putExtra("type", type);
-        context.sendBroadcast(intent); // 发送广播
     }
 }

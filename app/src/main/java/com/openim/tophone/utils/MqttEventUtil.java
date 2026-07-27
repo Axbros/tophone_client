@@ -2,6 +2,7 @@ package com.openim.tophone.utils;
 
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.mqtt.MqttManager;
+import com.openim.tophone.openim.entity.CallLogBean;
 
 import java.util.UUID;
 
@@ -15,6 +16,11 @@ public final class MqttEventUtil {
 
     public static void publishEvent(String type, String mobile, String content) {
         MqttManager.getInstance().publishEvent(type, mobile, content);
+    }
+
+    /** 系统通话记录落库后，补发包含系统 DURATION 的最终通话结果。 */
+    public static void publishCallRecord(CallLogBean callLog) {
+        MqttManager.getInstance().publishCallRecord(callLog);
     }
 
     /** 短信上行：tophone/sms/{deviceId} QoS 1，并保留 event 通道兼容 */

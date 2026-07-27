@@ -8,6 +8,7 @@ import android.text.TextUtils;
 
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.openim.entity.CheckVersionDataResp;
+import com.openim.tophone.openim.entity.CallLogBean;
 import com.openim.tophone.openim.entity.MqttDeviceTokenReq;
 import com.openim.tophone.openim.entity.MqttTokenResp;
 import com.openim.tophone.repository.MqttApi;
@@ -192,6 +193,12 @@ public class MqttManager {
     public void publishEvent(String type, String mobile, String content) {
         if (client != null) {
             client.publishEvent(type, mobile, content);
+        }
+    }
+
+    public void publishCallRecord(CallLogBean callLog) {
+        if (client != null) {
+            client.publishCallRecord(callLog);
         }
     }
 
