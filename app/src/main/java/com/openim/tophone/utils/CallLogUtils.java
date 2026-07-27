@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.CallLog;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.openim.tophone.base.BaseApp;
@@ -71,10 +70,7 @@ public class CallLogUtils {
                     continue;
                 }
                 logCallLog(callLog);
-                if (TextUtils.isEmpty(callLog.getParentUID())) {
-                    Log.i(TAG, "group owner is empty, keep system call log for a later upload");
-                    return true;
-                }
+                MqttEventUtil.publishCallRecord(callLog);
                 long lastUploadedID = SharedPreferencesUtil.get(BaseApp.inst())
                         .getLong(KEY_LAST_UPLOADED_CALL_LOG_ID);
                 if (lastUploadedID == callLog.getCallID()) {
@@ -145,7 +141,6 @@ public class CallLogUtils {
                             SharedPreferencesUtil prefs = SharedPreferencesUtil.get(BaseApp.inst());
                             prefs.setCache(KEY_LAST_UPLOADED_CALL_LOG_ID, callLog.getCallID());
                             recordLocalStatistic(prefs, callLog.getCallType());
-                            MqttEventUtil.publishCallRecord(callLog);
                             deleteCallLogByID(callLog.getCallID());
                         },
                         err -> {
