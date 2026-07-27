@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.app.role.RoleManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -59,6 +60,7 @@ import java.util.Objects;
 
 public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     private static final int PERMISSION_REQUEST_CODE = 1;
+    private static final int DEFAULT_DIALER_REQUEST_CODE = 2;
     public static String machineCode;
     private static String TAG = "MainActivity";
     public static SharedPreferences sp;
@@ -348,11 +350,43 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private void promptDefaultDialerIfNeeded() {
         try {
-            Intent intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
-            intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, getPackageName());
-            startActivity(intent);
+            if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
+                return;
+            }
+            TelecomManager telecomManager =
+                    (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
+            if (telecomManager != null
+                    && getPackageName().equals(telecomManager.getDefaultDialerPackage())) {
+                return;
+            }
+
+            Intent intent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                RoleManager roleManager = getSystemService(RoleManager.class);
+                if (roleManager == null
+                        || !roleManager.isRoleAvailable(RoleManager.ROLE_DIALER)
+                        || roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
+                    return;
+                }
+                intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);
+            } else {
+                intent = new Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER);
+                intent.putExtra(
+                        TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME,
+                        getPackageName()
+                );
+            }
+            startActivityForResult(intent, DEFAULT_DIALER_REQUEST_CODE);
         } catch (Exception e) {
             L.w(TAG, "prompt default dialer skipped: " + e.getMessage());
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == DEFAULT_DIALER_REQUEST_CODE) {
+            ((MainApplication) getApplication()).triggerDeviceProfileRefresh();
         }
     }
 

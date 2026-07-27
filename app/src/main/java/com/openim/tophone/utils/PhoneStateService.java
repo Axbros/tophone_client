@@ -64,6 +64,10 @@ public class PhoneStateService extends Service {
         pendingOutgoingStartedAt = System.currentTimeMillis();
     }
 
+    public static String getPendingOutgoingNumber() {
+        return pendingOutgoingNumber;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();

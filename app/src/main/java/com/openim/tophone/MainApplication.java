@@ -215,6 +215,7 @@ public class MainApplication extends BaseApp {
 
         CurrentVersionReq req = new CurrentVersionReq(
                 AppVersionUtil.getVersionName(context),
+                BuildConfig.VERSION_CODE,
                 deviceCode,
                 DeviceUtils.collectProfile(context, deviceCode)
         );
@@ -348,6 +349,7 @@ public class MainApplication extends BaseApp {
         String deviceCode = activeCheckedInDeviceCode;
         CurrentVersionReq req = new CurrentVersionReq(
                 AppVersionUtil.getVersionName(context),
+                BuildConfig.VERSION_CODE,
                 deviceCode,
                 DeviceUtils.collectProfile(context, deviceCode)
         );

@@ -6,8 +6,9 @@ public class CurrentVersionReq {
         this.deviceCode = deviceCode;
     }
 
-    public CurrentVersionReq(String version, String deviceCode, MobileDeviceProfile deviceProfile) {
+    public CurrentVersionReq(String version, int versionCode, String deviceCode, MobileDeviceProfile deviceProfile) {
         this.version = version;
+        this.versionCode = versionCode;
         this.deviceCode = deviceCode;
         this.deviceProfile = deviceProfile;
     }
@@ -21,6 +22,8 @@ public class CurrentVersionReq {
     }
 
     private String version;
+
+    public int versionCode;
 
     public String getDeviceCode() {
         return deviceCode;

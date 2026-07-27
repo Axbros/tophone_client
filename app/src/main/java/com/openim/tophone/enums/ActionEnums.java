@@ -11,6 +11,8 @@ public enum ActionEnums {
 
     ANSWER("answer"),
 
+    CALL_ACTIVE("call_active"),
+
     CALL("call")
 
     ;
