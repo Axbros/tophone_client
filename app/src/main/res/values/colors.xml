@@ -22,4 +22,8 @@
     <color name="rtc_text_secondary">#6B7280</color>
     <color name="rtc_text_hint">#9CA3AF</color>
 
+    <color name="call_screen_background">#111214</color>
+    <color name="call_text_secondary">#B8B8BD</color>
+    <color name="call_control_active_icon">#111214</color>
+
 </resources>

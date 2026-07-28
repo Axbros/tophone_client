@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.openim.tophone.base.vm.injection.Easy;
+import com.openim.tophone.telecom.InCallActivity;
 import com.openim.tophone.utils.ServerPingMonitor;
 import com.openim.tophone.utils.ServerPingUi;
 
@@ -55,6 +56,9 @@ public class BaseApp extends Application {
             @Override
             public void onActivityResumed(Activity activity) {
                 Log.d(TAG, "onActivityResumed: " + activity.getClass().getSimpleName());
+                if (activity instanceof InCallActivity) {
+                    return;
+                }
                 ServerPingUi.bindWhenReady(activity, () -> {
                     TextView pingView = ServerPingUi.bind(activity);
                     ServerPingMonitor monitor = ServerPingMonitor.getInstance();

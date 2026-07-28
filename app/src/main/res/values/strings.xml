@@ -184,4 +184,16 @@
     <string name="blocker_added">Number added to block list</string>
     <string name="blocker_not_blocked">Number is not in the block list</string>
     <string name="blocker_removed">Number removed from block list</string>
+    <string name="call_ui_phone_call">ToPhone call</string>
+    <string name="call_ui_incoming">Incoming call</string>
+    <string name="call_ui_calling">Calling…</string>
+    <string name="call_ui_connecting">Connecting…</string>
+    <string name="call_ui_on_hold">On hold</string>
+    <string name="call_ui_ended">Call ended</string>
+    <string name="call_ui_unknown_number">Unknown caller</string>
+    <string name="call_ui_mute">mute</string>
+    <string name="call_ui_speaker">speaker</string>
+    <string name="call_ui_answer">accept</string>
+    <string name="call_ui_decline">decline</string>
+    <string name="call_ui_end">end</string>
 </resources>
