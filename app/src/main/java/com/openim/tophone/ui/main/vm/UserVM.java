@@ -38,6 +38,8 @@ public class UserVM extends BaseViewModel {
     /** Call log, status, and connection UI — only after device is assigned to a group */
     public MutableLiveData<Boolean> showBoundFeatures = new MutableLiveData<>(false);
     public MutableLiveData<Boolean> showRoomSwitch = new MutableLiveData<>(false);
+    public MutableLiveData<String> roomInfoLabel = new MutableLiveData<>("");
+    public MutableLiveData<Boolean> showRoomInfo = new MutableLiveData<>(false);
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -53,6 +55,7 @@ public class UserVM extends BaseViewModel {
         }
         connectionStatus.setValue(MqttManager.getInstance().isConnected());
         refreshRoomSwitchVisibility(sp);
+        updateRoomInfo(sp.getString(Constants.getAssignedRoomIDKey(), ""));
     }
 
     private void refreshRoomSwitchVisibility(SharedPreferences sp) {
@@ -172,6 +175,15 @@ public class UserVM extends BaseViewModel {
                 isGroupInfoVisible.setValue(false);
                 showBoundFeatures.setValue(false);
             }
+        });
+    }
+
+    public void updateRoomInfo(String roomID) {
+        mainHandler.post(() -> {
+            String value = roomID != null ? roomID.trim() : "";
+            roomInfoLabel.setValue(value);
+            showRoomInfo.setValue(!value.isEmpty());
+            showRoomSwitch.setValue(Boolean.TRUE.equals(checkedIn.getValue()) && !value.isEmpty());
         });
     }
 

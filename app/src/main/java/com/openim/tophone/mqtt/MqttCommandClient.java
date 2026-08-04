@@ -217,11 +217,11 @@ public class MqttCommandClient implements MqttCallbackExtended {
     private void handleMetaMessage(String body) {
         try {
             JSONObject json = new JSONObject(body);
-            String type = json.optString("type", "");
+            String type = json.optString("action", json.optString("type", ""));
             if ("assigned".equals(type) || "unassigned".equals(type)) {
                 L.i(TAG, "group meta type=" + type);
                 MainApplication app = (MainApplication) appContext;
-                app.triggerDeviceProfileRefresh();
+                app.handleDeviceGroupMeta(type);
                 return;
             }
             if (!"policy".equals(type)) {

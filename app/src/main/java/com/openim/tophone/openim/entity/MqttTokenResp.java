@@ -9,5 +9,6 @@ public class MqttTokenResp {
         public String mqttToken;
         public String username;
         public String brokerTCP;
+        public Integer expiresIn;
     }
 }

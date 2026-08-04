@@ -22,6 +22,7 @@ public class MqttManager {
 
     private static final String TAG = "MqttManager";
     private static final long CONNECT_COOLDOWN_MS = 15_000L;
+    private static final long TOKEN_REFRESH_MARGIN_MS = 60_000L;
     private static final long[] RECONNECT_DELAYS_MS = {3_000L, 10_000L, 30_000L};
     private static MqttManager instance;
 
@@ -64,6 +65,9 @@ public class MqttManager {
         }
         if (!force && shouldSkipConnect(deviceId)) {
             return;
+        }
+        if (data != null) {
+            scheduleTokenRefresh(data.mqttExpiresIn);
         }
         if (data == null || !data.hasMqttCredentials()) {
             L.w(TAG, "no mqtt credentials in check_version response, try fetch token API");
@@ -168,7 +172,13 @@ public class MqttManager {
                             if (!TextUtils.isEmpty(resp.data.brokerTCP)) {
                                 resolvedBroker = resolveMqttBroker(resp.data.brokerTCP);
                             }
+                            if (client != null) {
+                                client.disconnect();
+                                client = null;
+                            }
+                            lastConnectAttemptMs = 0L;
                             connectWithCredentials(context, deviceId, resolvedBroker, user, token, false);
+                            scheduleTokenRefresh(resp.data.expiresIn);
                         },
                         err -> {
                             tokenRefreshInFlight = false;
@@ -211,6 +221,7 @@ public class MqttManager {
     public void disconnect() {
         intentionalDisconnect = true;
         mainHandler.removeCallbacks(reconnectRunnable);
+        mainHandler.removeCallbacks(tokenRefreshRunnable);
         if (client != null) {
             client.disconnect();
             client = null;
@@ -276,6 +287,27 @@ public class MqttManager {
             reconnectWithActiveCredentials();
         }
     };
+
+    private final Runnable tokenRefreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (TextUtils.isEmpty(activeDeviceId) || appContext == null) {
+                return;
+            }
+            refreshTokenAndConnect(appContext, activeDeviceId, resolveMqttBroker(activeBroker));
+        }
+    };
+
+    private synchronized void scheduleTokenRefresh(Integer expiresInSeconds) {
+        mainHandler.removeCallbacks(tokenRefreshRunnable);
+        if (expiresInSeconds == null || expiresInSeconds <= 0) {
+            return;
+        }
+        long ttlMs = expiresInSeconds * 1000L;
+        long delayMs = Math.max(30_000L, ttlMs - TOKEN_REFRESH_MARGIN_MS);
+        L.d(TAG, "schedule MQTT token refresh in " + delayMs + "ms");
+        mainHandler.postDelayed(tokenRefreshRunnable, delayMs);
+    }
 
     private synchronized void reconnectWithActiveCredentials() {
         if (intentionalDisconnect || TextUtils.isEmpty(activeDeviceId) || appContext == null) {

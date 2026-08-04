@@ -254,20 +254,15 @@ public class MainApplication extends BaseApp {
 
         applyPolicyFromCheckVersion(resp.data, reconnectMqtt);
         applyBindStateFromCheckVersion(context, resp.data);
+        boolean checkedIn = Boolean.TRUE.equals(resp.data.isExist);
+        ensureDeviceMqttConnection(context, deviceCode, resp.data, reconnectMqtt && checkedIn);
 
-        if (Boolean.TRUE.equals(resp.data.isExist)) {
+        if (checkedIn) {
             mainHandler.removeCallbacks(checkVersionRetryRunnable);
             pendingCheckDeviceCode = null;
             activeCheckedInDeviceCode = deviceCode;
             saveCheckInStatus(context, true);
             saveAssignedRoomID(context, resp.data.roomID);
-            if (reconnectMqtt || !MqttManager.getInstance().isConnected()) {
-                if (reconnectMqtt) {
-                    MqttManager.getInstance().forceReconnect(context, deviceCode, resp.data);
-                } else {
-                    MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
-                }
-            }
             RtcBackgroundJoiner.get().tryJoinWhenReady();
             schedulePolicySync();
             if (reconnectMqtt && resp.data.info != null && !resp.data.info.isEmpty()) {
@@ -281,7 +276,6 @@ public class MainApplication extends BaseApp {
         RtcBackgroundJoiner.get().leaveRoom();
         activeCheckedInDeviceCode = null;
         stopPolicySync();
-        MqttManager.getInstance().disconnect();
         String msg = resp.data.info != null ? resp.data.info : context.getString(R.string.toast_waiting);
         toast(context, msg);
 
@@ -359,12 +353,9 @@ public class MainApplication extends BaseApp {
                 .subscribe(
                         resp -> {
                             policySyncInFlight.set(false);
-                            if (resp != null && resp.code == 0 && resp.data != null) {
-                                applyPolicyFromCheckVersion(resp.data, true);
-                                if (!MqttManager.getInstance().isConnected()) {
-                                    MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, resp.data);
-                                }
-                            }
+                            // 该定时请求不仅同步权限策略，也必须同步绑定、房间和打卡状态。
+                            // 这样即使解绑 MQTT 消息偶发丢失，设备端也会在下一次校验时恢复正确界面。
+                            handleCheckVersionResponse(context, deviceCode, resp, false);
                         },
                         throwable -> {
                             policySyncInFlight.set(false);
@@ -413,6 +404,41 @@ public class MainApplication extends BaseApp {
 
     public void triggerMqttReconnect(String groupName) {
         refreshCheckVersionOnly(true);
+    }
+
+    private void ensureDeviceMqttConnection(
+            Context context,
+            String deviceCode,
+            com.openim.tophone.openim.entity.CheckVersionDataResp data,
+            boolean force
+    ) {
+        if (force) {
+            MqttManager.getInstance().forceReconnect(context, deviceCode, data);
+            return;
+        }
+        MqttManager.getInstance().connectAfterCheckIn(context, deviceCode, data);
+    }
+
+    /** MQTT 元数据事件只作为变更信号，最终状态始终重新从 check_version 获取。 */
+    public void handleDeviceGroupMeta(String type) {
+        Context context = BaseApp.inst();
+        if (context == null) {
+            return;
+        }
+        if ("unassigned".equals(type)) {
+            mainHandler.post(() -> {
+                saveCheckInStatus(context, false);
+                clearAssignedRoomID(context);
+                persistGroupName(context, "");
+                activeCheckedInDeviceCode = null;
+                stopPolicySync();
+                RtcBackgroundJoiner.get().leaveRoom();
+                if (VMStore.isInitialized()) {
+                    VMStore.get().updateBindState(true, "");
+                }
+            });
+        }
+        refreshCheckVersionOnly(false);
     }
 
     /** 权限授予后重新 check_version，上报含手机号的设备指纹 */
@@ -518,6 +544,7 @@ public class MainApplication extends BaseApp {
                 .edit()
                 .putString(Constants.getAssignedRoomIDKey(), roomID.trim())
                 .apply();
+        notifyRoomID(roomID.trim());
     }
 
     private void clearAssignedRoomID(Context context) {
@@ -525,6 +552,13 @@ public class MainApplication extends BaseApp {
                 .edit()
                 .remove(Constants.getAssignedRoomIDKey())
                 .apply();
+        notifyRoomID("");
+    }
+
+    private void notifyRoomID(String roomID) {
+        if (VMStore.isInitialized()) {
+            VMStore.get().updateRoomInfo(roomID);
+        }
     }
 
     private void toast(Context context, String msg) {
