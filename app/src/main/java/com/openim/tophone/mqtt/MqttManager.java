@@ -59,6 +59,10 @@ public class MqttManager {
         if (!Constants.isUseMqtt()) {
             return;
         }
+        if (intentionalDisconnect && !force) {
+            L.d(TAG, "manual disconnect active, skip background MQTT connect");
+            return;
+        }
         if (TextUtils.isEmpty(deviceId)) {
             L.w(TAG, "deviceId empty, skip MQTT");
             return;
@@ -159,6 +163,10 @@ public class MqttManager {
                 .subscribe(
                         resp -> {
                             tokenRefreshInFlight = false;
+                            if (intentionalDisconnect) {
+                                L.d(TAG, "discard refreshed token after manual disconnect");
+                                return;
+                            }
                             if (resp == null || resp.code != 0 || resp.data == null) {
                                 L.e(TAG, "fetchDeviceToken failed: " + (resp != null ? resp.msg : "null"));
                                 return;
@@ -218,7 +226,7 @@ public class MqttManager {
         }
     }
 
-    public void disconnect() {
+    public synchronized void disconnect() {
         intentionalDisconnect = true;
         mainHandler.removeCallbacks(reconnectRunnable);
         mainHandler.removeCallbacks(tokenRefreshRunnable);

@@ -41,6 +41,7 @@ import com.openim.tophone.rtc.RtcDebugLog;
 import com.openim.tophone.base.BaseActivity;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.databinding.ActivityMainBinding;
+import com.openim.tophone.mqtt.MqttManager;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
 import com.openim.tophone.rtc.RawAudioDataActivity;
@@ -523,6 +524,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     @Override
     protected void onDestroy() {
+        if (isFinishing()) {
+            L.i(TAG, "main task finishing, report device offline");
+            MqttManager.getInstance().disconnect();
+        }
         RtcBackgroundJoiner.get().setListener(null);
         destroyBaiduCloak();
         super.onDestroy();

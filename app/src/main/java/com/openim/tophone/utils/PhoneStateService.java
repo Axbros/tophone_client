@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
+import com.openim.tophone.mqtt.MqttManager;
 import com.openim.tophone.rtc.RtcSessionController;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.utils.MqttEventUtil;
@@ -226,6 +227,15 @@ public class PhoneStateService extends Service {
         }
         registerPhoneStateListenerIfAllowed();
         return START_STICKY;
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.i(TAG, "app task removed, report device offline");
+        MqttManager.getInstance().disconnect();
+        stopForeground(true);
+        stopSelf();
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override

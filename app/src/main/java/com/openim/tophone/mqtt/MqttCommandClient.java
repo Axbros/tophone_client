@@ -27,9 +27,10 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 设备端 MQTT：订阅 cmd (QoS1)，发布 ack/status + LWT (QoS0)。
+ * 设备端 MQTT：订阅 cmd (QoS1)，发布 ack/status + LWT（状态 QoS1）。
  */
 public class MqttCommandClient implements MqttCallbackExtended {
 
@@ -37,6 +38,8 @@ public class MqttCommandClient implements MqttCallbackExtended {
     private static final int QOS_CMD = 1;
     private static final int QOS_SMS = 1;
     private static final int QOS_ACK = 0;
+    private static final int QOS_STATUS = 1;
+    private static final long DISCONNECT_PUBLISH_TIMEOUT_MS = 1_500L;
     private static final long PRESENCE_HEARTBEAT_MS = 60_000L;
 
     private final Context appContext;
@@ -101,7 +104,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
         long ts = System.currentTimeMillis();
         String willTopic = "tophone/status/" + deviceId;
         String willPayload = "{\"online\":false,\"deviceId\":\"" + deviceId + "\",\"ts\":" + ts + "}";
-        options.setWill(willTopic, willPayload.getBytes(), QOS_ACK, false);
+        options.setWill(willTopic, willPayload.getBytes(), QOS_STATUS, false);
 
         setVmLoading(true);
         setVmConnectionStatus(false);
@@ -282,7 +285,7 @@ public class MqttCommandClient implements MqttCallbackExtended {
             status.put("online", online);
             status.put("deviceId", deviceId);
             status.put("ts", System.currentTimeMillis());
-            publishInternal("tophone/status/" + deviceId, status.toString(), QOS_ACK);
+            publishInternal("tophone/status/" + deviceId, status.toString(), QOS_STATUS);
             reportPresenceToServer(online);
         } catch (Exception e) {
             L.e(TAG, "publishStatus failed: " + e.getMessage());
@@ -518,28 +521,65 @@ public class MqttCommandClient implements MqttCallbackExtended {
         client = null;
         connecting = false;
         reportPresenceToServer(false);
-        if (c != null) {
-            try {
-                c.setCallback(null);
-                if (c.isConnected()) {
-                    try {
-                        JSONObject status = new JSONObject();
-                        status.put("online", false);
-                        status.put("deviceId", deviceId);
-                        status.put("ts", System.currentTimeMillis());
-                        MqttMessage message = new MqttMessage(status.toString().getBytes());
-                        message.setQos(QOS_ACK);
-                        message.setRetained(false);
-                        c.publish("tophone/status/" + deviceId, message);
-                    } catch (Exception ignored) {
-                    }
-                    c.disconnect();
-                }
-                c.close();
-            } catch (Exception ignored) {
-            }
-        }
+        publishOfflineThenClose(c);
         setVmConnectionStatus(false);
+    }
+
+    /** Publish the explicit offline state before closing the socket. */
+    private void publishOfflineThenClose(MqttAndroidClient c) {
+        if (c == null) {
+            return;
+        }
+        AtomicBoolean closed = new AtomicBoolean(false);
+        Runnable close = () -> {
+            if (!closed.compareAndSet(false, true)) {
+                return;
+            }
+            closeClient(c);
+        };
+        if (!c.isConnected()) {
+            close.run();
+            return;
+        }
+        try {
+            JSONObject status = new JSONObject();
+            status.put("online", false);
+            status.put("deviceId", deviceId);
+            status.put("ts", System.currentTimeMillis());
+            MqttMessage message = new MqttMessage(status.toString().getBytes());
+            message.setQos(QOS_STATUS);
+            message.setRetained(false);
+            c.publish("tophone/status/" + deviceId, message, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    L.d(TAG, "offline status delivered before disconnect, deviceId=" + deviceId);
+                    close.run();
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    L.w(TAG, "offline status publish failed before disconnect: "
+                            + (exception != null ? exception.getMessage() : "unknown"));
+                    close.run();
+                }
+            });
+            mainHandler.postDelayed(close, DISCONNECT_PUBLISH_TIMEOUT_MS);
+        } catch (Exception e) {
+            L.w(TAG, "offline status publish exception: " + e.getMessage());
+            close.run();
+        }
+    }
+
+    private void closeClient(MqttAndroidClient c) {
+        try {
+            c.setCallback(null);
+            if (c.isConnected()) {
+                c.disconnect();
+            }
+            c.close();
+        } catch (Exception e) {
+            L.w(TAG, "MQTT close failed: " + e.getMessage());
+        }
     }
 
     private void disconnectQuietly() {
