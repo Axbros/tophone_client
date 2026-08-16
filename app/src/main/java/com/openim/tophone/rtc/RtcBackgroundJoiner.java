@@ -46,7 +46,6 @@ public final class RtcBackgroundJoiner {
     private Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final OkHttpClient okHttpClient = new OkHttpClient();
-    private RtcCacheUtil cacheUtil;
 
     private UsbAudioDetector usbAudioDetector;
     private RTCVideo rtcVideo;
@@ -90,11 +89,10 @@ public final class RtcBackgroundJoiner {
 
     public void init(Context context) {
         appContext = context.getApplicationContext();
-        cacheUtil = new RtcCacheUtil(appContext);
         ensureUsbMonitoring();
         if (RtcRoomSession.get().hasActiveSession()) {
             restorePersistedSession();
-        } else if (!configReady) {
+        } else {
             refreshRtcAppIdOnStartup();
         }
         if (isCheckedIn() && !TextUtils.isEmpty(getAssignedRoomID())) {
@@ -212,7 +210,7 @@ public final class RtcBackgroundJoiner {
             @Override
             public void onSuccess(String appId) {
                 mainHandler.post(() -> {
-                    applyRtcAppId(appId, false);
+                    applyRtcAppId(appId);
                     configReady = true;
                 });
             }
@@ -221,11 +219,7 @@ public final class RtcBackgroundJoiner {
             public void onFailure(String message) {
                 mainHandler.post(() -> {
                     Log.w(TAG, "startup config failed: " + message);
-                    String cached = cacheUtil.getKeyAppId();
-                    if (!TextUtils.isEmpty(cached)) {
-                        applyRtcAppId(cached, true);
-                    }
-                    configReady = !TextUtils.isEmpty(cached);
+                    configReady = false;
                 });
             }
         });
@@ -239,7 +233,7 @@ public final class RtcBackgroundJoiner {
                     if (!isCurrentJoinAttempt(generation)) {
                         return;
                     }
-                    applyRtcAppId(appId, false);
+                    applyRtcAppId(appId);
                     configReady = true;
                     verifyAndJoinRoom(roomID, generation);
                 });
@@ -568,14 +562,17 @@ public final class RtcBackgroundJoiner {
         RTCVideo.destroyRTCVideo();
     }
 
-    private void applyRtcAppId(String appId, boolean fromCacheFallback) {
+    private void applyRtcAppId(String appId) {
         if (TextUtils.isEmpty(appId)) {
             return;
         }
-        Constants.RTC_APP_ID = appId;
-        if (!fromCacheFallback) {
-            cacheUtil.saveAppID(appId);
+        appId = appId.trim();
+        boolean changed = !TextUtils.isEmpty(Constants.RTC_APP_ID)
+                && !TextUtils.equals(Constants.RTC_APP_ID, appId);
+        if (changed && rtcVideo != null && !isJoined) {
+            destroyRtcEngine();
         }
+        Constants.RTC_APP_ID = appId;
     }
 
     private boolean isCheckedIn() {

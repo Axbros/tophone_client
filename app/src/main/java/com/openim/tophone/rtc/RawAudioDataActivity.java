@@ -87,7 +87,6 @@ public class RawAudioDataActivity extends RtcBaseActivity {
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final OkHttpClient okHttpClient = new OkHttpClient();
-    private RtcCacheUtil cacheUtil;
     private Runnable pendingRejoin;
 
     @Override
@@ -95,7 +94,6 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_raw_audio);
         initUI();
-        cacheUtil = new RtcCacheUtil(this);
         setTitle(getString(R.string.title_raw_audio_data) + " v" + AppVersionUtil.getVersionName(this));
         if (restorePersistedSession()) {
             configReady = true;
@@ -390,28 +388,28 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         controller.bindSession(rtcVideo, this, preferSpeakerOutput);
     }
 
-    private void onInitialConfigReady(boolean fromCacheFallback) {
+    private void onInitialConfigReady() {
         configReady = true;
         hideLoading();
         updateJoinButtonState();
-        if (fromCacheFallback) {
-            RtcToastUtil.showLongToast(this, getString(R.string.rtc_using_cached_config));
-        }
         updateStatusForCurrentState();
         if (!isJoined) {
             tryAutoJoinRoom();
         }
     }
 
-    private void applyRtcAppId(String appId, boolean fromCacheFallback) {
+    private void applyRtcAppId(String appId) {
         if (TextUtils.isEmpty(appId)) {
             return;
         }
-        Constants.RTC_APP_ID = appId;
-        if (!fromCacheFallback) {
-            cacheUtil.saveAppID(appId);
+        appId = appId.trim();
+        boolean changed = !TextUtils.isEmpty(Constants.RTC_APP_ID)
+                && !TextUtils.equals(Constants.RTC_APP_ID, appId);
+        if (changed && rtcVideo != null && !isJoined) {
+            destroyRtcEngine();
         }
-        Log.i(TAG, "RTC_APP_ID=" + appId + (fromCacheFallback ? " (cache)" : " (server)"));
+        Constants.RTC_APP_ID = appId;
+        Log.i(TAG, "RTC_APP_ID=" + appId + " (server)");
     }
 
     private void refreshRtcAppIdOnStartup() {
@@ -419,8 +417,8 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             @Override
             public void onSuccess(String appId) {
                 mHandler.post(() -> {
-                    applyRtcAppId(appId, false);
-                    onInitialConfigReady(false);
+                    applyRtcAppId(appId);
+                    onInitialConfigReady();
                 });
             }
 
@@ -428,11 +426,11 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             public void onFailure(String message) {
                 mHandler.post(() -> {
                     Log.w(TAG, "startup config failed: " + message);
-                    String cached = cacheUtil.getKeyAppId();
-                    if (!TextUtils.isEmpty(cached)) {
-                        applyRtcAppId(cached, true);
-                    }
-                    onInitialConfigReady(!TextUtils.isEmpty(cached));
+                    configReady = false;
+                    hideLoading();
+                    updateJoinButtonState();
+                    RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                            getString(R.string.rtc_config_fetch_failed, message));
                 });
             }
         });
@@ -443,7 +441,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             @Override
             public void onSuccess(String appId) {
                 runOnUiThread(() -> {
-                    applyRtcAppId(appId, false);
+                    applyRtcAppId(appId);
                     verifyAndJoinRoom(roomID);
                 });
             }

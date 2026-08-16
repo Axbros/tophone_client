@@ -29,8 +29,10 @@ public final class RtcConfigLoader {
 
     public static void fetchAppId(OkHttpClient client, AppIdCallback callback) {
         Request request = new Request.Builder()
-                .url(Constants.getRtcConfigURL())
+                .url(Constants.getRtcConfigURL() + "?_rtc_config_at=" + System.currentTimeMillis())
                 .addHeader("Accept", "application/json")
+                .addHeader("Cache-Control", "no-cache, no-store")
+                .addHeader("Pragma", "no-cache")
                 .get()
                 .build();
 
