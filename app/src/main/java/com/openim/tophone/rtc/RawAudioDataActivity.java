@@ -465,7 +465,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         refreshUserIdDisplay();
         RoomVerifier.verifyRoom(roomID, rtcUserId, RawAudioDataActivity.this, new RoomVerifier.RoomCallback() {
             @Override
-            public void onResult(boolean isExist, String t) {
+            public void onResult(boolean isExist, String t, String appID) {
                 runOnUiThread(() -> {
                     if (!isExist) {
                         joinInProgress = false;
@@ -485,6 +485,17 @@ public class RawAudioDataActivity extends RtcBaseActivity {
                         scheduleReconnect();
                         return;
                     }
+                    if (TextUtils.isEmpty(appID)) {
+                        joinInProgress = false;
+                        hideJoinLoading();
+                        setStatusText(getString(R.string.rtc_status_join_failed));
+                        RtcToastUtil.showAlert(RawAudioDataActivity.this,
+                                getString(R.string.rtc_app_id_missing));
+                        scheduleReconnect();
+                        return;
+                    }
+                    // 使用服务端签发本次 Token 时读取到的同一套 AppID，不使用旧内存值。
+                    applyRtcAppId(appID);
                     warnIfTokenAppIdMismatch(t);
                     initRTCVideo();
                     if (rtcVideo == null) {

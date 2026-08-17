@@ -21,7 +21,7 @@ public class RoomVerifier {
     private static final OkHttpClient client = new OkHttpClient();
 
     public interface RoomCallback {
-        void onResult(boolean isExist, String token);
+        void onResult(boolean isExist, String token, String appID);
 
         void onError(Exception e);
 
@@ -73,7 +73,8 @@ public class RoomVerifier {
                     JSONObject data = jsonResponse.getJSONObject("data");
                     boolean isExist = data.getBoolean("isExist");
                     String t = data.getString("token");
-                    callback.onResult(isExist, t);
+                    String appID = data.optString("appID", "").trim();
+                    callback.onResult(isExist, t, appID);
                 } catch (Exception e) {
                     callback.onError(e);
                 }

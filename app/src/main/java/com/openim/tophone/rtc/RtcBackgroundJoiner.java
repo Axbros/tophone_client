@@ -260,7 +260,7 @@ public final class RtcBackgroundJoiner {
         String rtcUserId = getRtcUserId();
         RoomVerifier.verifyRoom(roomID, rtcUserId, appContext, new RoomVerifier.RoomCallback() {
             @Override
-            public void onResult(boolean isExist, String t) {
+            public void onResult(boolean isExist, String t, String appID) {
                 mainHandler.post(() -> {
                     if (!isCurrentJoinAttempt(generation)) {
                         return;
@@ -279,6 +279,15 @@ public final class RtcBackgroundJoiner {
                         scheduleReconnect();
                         return;
                     }
+                    if (TextUtils.isEmpty(appID)) {
+                        joinInProgress = false;
+                        joinAttemptStartedAt = 0L;
+                        notifyListener();
+                        scheduleReconnect();
+                        return;
+                    }
+                    // 使用服务端签发本次 Token 时读取到的同一套 AppID，不使用旧内存值。
+                    applyRtcAppId(appID);
                     initRtcVideo();
                     if (rtcVideo == null) {
                         joinInProgress = false;

@@ -106,25 +106,6 @@
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="@{userVM.showBoundFeatures ? View.VISIBLE : View.GONE}"
-                    android:paddingTop="16dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/call_log_statistic"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/call_log_statistic_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@android:color/black"
-                        android:textStyle="bold" />
-                </LinearLayout>
                 <!-- 账号状态部分 -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -160,10 +141,18 @@
                         android:textSize="18sp"
                         android:textStyle="bold" />
                     <TextView
+                        android:id="@+id/room_info_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@{userVM.roomInfoLabel}"
-                        android:textColor="@android:color/black"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingStart="4dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingBottom="4dp"
+                        android:textColor="@android:color/holo_blue_dark"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -222,18 +211,6 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:paddingTop="16dp">
-                    <TextView
-                        android:id="@+id/link_server_settings"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingTop="4dp"
-                        android:paddingBottom="8dp"
-                        android:text="@string/server_settings_entry"
-                        android:textColor="@android:color/holo_blue_dark"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
                     <TextView
                         android:id="@+id/copyright"
                         android:layout_width="wrap_content"

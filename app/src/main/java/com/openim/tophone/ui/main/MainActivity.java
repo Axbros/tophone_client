@@ -2,10 +2,8 @@ package com.openim.tophone.ui.main;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.app.role.RoleManager;
@@ -28,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -44,7 +43,6 @@ import com.openim.tophone.databinding.ActivityMainBinding;
 import com.openim.tophone.mqtt.MqttManager;
 import com.openim.tophone.stroage.VMStore;
 import com.openim.tophone.ui.main.vm.UserVM;
-import com.openim.tophone.rtc.RawAudioDataActivity;
 import com.openim.tophone.rtc.RtcBackgroundJoiner;
 import com.openim.tophone.utils.Constants;
 import com.openim.tophone.utils.DeviceUtils;
@@ -52,7 +50,6 @@ import com.openim.tophone.utils.L;
 import com.openim.tophone.utils.AppToast;
 import com.openim.tophone.utils.PhoneStateService;
 import com.openim.tophone.utils.QrCodeHelper;
-import com.openim.tophone.utils.SharedPreferencesUtil;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -65,8 +62,8 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
     public static String machineCode;
     private static String TAG = "MainActivity";
     public static SharedPreferences sp;
-    private TextView callLogStatisticText;
     private ImageView pairingQrImage;
+    private TextView roomInfoText;
     private SwitchCompat roomSwitch;
     private View baiduCloakOverlay;
     private WebView baiduCloakWebView;
@@ -79,8 +76,6 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private int clickCount = 0;
     private long lastClickTime = 0;
-    private int rtcClickCount = 0;
-    private long rtcLastClickTime = 0;
     private int baiduCloakClickCount = 0;
     private long baiduCloakLastClickTime = 0;
 
@@ -100,13 +95,10 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         super.onCreate(savedInstanceState);
         ActivityMainBinding view = DataBindingUtil.setContentView(this, R.layout.activity_main);
         setupBaiduCloak();
-        callLogStatisticText = findViewById(R.id.call_log_statistic_text);
         pairingQrImage = findViewById(R.id.pairing_qr_image);
+        roomInfoText = findViewById(R.id.room_info_text);
         View headerBGImage = findViewById(R.id.header_include);
         setupHiddenDomainEntry(headerBGImage);
-        findViewById(R.id.link_server_settings).setOnClickListener(v ->
-                startActivity(new Intent(this, DomainConfigActivity.class)));
-        setupHiddenRtcEntry(callLogStatisticText);
         roomSwitch = findViewById(R.id.room_switch);
         setupRoomSwitch();
         connectBtn = findViewById(R.id.btn_connect);
@@ -116,6 +108,7 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         textView.setText(getString(R.string.learn_more, currentYear));
         // 2. 初始化 ViewModel
         vm = new ViewModelProvider(this).get(UserVM.class);
+        roomInfoText.setOnClickListener(v -> showRoomQrDialog());
         view.setUserVM(vm);
         view.setLifecycleOwner(this);
         VMStore.init(vm);
@@ -414,15 +407,31 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         }
     }
 
-    private void refreshCallLogStatistic() {
-        if (callLogStatisticText == null) {
+    private void showRoomQrDialog() {
+        String roomID = vm != null && vm.roomInfoLabel.getValue() != null
+                ? vm.roomInfoLabel.getValue().trim()
+                : "";
+        if (TextUtils.isEmpty(roomID)) {
+            AppToast.show(this, R.string.room_qr_unavailable, Toast.LENGTH_SHORT);
             return;
         }
-        SharedPreferencesUtil prefs = SharedPreferencesUtil.get(this);
-        callLogStatisticText.setText(prefs.formatTodayCallStats());
-    }
 
-    private boolean callLogReceiverRegistered = false;
+        View content = getLayoutInflater().inflate(R.layout.dialog_room_qr, null, false);
+        ImageView qrImage = content.findViewById(R.id.room_qr_image);
+        TextView roomCode = content.findViewById(R.id.room_qr_code);
+        Bitmap bitmap = QrCodeHelper.encode(QrCodeHelper.buildRoomPayload(roomID), 768);
+        if (bitmap == null) {
+            AppToast.show(this, R.string.room_qr_unavailable, Toast.LENGTH_SHORT);
+            return;
+        }
+        qrImage.setImageBitmap(bitmap);
+        roomCode.setText(roomID);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.room_qr_title)
+                .setView(content)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
 
     private void setupRoomSwitch() {
         if (roomSwitch == null) {
@@ -453,73 +462,26 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
 
     private void onBoundFeaturesChanged(Boolean bound) {
         if (Boolean.TRUE.equals(bound)) {
-            refreshCallLogStatistic();
             if (hasPhonePermissions()) {
                 startPhoneStateServiceSafely();
             }
-            registerCallLogReceiverIfNeeded();
-        } else {
-            unregisterCallLogReceiverIfNeeded();
         }
     }
-
-    private void registerCallLogReceiverIfNeeded() {
-        if (callLogReceiverRegistered) {
-            return;
-        }
-        registerReceiver(receiver, new IntentFilter("CALL_LOG_EVENT"));
-        callLogReceiverRegistered = true;
-    }
-
-    private void unregisterCallLogReceiverIfNeeded() {
-        if (!callLogReceiverRegistered) {
-            return;
-        }
-        try {
-            unregisterReceiver(receiver);
-        } catch (IllegalArgumentException ignored) {
-        }
-        callLogReceiverRegistered = false;
-    }
-
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String callType = intent.getStringExtra("type");
-            if (callType != null) {
-                SharedPreferencesUtil.get(MainActivity.this).recordCallEvent(callType);
-            }
-            refreshCallLogStatistic();
-        }
-    };
 
     @Override
     protected void onStart() {
         super.onStart();
         vm.syncCheckInStatus(this);
-        if (Boolean.TRUE.equals(vm.showBoundFeatures.getValue())) {
-            registerCallLogReceiverIfNeeded();
-            refreshCallLogStatistic();
-        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         vm.syncCheckInStatus(this);
-        if (Boolean.TRUE.equals(vm.showBoundFeatures.getValue())) {
-            refreshCallLogStatistic();
-        }
         ((MainApplication) getApplication()).triggerDeviceProfileRefresh();
         if (RtcDebugLog.hasCrashReport()) {
             AppToast.show(this, R.string.rtc_debug_crash_main_hint, Toast.LENGTH_LONG);
         }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterCallLogReceiverIfNeeded();
     }
 
     @Override
@@ -626,19 +588,4 @@ public class MainActivity extends BaseActivity<UserVM, ActivityMainBinding> {
         });
     }
 
-    /** 连点 7 次进入控制端语聊房 */
-    private void setupHiddenRtcEntry(View targetView) {
-        targetView.setOnClickListener(v -> {
-            long now = System.currentTimeMillis();
-            if (now - rtcLastClickTime > 800) {
-                rtcClickCount = 0;
-            }
-            rtcLastClickTime = now;
-            rtcClickCount++;
-            if (rtcClickCount >= 7) {
-                rtcClickCount = 0;
-                startActivity(new Intent(this, RawAudioDataActivity.class));
-            }
-        });
-    }
 }

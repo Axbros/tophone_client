@@ -24,6 +24,15 @@ public final class QrCodeHelper {
         return obj.toString();
     }
 
+    /** 房间二维码只携带房间号，不包含用户身份或访问 Token。 */
+    public static String buildRoomPayload(String roomID) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("v", 1);
+        obj.addProperty("type", "tophone_room");
+        obj.addProperty("roomID", roomID != null ? roomID.trim() : "");
+        return obj.toString();
+    }
+
     public static Bitmap encode(String content, int sizePx) {
         if (content == null || content.isEmpty()) {
             return null;
