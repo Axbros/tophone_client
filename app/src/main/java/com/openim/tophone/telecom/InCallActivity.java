@@ -27,6 +27,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.openim.tophone.R;
+import com.openim.tophone.net.RXRetrofit.N;
+import com.openim.tophone.utils.PhoneLocationHelper;
 
 import java.util.Locale;
 
@@ -36,11 +38,13 @@ import java.util.Locale;
 public class InCallActivity extends AppCompatActivity {
     private static final long TIMER_INTERVAL_MS = 1000L;
     private static final long FINISH_DELAY_MS = 800L;
+    private static final String LOCATION_REQUEST_TAG = "InCallActivityLocation";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView avatarText;
     private TextView titleText;
     private TextView numberText;
+    private TextView locationText;
     private TextView statusText;
     private ImageButton muteButton;
     private ImageButton speakerButton;
@@ -52,6 +56,7 @@ public class InCallActivity extends AppCompatActivity {
     private String phoneNumber = "";
     private boolean incoming;
     private long connectedAt;
+    private String requestedLocationNumber = "";
 
     private final Runnable timerRunnable = new Runnable() {
         @Override
@@ -127,6 +132,12 @@ public class InCallActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        N.clearDispose(LOCATION_REQUEST_TAG);
+        super.onDestroy();
+    }
+
+    @Override
     public void onBackPressed() {
         if (callState == Call.STATE_DISCONNECTED) {
             super.onBackPressed();
@@ -153,6 +164,7 @@ public class InCallActivity extends AppCompatActivity {
         avatarText = findViewById(R.id.callAvatarText);
         titleText = findViewById(R.id.callTitleText);
         numberText = findViewById(R.id.callNumberText);
+        locationText = findViewById(R.id.callLocationText);
         statusText = findViewById(R.id.callStatusText);
         muteButton = findViewById(R.id.callMuteButton);
         speakerButton = findViewById(R.id.callSpeakerButton);
@@ -262,6 +274,47 @@ public class InCallActivity extends AppCompatActivity {
             numberText.setVisibility(View.VISIBLE);
             avatarText.setText(firstCharacter(contactName));
         }
+        renderPhoneLocation(displayNumber);
+    }
+
+    private void renderPhoneLocation(String displayNumber) {
+        if (displayNumber == null
+                || displayNumber.trim().isEmpty()
+                || displayNumber.equals(getString(R.string.call_ui_unknown_number))) {
+            requestedLocationNumber = "";
+            locationText.setVisibility(View.GONE);
+            return;
+        }
+        String normalized = displayNumber.trim();
+        if (normalized.equals(requestedLocationNumber)) {
+            return;
+        }
+        requestedLocationNumber = normalized;
+        locationText.setText(R.string.call_ui_location_loading);
+        locationText.setVisibility(View.VISIBLE);
+        PhoneLocationHelper.getPhoneLocation(
+                normalized,
+                LOCATION_REQUEST_TAG,
+                new PhoneLocationHelper.LocationCallback() {
+                    @Override
+                    public void onResult(String location) {
+                        if (!normalized.equals(requestedLocationNumber) || isFinishing()) {
+                            return;
+                        }
+                        locationText.setText(location);
+                        locationText.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onError(Throwable error) {
+                        if (!normalized.equals(requestedLocationNumber) || isFinishing()) {
+                            return;
+                        }
+                        locationText.setText(R.string.call_ui_location_unknown);
+                        locationText.setVisibility(View.VISIBLE);
+                    }
+                }
+        );
     }
 
     private void renderDuration() {

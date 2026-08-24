@@ -2,16 +2,37 @@ package com.openim.tophone.openim.entity;
 
 public class PhoneLocationResponse {
     public int code;
-    public String shengfen;  // 省份
-    public String chengshi;  // 城市
-    public String fuwushang; // 服务商
+    public String msg;
+    public PhoneLocationData data;
 
-    // 如果 code 不是 200 的话，给一个默认值
-    public String getLocation() {
-        if (code == 200) {
-            return shengfen + "·" + chengshi + "·" + fuwushang;
-        } else {
-            return "China Mainland";
+    public static class PhoneLocationData {
+        public String province;
+        public String city;
+        public String serviceProvider;
+        public String display;
+    }
+
+    public String getDisplay() {
+        if (code != 0 || data == null) {
+            return "";
         }
+        if (data.display != null && !data.display.trim().isEmpty()) {
+            return data.display.trim();
+        }
+        StringBuilder out = new StringBuilder();
+        appendPart(out, data.province);
+        appendPart(out, data.city);
+        appendPart(out, data.serviceProvider);
+        return out.toString();
+    }
+
+    private static void appendPart(StringBuilder out, String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return;
+        }
+        if (out.length() > 0) {
+            out.append("·");
+        }
+        out.append(value.trim());
     }
 }

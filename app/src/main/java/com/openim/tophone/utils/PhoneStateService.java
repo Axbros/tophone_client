@@ -23,14 +23,9 @@ import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.enums.ActionEnums;
 import com.openim.tophone.mqtt.MqttManager;
-import com.openim.tophone.rtc.RtcSessionController;
 import com.openim.tophone.net.RXRetrofit.N;
-import com.openim.tophone.utils.MqttEventUtil;
-import com.openim.tophone.repository.LocationService;
+import com.openim.tophone.rtc.RtcSessionController;
 
-import java.util.concurrent.TimeUnit;
-
-import io.reactivex.disposables.Disposable;
 public class PhoneStateService extends Service {
     private PhoneStateListener phoneStateListener;
     private TelephonyManager telephonyManager;
@@ -49,9 +44,6 @@ public class PhoneStateService extends Service {
     private static final int NOTIFICATION_ID = 1;
 
     private String TAG = "PhoneStateService";
-
-    private static final String API_KEY = "819bb34ae3ff372bae58d900877443d5";
-    private static final String API_ID = "10004275";
 
     private final CallBlocker callBlocker = new CallBlocker(BaseApp.inst());
 
@@ -256,30 +248,28 @@ public class PhoneStateService extends Service {
 
     // 被呼叫
     private void onCalling(String phoneNumber) {
-        // 这里是获取归属地的逻辑，非通话时长
         Log.d("Chat", "正在获取 " + phoneNumber + " 的归属地…");
-        Disposable disposable = N.API(LocationService.class)
-                .getPhoneNumberLocation(API_ID, API_KEY, phoneNumber)
-                .timeout(3, TimeUnit.SECONDS) // ⏱ 设置最大等待时间 3 秒
-                .compose(N.IOMain())
-                .subscribe(response -> {
-                    String location;
-                    if (response.code == 200) {
-                        location = response.shengfen + "·" + response.chengshi + "·" + response.fuwushang;
-                    } else {
-                        location = "China Mainland";
+        PhoneLocationHelper.getPhoneLocation(
+                phoneNumber,
+                getClass().getSimpleName(),
+                new PhoneLocationHelper.LocationCallback() {
+                    @Override
+                    public void onResult(String location) {
+                        Log.d("Chat", "Caller location: " + location);
+                        AppToast.show(BaseApp.inst(),
+                                BaseApp.inst().getString(R.string.toast_incoming_location, location),
+                                Toast.LENGTH_SHORT);
+                        MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, location);
                     }
-                    Log.d("Chat", "Caller location: " + location);
-                    AppToast.show(BaseApp.inst(),
-                            BaseApp.inst().getString(R.string.toast_incoming_location, location),
-                            Toast.LENGTH_SHORT);
-                    MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, location);
-                }, throwable -> {
-                    Log.e("Chat", "获取归属地失败: " + throwable.getMessage());
-                    AppToast.show(BaseApp.inst(), R.string.toast_location_failed, Toast.LENGTH_SHORT);
-                    MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, "");
-                });
-        N.addDispose(this.getClass().getSimpleName(), disposable);
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        Log.e("Chat", "获取归属地失败: " + throwable.getMessage());
+                        AppToast.show(BaseApp.inst(), R.string.toast_location_failed, Toast.LENGTH_SHORT);
+                        MqttEventUtil.publishEvent(ActionEnums.INCOME.getType(), phoneNumber, "");
+                    }
+                }
+        );
     }
 
     private void scheduleCallLogUpload(long sessionStartedAt, String phoneNumber) {

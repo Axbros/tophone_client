@@ -1,7 +1,12 @@
 package com.openim.tophone.utils;
 
+import android.content.Context;
+
+import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.net.RXRetrofit.N;
 import com.openim.tophone.repository.LocationService;
+
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.disposables.Disposable;
 
@@ -12,25 +17,33 @@ public class PhoneLocationHelper {
         void onError(Throwable e);
     }
 
-    private static final String ID = "10004275";
-    private static final String KEY = "819bb34ae3ff372bae58d900877443d5";
-
     public static void getPhoneLocation(String phoneNumber, String tag, LocationCallback callback) {
-        Disposable disposable = N.API(LocationService.class)
-                .getPhoneNumberLocation(ID, KEY, phoneNumber)
-                .compose(N.IOMain()) // ⬅️ 切换线程：IO请求 + 主线程回调
-                .subscribe(response -> {
-                    if (response.code == 200) {
-                        String location = response.shengfen + "·" + response.chengshi + "·" + response.fuwushang;
-                        callback.onResult(location);
-                    } else {
-                        callback.onResult("China Mainland");
-                    }
-                }, throwable -> {
-                    callback.onError(throwable);
-                });
+        Context context = BaseApp.inst();
+        if (context == null) {
+            callback.onError(new IllegalStateException("application context unavailable"));
+            return;
+        }
+        String deviceCode = DeviceUtils.getOrCreateClientDeviceId(context);
+        if (deviceCode == null || deviceCode.trim().isEmpty()) {
+            callback.onError(new IllegalStateException("device code unavailable"));
+            return;
+        }
 
-        // ⬅️ 建议添加 Disposable 管理，避免内存泄漏
+        Disposable disposable = N.mAPI(LocationService.class)
+                .getPhoneNumberLocation(deviceCode, phoneNumber)
+                .timeout(5, TimeUnit.SECONDS)
+                .compose(N.IOMain())
+                .subscribe(response -> {
+                    String display = response == null ? "" : response.getDisplay();
+                    if (display.isEmpty()) {
+                        callback.onError(new IllegalStateException(
+                                response == null ? "empty phone location response" : response.msg
+                        ));
+                        return;
+                    }
+                    callback.onResult(display);
+                }, callback::onError);
+
         N.addDispose(tag, disposable);
     }
 }

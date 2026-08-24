@@ -70,6 +70,23 @@
         tools:visibility="visible" />
 
     <TextView
+        android:id="@+id/callLocationText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textColor="@color/call_text_secondary"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/callNumberText"
+        tools:text="广东·深圳·中国移动"
+        tools:visibility="visible" />
+
+    <TextView
         android:id="@+id/callStatusText"
         android:layout_width="0dp"
         android:layout_height="24dp"
@@ -80,7 +97,7 @@
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/callNumberText" />
+        app:layout_constraintTop_toBottomOf="@id/callLocationText" />
 
     <LinearLayout
         android:id="@+id/callActiveControls"
