@@ -111,9 +111,10 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <LinearLayout
-            android:layout_width="96dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:layout_weight="1"
             android:orientation="vertical">
 
             <ImageButton
@@ -136,13 +137,44 @@
         </LinearLayout>
 
         <Space
-            android:layout_width="40dp"
+            android:layout_width="12dp"
             android:layout_height="1dp" />
 
         <LinearLayout
-            android:layout_width="96dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/callKeypadButton"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:background="@drawable/bg_call_button_neutral"
+                android:contentDescription="@string/call_ui_keypad"
+                android:padding="19dp"
+                android:src="@drawable/ic_call_keypad"
+                app:tint="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/call_ui_keypad"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="1dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"
             android:orientation="vertical">
 
             <ImageButton
@@ -163,6 +195,111 @@
                 android:textColor="@color/white"
                 android:textSize="14sp" />
         </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/callDtmfPanel"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="150dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/callDtmfDigits"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:ellipsize="start"
+            android:gravity="center"
+            android:hint="@string/call_ui_dtmf_hint"
+            android:maxLines="1"
+            android:textColor="@color/white"
+            android:textColorHint="@color/call_text_secondary"
+            android:textSize="20sp"
+            tools:text="1234" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="4">
+
+            <TextView
+                android:id="@+id/callDtmf1"
+                style="@style/CallDtmfKey"
+                android:text="1" />
+
+            <TextView
+                android:id="@+id/callDtmf2"
+                style="@style/CallDtmfKey"
+                android:text="2" />
+
+            <TextView
+                android:id="@+id/callDtmf3"
+                style="@style/CallDtmfKey"
+                android:text="3" />
+
+            <TextView
+                android:id="@+id/callDtmf4"
+                style="@style/CallDtmfKey"
+                android:text="4" />
+
+            <TextView
+                android:id="@+id/callDtmf5"
+                style="@style/CallDtmfKey"
+                android:text="5" />
+
+            <TextView
+                android:id="@+id/callDtmf6"
+                style="@style/CallDtmfKey"
+                android:text="6" />
+
+            <TextView
+                android:id="@+id/callDtmf7"
+                style="@style/CallDtmfKey"
+                android:text="7" />
+
+            <TextView
+                android:id="@+id/callDtmf8"
+                style="@style/CallDtmfKey"
+                android:text="8" />
+
+            <TextView
+                android:id="@+id/callDtmf9"
+                style="@style/CallDtmfKey"
+                android:text="9" />
+
+            <TextView
+                android:id="@+id/callDtmfStar"
+                style="@style/CallDtmfKey"
+                android:text="*" />
+
+            <TextView
+                android:id="@+id/callDtmf0"
+                style="@style/CallDtmfKey"
+                android:text="0" />
+
+            <TextView
+                android:id="@+id/callDtmfHash"
+                style="@style/CallDtmfKey"
+                android:text="#" />
+        </GridLayout>
+
+        <TextView
+            android:id="@+id/callDtmfClose"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:text="@string/call_ui_keypad_hide"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
     </LinearLayout>
 
     <LinearLayout

@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ToPhoneInCallService extends InCallService {
     private static final String TAG = "ToPhoneInCallService";
     private static final long MQTT_RETRY_DELAY_MS = 1000L;
+    private static final long DTMF_TONE_DURATION_MS = 180L;
+    private static final String VALID_DTMF_DIGITS = "0123456789*#";
 
     public static final String ACTION_CALL_STATE_CHANGED =
             "com.openim.tophone.action.CALL_STATE_CHANGED";
@@ -44,6 +46,8 @@ public class ToPhoneInCallService extends InCallService {
     private final Map<Call, Call.Callback> callbacks = new ConcurrentHashMap<>();
     private final Set<Call> activeReported =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private Call dtmfCall;
+    private final Runnable stopDtmfRunnable = this::stopActiveDtmfTone;
 
     @Override
     public void onCreate() {
@@ -77,6 +81,9 @@ public class ToPhoneInCallService extends InCallService {
 
     @Override
     public void onCallRemoved(Call call) {
+        if (dtmfCall == call) {
+            stopActiveDtmfTone();
+        }
         publishCallState(call, Call.STATE_DISCONNECTED);
         Call.Callback callback = callbacks.remove(call);
         if (callback != null) {
@@ -93,6 +100,7 @@ public class ToPhoneInCallService extends InCallService {
 
     @Override
     public void onDestroy() {
+        stopActiveDtmfTone();
         handler.removeCallbacksAndMessages(null);
         for (Map.Entry<Call, Call.Callback> entry : callbacks.entrySet()) {
             entry.getKey().unregisterCallback(entry.getValue());
@@ -256,6 +264,46 @@ public class ToPhoneInCallService extends InCallService {
         }
         service.setAudioRoute(targetRoute);
         return enableSpeaker;
+    }
+
+    public static boolean sendDtmfTone(char digit) {
+        ToPhoneInCallService service = instance;
+        Call call = currentCall;
+        if (service == null
+                || call == null
+                || call.getState() != Call.STATE_ACTIVE
+                || VALID_DTMF_DIGITS.indexOf(digit) < 0) {
+            return false;
+        }
+        try {
+            service.handler.removeCallbacks(service.stopDtmfRunnable);
+            service.stopActiveDtmfTone();
+            call.playDtmfTone(digit);
+            service.dtmfCall = call;
+            service.handler.postDelayed(
+                    service.stopDtmfRunnable,
+                    DTMF_TONE_DURATION_MS
+            );
+            return true;
+        } catch (RuntimeException error) {
+            Log.e(TAG, "unable to send DTMF digit=" + digit, error);
+            service.stopActiveDtmfTone();
+            return false;
+        }
+    }
+
+    private void stopActiveDtmfTone() {
+        handler.removeCallbacks(stopDtmfRunnable);
+        Call call = dtmfCall;
+        dtmfCall = null;
+        if (call == null) {
+            return;
+        }
+        try {
+            call.stopDtmfTone();
+        } catch (RuntimeException error) {
+            Log.w(TAG, "unable to stop DTMF tone", error);
+        }
     }
 
     private String resolveNumber(Call call) {

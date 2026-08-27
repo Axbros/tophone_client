@@ -47,9 +47,12 @@ public class InCallActivity extends AppCompatActivity {
     private TextView locationText;
     private TextView statusText;
     private ImageButton muteButton;
+    private ImageButton keypadButton;
     private ImageButton speakerButton;
     private LinearLayout activeControls;
+    private LinearLayout dtmfPanel;
     private LinearLayout incomingControls;
+    private TextView dtmfDigits;
     private View endCallContainer;
     private boolean receiverRegistered;
     private int callState = Call.STATE_DISCONNECTED;
@@ -57,6 +60,7 @@ public class InCallActivity extends AppCompatActivity {
     private boolean incoming;
     private long connectedAt;
     private String requestedLocationNumber = "";
+    private boolean dtmfPanelVisible;
 
     private final Runnable timerRunnable = new Runnable() {
         @Override
@@ -139,6 +143,10 @@ public class InCallActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (dtmfPanelVisible) {
+            setDtmfPanelVisible(false);
+            return;
+        }
         if (callState == Call.STATE_DISCONNECTED) {
             super.onBackPressed();
         }
@@ -167,8 +175,11 @@ public class InCallActivity extends AppCompatActivity {
         locationText = findViewById(R.id.callLocationText);
         statusText = findViewById(R.id.callStatusText);
         muteButton = findViewById(R.id.callMuteButton);
+        keypadButton = findViewById(R.id.callKeypadButton);
         speakerButton = findViewById(R.id.callSpeakerButton);
         activeControls = findViewById(R.id.callActiveControls);
+        dtmfPanel = findViewById(R.id.callDtmfPanel);
+        dtmfDigits = findViewById(R.id.callDtmfDigits);
         incomingControls = findViewById(R.id.callIncomingControls);
         endCallContainer = findViewById(R.id.callEndContainer);
     }
@@ -191,6 +202,27 @@ public class InCallActivity extends AppCompatActivity {
             ToPhoneInCallService.toggleSpeaker();
             renderAudioControls();
         });
+        keypadButton.setOnClickListener(view -> {
+            if (callState == Call.STATE_ACTIVE) {
+                dtmfDigits.setText("");
+                setDtmfPanelVisible(true);
+            }
+        });
+        findViewById(R.id.callDtmfClose).setOnClickListener(
+                view -> setDtmfPanelVisible(false)
+        );
+        bindDtmfKey(R.id.callDtmf1, '1');
+        bindDtmfKey(R.id.callDtmf2, '2');
+        bindDtmfKey(R.id.callDtmf3, '3');
+        bindDtmfKey(R.id.callDtmf4, '4');
+        bindDtmfKey(R.id.callDtmf5, '5');
+        bindDtmfKey(R.id.callDtmf6, '6');
+        bindDtmfKey(R.id.callDtmf7, '7');
+        bindDtmfKey(R.id.callDtmf8, '8');
+        bindDtmfKey(R.id.callDtmf9, '9');
+        bindDtmfKey(R.id.callDtmfStar, '*');
+        bindDtmfKey(R.id.callDtmf0, '0');
+        bindDtmfKey(R.id.callDtmfHash, '#');
     }
 
     private void readCallState(Intent intent) {
@@ -221,9 +253,16 @@ public class InCallActivity extends AppCompatActivity {
         renderAudioControls();
 
         boolean isRinging = callState == Call.STATE_RINGING;
+        if (callState != Call.STATE_ACTIVE) {
+            dtmfPanelVisible = false;
+        }
+        boolean showDtmfPanel = callState == Call.STATE_ACTIVE && dtmfPanelVisible;
         incomingControls.setVisibility(isRinging ? View.VISIBLE : View.GONE);
-        activeControls.setVisibility(isRinging ? View.GONE : View.VISIBLE);
+        activeControls.setVisibility(isRinging || showDtmfPanel ? View.GONE : View.VISIBLE);
+        dtmfPanel.setVisibility(showDtmfPanel ? View.VISIBLE : View.GONE);
         endCallContainer.setVisibility(isRinging ? View.GONE : View.VISIBLE);
+        keypadButton.setEnabled(callState == Call.STATE_ACTIVE);
+        keypadButton.setAlpha(callState == Call.STATE_ACTIVE ? 1.0f : 0.45f);
 
         switch (callState) {
             case Call.STATE_RINGING:
@@ -328,6 +367,25 @@ public class InCallActivity extends AppCompatActivity {
     private void renderAudioControls() {
         renderToggleButton(muteButton, ToPhoneInCallService.isMuted());
         renderToggleButton(speakerButton, ToPhoneInCallService.isSpeakerOn());
+    }
+
+    private void bindDtmfKey(int viewId, char digit) {
+        findViewById(viewId).setOnClickListener(view -> {
+            if (!ToPhoneInCallService.sendDtmfTone(digit)) {
+                return;
+            }
+            CharSequence existing = dtmfDigits.getText();
+            String updated = (existing == null ? "" : existing.toString()) + digit;
+            if (updated.length() > 24) {
+                updated = updated.substring(updated.length() - 24);
+            }
+            dtmfDigits.setText(updated);
+        });
+    }
+
+    private void setDtmfPanelVisible(boolean visible) {
+        dtmfPanelVisible = visible && callState == Call.STATE_ACTIVE;
+        renderCallState();
     }
 
     private void renderToggleButton(ImageButton button, boolean active) {

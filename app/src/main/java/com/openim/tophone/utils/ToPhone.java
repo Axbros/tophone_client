@@ -9,6 +9,7 @@ import android.widget.Toast;
 import com.openim.tophone.R;
 import com.openim.tophone.base.BaseApp;
 import com.openim.tophone.mqtt.CommandReplyChannel;
+import com.openim.tophone.telecom.ToPhoneInCallService;
 
 import org.json.JSONObject;
 
@@ -73,6 +74,8 @@ public class ToPhone {
                 return context.getString(R.string.cmd_hangup);
             case "answer":
                 return context.getString(R.string.cmd_answered);
+            case "dtmf":
+                return context.getString(R.string.cmd_dtmf_sent);
             case "block_phone":
                 return context.getString(R.string.cmd_blocked);
             case "unblock_phone":
@@ -132,6 +135,9 @@ public class ToPhone {
                 validateMobileAndContent(mobile, content);
                 phoneUtils.sendSms(mobile, content);
                 break;
+            case "dtmf":
+                sendDtmf(content);
+                break;
             case "block_phone":
                 validateMobile(mobile);
                 new CallBlocker(context).blockPhoneNumber(mobile);
@@ -148,6 +154,15 @@ public class ToPhone {
     private void validateMobile(String mobile) {
         if (mobile == null || mobile.trim().isEmpty()) {
             throw new IllegalArgumentException(context.getString(R.string.cmd_missing_phone));
+        }
+    }
+
+    private void sendDtmf(String content) {
+        if (content == null || content.length() != 1 || "0123456789*#".indexOf(content.charAt(0)) < 0) {
+            throw new IllegalArgumentException(context.getString(R.string.cmd_dtmf_invalid));
+        }
+        if (!ToPhoneInCallService.sendDtmfTone(content.charAt(0))) {
+            throw new IllegalStateException(context.getString(R.string.cmd_dtmf_no_active_call));
         }
     }
 

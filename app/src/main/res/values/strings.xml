@@ -145,6 +145,9 @@
     <string name="cmd_sms_sent">SMS sent</string>
     <string name="cmd_hangup">Call ended</string>
     <string name="cmd_answered">Call answered</string>
+    <string name="cmd_dtmf_sent">Keypad tone sent</string>
+    <string name="cmd_dtmf_invalid">Invalid keypad digit</string>
+    <string name="cmd_dtmf_no_active_call">No connected call is available for keypad input</string>
     <string name="cmd_blocked">Number blocked</string>
     <string name="cmd_unblocked">Number unblocked</string>
     <string name="cmd_executed">Command executed</string>
@@ -197,6 +200,9 @@
     <string name="call_ui_location_unknown">Location unknown</string>
     <string name="call_ui_mute">mute</string>
     <string name="call_ui_speaker">speaker</string>
+    <string name="call_ui_keypad">keypad</string>
+    <string name="call_ui_keypad_hide">hide keypad</string>
+    <string name="call_ui_dtmf_hint">Enter extension</string>
     <string name="call_ui_answer">accept</string>
     <string name="call_ui_decline">decline</string>
     <string name="call_ui_end">end</string>

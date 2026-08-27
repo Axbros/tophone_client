@@ -17,4 +17,17 @@
         <!-- 设置不可用状态下的透明度 -->
         <item name="android:alpha">0.5</item>
     </style>
+
+    <style name="CallDtmfKey">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:background">@drawable/bg_call_button_neutral</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">22sp</item>
+    </style>
 </resources>
