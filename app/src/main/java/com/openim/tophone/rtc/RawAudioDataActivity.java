@@ -724,6 +724,7 @@ public class RawAudioDataActivity extends RtcBaseActivity {
         isLoopJoinRoom = true;
         hideJoinLoading();
         bindRtcSession();
+        RtcAudioRouter.maximizeRtcOutputVolume(this);
         syncUiForJoinedState();
     }
 
@@ -856,6 +857,9 @@ public class RawAudioDataActivity extends RtcBaseActivity {
             rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         }
         bindRtcSession();
+        if (isJoined) {
+            RtcAudioRouter.maximizeRtcOutputVolume(this);
+        }
         updateCheckInStatus();
         return true;
     }

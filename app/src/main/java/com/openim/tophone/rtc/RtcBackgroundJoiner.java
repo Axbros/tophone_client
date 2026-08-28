@@ -408,6 +408,7 @@ public final class RtcBackgroundJoiner {
         joinAttemptStartedAt = 0L;
         activeJoinGeneration = 0L;
         bindRtcSession();
+        RtcAudioRouter.maximizeRtcOutputVolume(appContext);
         persistSession();
         notifyListener();
     }
@@ -442,6 +443,9 @@ public final class RtcBackgroundJoiner {
             rtcRoom.setRTCRoomEventHandler(rtcRoomEventHandler);
         }
         bindRtcSession();
+        if (isJoined) {
+            RtcAudioRouter.maximizeRtcOutputVolume(appContext);
+        }
         notifyListener();
         return true;
     }

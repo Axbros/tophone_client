@@ -114,6 +114,41 @@ public final class RtcAudioRouter {
         }
     }
 
+    /**
+     * Maximize both Android streams used by RTC communication routes. Voice-call
+     * covers communication/earpiece/speaker routing, while music covers vendor
+     * speaker implementations and most USB audio devices.
+     */
+    public static void maximizeRtcOutputVolume(Context context) {
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            RtcDebugLog.w(TAG, "maximizeRtcOutputVolume: AudioManager null");
+            return;
+        }
+        if (audioManager.isVolumeFixed()) {
+            RtcDebugLog.i(TAG, "maximizeRtcOutputVolume: device volume is fixed");
+            return;
+        }
+        maximizeStream(audioManager, AudioManager.STREAM_VOICE_CALL, "VOICE_CALL");
+        maximizeStream(audioManager, AudioManager.STREAM_MUSIC, "MUSIC");
+    }
+
+    private static void maximizeStream(AudioManager audioManager, int streamType, String streamName) {
+        try {
+            int before = audioManager.getStreamVolume(streamType);
+            int maximum = audioManager.getStreamMaxVolume(streamType);
+            if (maximum > 0 && before != maximum) {
+                audioManager.setStreamVolume(streamType, maximum, 0);
+            }
+            RtcDebugLog.i(TAG, "maximizeVolume stream=" + streamName
+                    + " before=" + before + " max=" + maximum
+                    + " after=" + audioManager.getStreamVolume(streamType));
+        } catch (RuntimeException error) {
+            RtcDebugLog.e(TAG, "maximizeVolume failed stream=" + streamName
+                    + " error=" + error.getMessage());
+        }
+    }
+
     private static AudioRoute setRouteWithFallback(RTCVideo rtcVideo, AudioRoute... routes) {
         for (AudioRoute route : routes) {
             int code = rtcVideo.setAudioRoute(route);
